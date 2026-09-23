@@ -7,9 +7,11 @@ const SystemSettingsCard: React.FC = () => {
   // null = unknown / error reading state
   const [autostart, setAutostart] = useState<boolean | null>(null);
   const [closeToTray, setCloseToTray] = useState<boolean | null>(null);
+  const [startMinimized, setStartMinimized] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
   const [pendingCloseToTray, setPendingCloseToTray] = useState(false);
+  const [pendingStartMinimized, setPendingStartMinimized] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -19,6 +21,9 @@ const SystemSettingsCard: React.FC = () => {
       invoke<boolean>('get_close_to_tray')
         .then(setCloseToTray)
         .catch(() => setCloseToTray(null)),
+      invoke<boolean>('get_start_minimized')
+        .then(setStartMinimized)
+        .catch(() => setStartMinimized(null)),
     ]).finally(() => setLoading(false));
   }, []);
 
@@ -50,12 +55,30 @@ const SystemSettingsCard: React.FC = () => {
     }
   };
 
+  const handleStartMinimizedToggle = async () => {
+    if (startMinimized === null) return;
+    const next = !startMinimized;
+    setPendingStartMinimized(true);
+    try {
+      await invoke('set_start_minimized', { enabled: next });
+      setStartMinimized(next);
+    } catch (err) {
+      console.error('Failed to toggle start minimized:', err);
+    } finally {
+      setPendingStartMinimized(false);
+    }
+  };
+
   const isDisabled = loading || pending || autostart === null;
   const isChecked = autostart === true;
 
   const closeToTrayDisabled =
     loading || pendingCloseToTray || closeToTray === null;
   const closeToTrayChecked = closeToTray === true;
+
+  const startMinimizedDisabled =
+    loading || pendingStartMinimized || startMinimized === null;
+  const startMinimizedChecked = startMinimized === true;
 
   return (
     <SettingsCard
@@ -100,6 +123,49 @@ const SystemSettingsCard: React.FC = () => {
           />
         </button>
       </div>
+
+      {isChecked && (
+        <div className="flex items-center justify-between py-1">
+          <div>
+            <div id="start-minimized-label" className="font-medium">
+              Start minimized
+            </div>
+            <div
+              id="start-minimized-desc"
+              className="text-muted-foreground text-sm"
+            >
+              When enabled, PictoPy starts silently in the system tray on boot.
+              When disabled, the main window opens on boot instead.
+            </div>
+          </div>
+
+          <button
+            role="switch"
+            aria-checked={startMinimizedChecked}
+            aria-labelledby="start-minimized-label"
+            aria-describedby="start-minimized-desc"
+            disabled={startMinimizedDisabled}
+            onClick={handleStartMinimizedToggle}
+            className={[
+              'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full',
+              'transition-colors duration-200 ease-in-out',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+              'disabled:cursor-not-allowed disabled:opacity-50',
+              startMinimizedChecked
+                ? 'bg-primary focus-visible:ring-primary'
+                : 'bg-gray-200 focus-visible:ring-gray-500 dark:bg-gray-700',
+            ].join(' ')}
+          >
+            <span
+              className={[
+                'inline-block h-4 w-4 rounded-full bg-white shadow-md',
+                'transition-transform duration-200 ease-in-out',
+                startMinimizedChecked ? 'translate-x-6' : 'translate-x-1',
+              ].join(' ')}
+            />
+          </button>
+        </div>
+      )}
 
       <div className="flex items-center justify-between py-1">
         <div>
