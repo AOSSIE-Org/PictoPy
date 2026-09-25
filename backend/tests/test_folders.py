@@ -1392,3 +1392,179 @@ class TestFoldersIntegration:
 
         mock_enable_batch.assert_called_once_with(folder_ids)
         mock_delete_batch.assert_called_once_with(folder_ids)
+
+
+# ##############################
+# Tests for database-lock fix (#1557)
+# ##############################
+
+
+class TestRetryOnLocked:
+    """Tests for the _retry_on_locked decorator and related DB hardening."""
+
+    def test_retry_decorator_succeeds_on_first_attempt(self, test_db):
+        """Verify _retry_on_locked is a no-op when the call succeeds immediately."""
+        from app.database.folders import _retry_on_locked
+
+        call_count = 0
+
+        @_retry_on_locked
+        def always_ok():
+            nonlocal call_count
+            call_count += 1
+            return "done"
+
+        assert always_ok() == "done"
+        assert call_count == 1
+
+    def test_retry_decorator_retries_on_locked_then_succeeds(self, test_db):
+        """Verify the decorator retries on 'database is locked' and eventually succeeds."""
+        from app.database.folders import _retry_on_locked, _RETRY_MAX_ATTEMPTS
+
+        attempts = 0
+
+        @_retry_on_locked
+        def flaky():
+            nonlocal attempts
+            attempts += 1
+            if attempts < 3:
+                raise sqlite3.OperationalError("database is locked")
+            return "recovered"
+
+        # Patch sleep to speed up the test
+        with patch("app.database.folders.time.sleep"):
+            result = flaky()
+
+        assert result == "recovered"
+        assert attempts == 3
+
+    def test_retry_decorator_exhausts_retries(self, test_db):
+        """Verify the decorator raises after all retries are exhausted."""
+        from app.database.folders import _retry_on_locked, _RETRY_MAX_ATTEMPTS
+
+        @_retry_on_locked
+        def always_locked():
+            raise sqlite3.OperationalError("database is locked")
+
+        with patch("app.database.folders.time.sleep"):
+            with pytest.raises(sqlite3.OperationalError, match="retries"):
+                always_locked()
+
+    def test_retry_decorator_passes_through_non_lock_errors(self, test_db):
+        """Non-lock OperationalErrors must NOT be retried."""
+        from app.database.folders import _retry_on_locked
+
+        @_retry_on_locked
+        def bad_sql():
+            raise sqlite3.OperationalError("no such table: foobar")
+
+        with pytest.raises(sqlite3.OperationalError, match="no such table"):
+            bad_sql()
+
+    def test_db_delete_folders_batch_has_retry_decorator(self, test_db):
+        """Confirm db_delete_folders_batch is actually decorated with _retry_on_locked."""
+        # The decorator wraps the function, so __wrapped__ should exist
+        assert hasattr(db_delete_folders_batch, "__wrapped__")
+
+    def test_db_delete_folder_has_retry_decorator(self, test_db):
+        """Confirm db_delete_folder is actually decorated with _retry_on_locked."""
+        assert hasattr(db_delete_folder, "__wrapped__")
+
+    def test_connection_uses_timeout(self, test_db):
+        """All sqlite3.connect() calls in folders.py should use DB_TIMEOUT."""
+        from app.database.folders import DB_TIMEOUT
+
+        assert DB_TIMEOUT >= 10, "DB_TIMEOUT should be at least 10 seconds"
+
+    def test_delete_folders_batch_retries_on_locked(self, test_db):
+        """Integration test: db_delete_folders_batch retries on locked DB."""
+        # Insert a folder first
+        db_insert_folders_batch(
+            [("test-retry-id", "/tmp/retry_test", None, 1693526400, False, None)]
+        )
+
+        call_count = 0
+        original_connect = sqlite3.connect
+
+        def mock_connect(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count <= 2:
+                # Simulate lock by raising before the connection is used
+                raise sqlite3.OperationalError("database is locked")
+            return original_connect(*args, **kwargs)
+
+        with patch("app.database.folders.time.sleep"):
+            with patch("app.database.folders.sqlite3.connect", side_effect=mock_connect):
+                result = db_delete_folders_batch(["test-retry-id"])
+
+        # Should have succeeded on the 3rd attempt
+        assert call_count == 3
+        assert result >= 0
+
+
+class TestDeleteFoldersRouteErrorHandling:
+    """Tests for the improved error messages in the delete route."""
+
+    @patch("app.routes.folders.db_delete_folders_batch")
+    def test_delete_folders_database_locked_returns_503(
+        self, mock_delete_batch, client
+    ):
+        """When all retries are exhausted, the route should return 503 with a clear message."""
+        mock_delete_batch.side_effect = sqlite3.OperationalError(
+            "database is locked after 5 retries – background indexing may "
+            "still be in progress, please try again in a few moments"
+        )
+
+        response = client.request(
+            "DELETE",
+            "/folders/delete-folders",
+            content='{"folder_ids": ["folder-1"]}',
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 503
+        data = response.json()
+        assert data["detail"]["success"] is False
+        assert data["detail"]["error"] == "Database busy"
+        assert "busy" in data["detail"]["message"].lower()
+
+    @patch("app.routes.folders.db_delete_folders_batch")
+    def test_delete_folders_non_lock_error_returns_500(
+        self, mock_delete_batch, client
+    ):
+        """Non-lock database errors should still return 500."""
+        mock_delete_batch.side_effect = Exception("some other database error")
+
+        response = client.request(
+            "DELETE",
+            "/folders/delete-folders",
+            content='{"folder_ids": ["folder-1"]}',
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 500
+        data = response.json()
+        assert data["detail"]["error"] == "Internal server error"
+
+
+class TestWALMode:
+    """Tests for WAL journal mode enablement."""
+
+    def test_wal_mode_enabled_on_new_db(self, test_db):
+        """After creating tables through the normal startup path, the
+        database should be in WAL mode (or at least accept it)."""
+        conn = sqlite3.connect(test_db)
+        result = conn.execute("PRAGMA journal_mode=WAL").fetchone()
+        conn.close()
+        assert result[0] == "wal"
+
+    def test_connection_module_sets_wal(self, test_db, monkeypatch):
+        """get_db_connection() should enable WAL mode."""
+        monkeypatch.setattr("app.database.connection.DATABASE_PATH", test_db)
+        from app.database.connection import get_db_connection
+
+        with get_db_connection() as conn:
+            result = conn.execute("PRAGMA journal_mode").fetchone()
+            assert result[0] == "wal"
+

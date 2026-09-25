@@ -74,6 +74,16 @@ os.makedirs(THUMBNAIL_IMAGES_PATH, exist_ok=True)
 async def lifespan(app: FastAPI):
     # Create tables and initialize systems
     generate_openapi_json()
+    # Enable WAL journal mode for the database.  WAL allows concurrent
+    # readers while a writer holds the lock, which prevents "database is
+    # locked" errors when e.g. a folder delete runs while background
+    # indexing is still writing.  The mode is persistent per database
+    # file, so setting it once at startup is sufficient.
+    import sqlite3 as _sqlite3
+
+    _wal_conn = _sqlite3.connect(DATABASE_PATH)
+    _wal_conn.execute("PRAGMA journal_mode=WAL")
+    _wal_conn.close()
     db_create_folders_table()
     db_create_images_table()
     db_create_videos_table()

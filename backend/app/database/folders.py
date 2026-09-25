@@ -1,12 +1,62 @@
 import sqlite3
 import os
+import time
 import uuid
+import functools
 from typing import List, Tuple, Dict, Optional
 from app.config.settings import DATABASE_PATH
 from app.logging.setup_logging import get_logger
 
 # Initialize logger
 logger = get_logger(__name__)
+
+# Seconds that sqlite3.connect() waits for a write-lock before raising
+# OperationalError.  The default (5 s) is too short when background
+# indexing holds the lock for an extended write batch.
+DB_TIMEOUT = 30
+
+# Retry parameters for operations that may hit "database is locked"
+# even after the extended timeout (e.g. deletes during heavy indexing).
+_RETRY_MAX_ATTEMPTS = 5
+_RETRY_BASE_DELAY = 0.5  # seconds; doubles each retry (0.5, 1, 2, 4, 8)
+
+
+def _retry_on_locked(func):
+    """Decorator: retry on ``sqlite3.OperationalError: database is locked``.
+
+    Uses bounded exponential back-off so that delete (or any decorated
+    write) survives transient lock contention from background indexing
+    without surfacing a raw exception to the user.
+    """
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        last_exc: Exception | None = None
+        for attempt in range(_RETRY_MAX_ATTEMPTS):
+            try:
+                return func(*args, **kwargs)
+            except sqlite3.OperationalError as exc:
+                if "database is locked" not in str(exc):
+                    raise
+                last_exc = exc
+                delay = _RETRY_BASE_DELAY * (2 ** attempt)
+                logger.warning(
+                    "%s: database is locked (attempt %d/%d), "
+                    "retrying in %.1f s …",
+                    func.__name__,
+                    attempt + 1,
+                    _RETRY_MAX_ATTEMPTS,
+                    delay,
+                )
+                time.sleep(delay)
+        # All retries exhausted – raise with a user-friendly message.
+        raise sqlite3.OperationalError(
+            f"database is locked after {_RETRY_MAX_ATTEMPTS} retries – "
+            "background indexing may still be in progress, please try "
+            "again in a few moments"
+        ) from last_exc
+
+    return wrapper
 
 # Type definitions
 FolderId = str
@@ -32,7 +82,7 @@ INDEXING_STATUSES = (
 def db_create_folders_table() -> None:
     conn = None
     try:
-        conn = sqlite3.connect(DATABASE_PATH)
+        conn = sqlite3.connect(DATABASE_PATH, timeout=DB_TIMEOUT)
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -60,7 +110,7 @@ def db_insert_folders_batch(folders_data: List[FolderData]) -> None:
     folders_data: list of tuples (folder_id, folder_path,
     parent_folder_id,last_modified_time, AI_Tagging, taggingCompleted)
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=DB_TIMEOUT)
     cursor = conn.cursor()
 
     try:
@@ -84,7 +134,7 @@ def db_insert_folder(
     taggingCompleted: Optional[bool] = None,
     folder_id: Optional[FolderId] = None,
 ) -> FolderId:
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=DB_TIMEOUT)
     cursor = conn.cursor()
 
     try:
@@ -126,7 +176,7 @@ def db_insert_folder(
 
 
 def db_get_folder_id_from_path(folder_path: FolderPath) -> Optional[FolderId]:
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=DB_TIMEOUT)
     cursor = conn.cursor()
     try:
         abs_folder_path = os.path.abspath(folder_path)
@@ -141,7 +191,7 @@ def db_get_folder_id_from_path(folder_path: FolderPath) -> Optional[FolderId]:
 
 
 def db_get_folder_path_from_id(folder_id: FolderId) -> Optional[FolderPath]:
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=DB_TIMEOUT)
     cursor = conn.cursor()
     try:
         cursor.execute(
@@ -157,7 +207,7 @@ def db_get_folder_path_from_id(folder_id: FolderId) -> Optional[FolderPath]:
 def db_get_all_folders() -> List[FolderPath]:
     # try/finally, not `with`: sqlite3's context manager commits the
     # transaction but leaves the connection (and its file handle) open.
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=DB_TIMEOUT)
     try:
         rows = conn.execute("SELECT folder_path FROM folders").fetchall()
         return [row[0] for row in rows] if rows else []
@@ -166,7 +216,7 @@ def db_get_all_folders() -> List[FolderPath]:
 
 
 def db_get_all_folder_ids() -> List[FolderId]:
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=DB_TIMEOUT)
     cursor = conn.cursor()
     try:
         cursor.execute("SELECT folder_id from folders")
@@ -176,6 +226,7 @@ def db_get_all_folder_ids() -> List[FolderId]:
         conn.close()
 
 
+@_retry_on_locked
 def db_delete_folders_batch(folder_ids: List[FolderId]) -> int:
     """
     Delete multiple folders in a single database transaction.
@@ -185,7 +236,7 @@ def db_delete_folders_batch(folder_ids: List[FolderId]) -> int:
     if not folder_ids:
         return 0
 
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=DB_TIMEOUT)
     cursor = conn.cursor()
 
     try:
@@ -212,8 +263,9 @@ def db_delete_folders_batch(folder_ids: List[FolderId]) -> int:
         conn.close()
 
 
+@_retry_on_locked
 def db_delete_folder(folder_path: FolderPath) -> None:
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=DB_TIMEOUT)
     cursor = conn.cursor()
     try:
         abs_folder_path = os.path.abspath(folder_path)
@@ -250,7 +302,7 @@ def db_update_parent_ids_for_subtree(
     Only updates folders whose parent_folder_id is NULL.
     folder_map: dict mapping folder_path to tuple of (folder_id, parent_id)
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=DB_TIMEOUT)
     cursor = conn.cursor()
     try:
         for folder_path, (folder_id, parent_id) in folder_map.items():
@@ -273,7 +325,7 @@ def db_folder_exists(folder_path: FolderPath) -> bool:
     Check if a folder exists in the database.
     Returns True if the folder exists, False otherwise.
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=DB_TIMEOUT)
     cursor = conn.cursor()
     try:
         abs_path = os.path.abspath(folder_path)
@@ -295,7 +347,7 @@ def db_find_parent_folder_id(folder_path: FolderPath) -> Optional[FolderId]:
     if not parent_path or parent_path == folder_path:  # Root directory
         return None
 
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=DB_TIMEOUT)
     cursor = conn.cursor()
     try:
         cursor.execute(
@@ -319,7 +371,7 @@ def db_update_ai_tagging_batch(
     if not folder_ids:
         return 0
 
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=DB_TIMEOUT)
     cursor = conn.cursor()
 
     try:
@@ -362,7 +414,7 @@ def db_disable_ai_tagging_batch(folder_ids: List[FolderId]) -> int:
 
 def db_get_folder_ids_by_path_prefix(root_path: str) -> List[FolderIdPath]:
     """Get all folder IDs and paths whose path starts with the given root path."""
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=DB_TIMEOUT)
     cursor = conn.cursor()
 
     try:
@@ -395,7 +447,7 @@ def db_get_folder_ids_by_paths(
     if not folder_paths:
         return {}
 
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=DB_TIMEOUT)
     cursor = conn.cursor()
 
     try:
@@ -429,7 +481,7 @@ def db_get_all_folder_details() -> (
     image_count and video_count.
     Returns list of tuples with all folder information.
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=DB_TIMEOUT)
     cursor = conn.cursor()
 
     try:
@@ -464,7 +516,7 @@ def db_get_direct_child_folders(parent_folder_id: str) -> List[Tuple[str, str]]:
     Get all direct child folders (not subfolders) for a given parent folder.
     Returns list of tuples (folder_id, folder_path).
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=DB_TIMEOUT)
     cursor = conn.cursor()
 
     try:
@@ -490,7 +542,7 @@ def db_set_tagging_completed(completed: bool) -> int:
     mid-tagging. The tagging sequences now clear it on entry and set it on
     exit. Returns the number of folders updated.
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=DB_TIMEOUT)
     cursor = conn.cursor()
     try:
         cursor.execute(
@@ -523,7 +575,7 @@ def db_clear_stale_processing_flags() -> int:
 
     Returns the number of folders corrected.
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=DB_TIMEOUT)
     cursor = conn.cursor()
     try:
         # One statement, not two: a folder that is both mid-tagging and
@@ -568,7 +620,7 @@ def db_update_folder_indexing_status(folder_id: str, status: str) -> None:
     if status not in INDEXING_STATUSES:
         raise ValueError(f"unknown indexing status: {status}")
 
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=DB_TIMEOUT)
     cursor = conn.cursor()
     try:
         cursor.execute(
