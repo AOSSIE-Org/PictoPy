@@ -511,7 +511,16 @@ def image_util_find_folder_id_for_image(
 def image_util_is_valid_image(file_path: str) -> bool:
     """Check if the file is a valid image with allowed extensions."""
     # Check file extension first
-    allowed_extensions = {".jpg", ".jpeg", ".png"}
+    allowed_extensions = {
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".webp",
+        ".bmp",
+        ".tiff",
+        ".tif",
+        ".gif",
+    }
     file_extension = Path(file_path).suffix.lower()
 
     if file_extension not in allowed_extensions:
