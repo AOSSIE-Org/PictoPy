@@ -25,5 +25,5 @@ Identical to `backend/`: **black at 88 columns, never `ruff format`**. The same
 `.pre-commit-config.yaml` at the repository root covers this directory.
 
 ```bash
-pre-commit run --config ../.pre-commit-config.yaml --all-files
+SKIP=mypy-backend,mypy-sync-microservice pre-commit run --config ../.pre-commit-config.yaml
 ```

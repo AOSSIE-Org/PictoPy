@@ -36,6 +36,7 @@ export const useUserPreferences = () => {
     YOLO_model_size: 'nano',
     GPU_Acceleration: false,
     Video_Frame_Interval: 5,
+    Video_Face_Detection: false,
     memories: DEFAULT_MEMORIES_PREFERENCES,
   });
 
@@ -181,6 +182,18 @@ export const useUserPreferences = () => {
     }));
 
   /**
+   * Turn finding people in videos on or off.
+   */
+  const toggleVideoFaceDetection = async () =>
+    writePreferences((current) => {
+      const Video_Face_Detection = !current.Video_Face_Detection;
+      return {
+        next: { ...current, Video_Face_Detection },
+        request: { Video_Face_Detection },
+      };
+    });
+
+  /**
    * Patch memories preferences.
    */
   const updateMemoriesPreferences = async (
@@ -208,6 +221,7 @@ export const useUserPreferences = () => {
     updateYoloModelSize,
     toggleGpuAcceleration,
     updateVideoFrameInterval,
+    toggleVideoFaceDetection,
     updateMemoriesPreferences,
 
     // For refetching preferences after external events (e.g., Model Manager window closing)

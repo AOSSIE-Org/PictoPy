@@ -14,6 +14,8 @@ export const videosEndpoints = {
   semanticSearch: (query: string) =>
     `/videos/semantic-search?query=${encodeURIComponent(query)}`,
   purgeFrameCache: '/videos/purge-frame-cache',
+  scanFaces: '/videos/scan-faces',
+  faceScanStatus: '/videos/face-scan-status',
 };
 
 export const faceClustersEndpoints = {

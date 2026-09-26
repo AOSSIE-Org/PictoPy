@@ -2,6 +2,7 @@ import json
 import os
 import sqlite3
 import tempfile
+from contextlib import closing
 from typing import Iterator, Optional
 from unittest.mock import MagicMock, patch
 
@@ -10,13 +11,19 @@ import pytest
 
 from app.database.faces import (
     db_create_faces_table,
+    db_delete_keyframe_faces_for_video,
     db_insert_face_embeddings,
     db_get_faces_unassigned_clusters,
     db_get_all_faces_with_cluster_names,
     db_update_face_cluster_ids_batch,
     db_get_cluster_mean_embeddings,
+    db_get_cluster_media_pairs,
+    db_repair_orphaned_faces,
 )
 from app.database.face_clusters import db_create_clusters_table
+from app.database.images import db_create_images_table
+from app.database.videos import db_create_videos_table
+from app.database.video_frames import db_create_video_frames_tables
 
 # ##############################
 # Pytest Fixtures
@@ -32,10 +39,29 @@ def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
     monkeypatch.setattr("app.config.settings.DATABASE_PATH", db_path)
     monkeypatch.setattr("app.database.faces.DATABASE_PATH", db_path)
     monkeypatch.setattr("app.database.face_clusters.DATABASE_PATH", db_path)
+    monkeypatch.setattr("app.database.images.DATABASE_PATH", db_path)
+    monkeypatch.setattr("app.database.videos.DATABASE_PATH", db_path)
 
-    # clusters first: db_get_all_faces_with_cluster_names LEFT JOINs it
+    # FKs are enforced on faces, and SQLite resolves every parent table even
+    # for NULL children, so all of them must exist before the first insert.
     db_create_clusters_table()
+    db_create_images_table()
+    db_create_videos_table()
+    db_create_video_frames_tables()
     db_create_faces_table()
+
+    # Seed the parents the tests' faces point at
+    with closing(sqlite3.connect(db_path)) as conn:
+        conn.executemany(
+            "INSERT INTO images (id, path) VALUES (?, ?)",
+            [(image_id, f"/photos/{image_id}.jpg") for image_id in ("img-1", "img-2")],
+        )
+        conn.execute("INSERT INTO videos (id, path) VALUES ('vid-1', '/a.mp4')")
+        conn.execute(
+            "INSERT INTO video_frames (id, video_id, frame_path) "
+            "VALUES ('frame-1', 'vid-1', '/f.jpg')"
+        )
+        conn.commit()
 
     yield db_path
 
@@ -66,6 +92,24 @@ def add_face(
     return db_insert_face_embeddings(
         image_id, embedding, cluster_id=cluster_id, **kwargs
     )
+
+
+def add_orphan_face(
+    db_path: str,
+    image_id: Optional[str],
+    cluster_id: Optional[str] = None,
+    frame_id: Optional[str] = None,
+) -> int:
+    """Insert a face with FKs off, as rows were written before enforcement."""
+    conn = sqlite3.connect(db_path)
+    face_id = conn.execute(
+        "INSERT INTO faces (image_id, frame_id, cluster_id, embeddings) "
+        "VALUES (?, ?, ?, ?)",
+        (image_id, frame_id, cluster_id, "[0.1, 0.2]"),
+    ).lastrowid
+    conn.commit()
+    conn.close()
+    return face_id
 
 
 # ##############################
@@ -105,6 +149,59 @@ class TestFacesTable:
 
 
 # ##############################
+# Startup repair
+# ##############################
+
+
+class TestRepairOrphanedFaces:
+    def test_deletes_faces_whose_image_is_gone(self, test_db):
+        kept = add_face("img-1")
+        add_orphan_face(test_db, "img-deleted")
+
+        assert db_repair_orphaned_faces() == 1
+        assert [f["face_id"] for f in db_get_faces_unassigned_clusters()] == [kept]
+
+    def test_keeps_video_faces(self, test_db):
+        """A keyframe face has no image_id by design; it is not an orphan."""
+        face_id = add_face(image_id=None, frame_id="frame-1")
+
+        assert db_repair_orphaned_faces() == 0
+        assert [f["face_id"] for f in db_get_faces_unassigned_clusters()] == [face_id]
+
+    def test_deletes_faces_whose_keyframe_is_gone(self, test_db):
+        kept = add_face(image_id=None, frame_id="frame-1")
+        add_orphan_face(test_db, image_id=None, frame_id="frame-deleted")
+
+        assert db_repair_orphaned_faces() == 1
+        assert [f["face_id"] for f in db_get_faces_unassigned_clusters()] == [kept]
+
+    def test_unassigns_faces_whose_cluster_is_gone(self, test_db):
+        cluster = add_cluster(test_db, "cluster-1", "Alice")
+        add_face("img-1", cluster_id=cluster)
+        stale = add_orphan_face(test_db, "img-2", cluster_id="cluster-deleted")
+
+        assert db_repair_orphaned_faces() == 1
+        # The face survives, back in the pool for clustering; the valid one stays put
+        assert [f["face_id"] for f in db_get_faces_unassigned_clusters()] == [stale]
+
+    def test_is_a_noop_on_a_consistent_database(self, test_db):
+        cluster = add_cluster(test_db, "cluster-1", "Alice")
+        add_face("img-1", cluster_id=cluster)
+        add_face("img-2")
+
+        assert db_repair_orphaned_faces() == 0
+        assert len(db_get_all_faces_with_cluster_names()) == 2
+
+    def test_failure_does_not_raise(self, test_db):
+        """Runs at startup, so a broken database must not stop the backend."""
+        conn = sqlite3.connect(test_db)
+        conn.execute("DROP TABLE images")
+        conn.close()
+
+        assert db_repair_orphaned_faces() == 0
+
+
+# ##############################
 # Inserting embeddings
 # ##############################
 
@@ -136,6 +233,15 @@ class TestInsertFaceEmbeddings:
         conn.close()
         assert confidence is None
         assert bbox_json is None
+
+    def test_rejects_a_face_for_a_missing_image(self, test_db):
+        """FKs are enforced, so a face can't outlive or precede its image."""
+        with pytest.raises(sqlite3.IntegrityError):
+            add_face("img-deleted")
+
+    def test_rejects_an_unknown_cluster(self, test_db):
+        with pytest.raises(sqlite3.IntegrityError):
+            add_face("img-1", cluster_id="cluster-missing")
 
 
 # ##############################
@@ -265,3 +371,200 @@ class TestClusterMeanEmbeddings:
     def test_returns_empty_without_assigned_faces(self, test_db):
         add_face("img-1")  # unassigned faces are excluded
         assert db_get_cluster_mean_embeddings() == []
+
+    def test_keyframe_faces_never_move_the_mean(self, test_db):
+        """A cluster is defined by its photos; attached video faces must not
+        drag it, or matches could drift across people one face at a time."""
+        cluster = add_cluster(test_db, "cluster-1", "Alice")
+        add_face("img-1", np.array([0.2, 0.4]), cluster_id=cluster)
+        add_face(None, np.array([1.0, 1.0]), cluster_id=cluster, frame_id="frame-1")
+
+        (mean,) = db_get_cluster_mean_embeddings()
+        assert np.allclose(mean["mean_embedding"], [0.2, 0.4])
+
+    def test_cluster_of_only_keyframe_faces_has_no_mean(self, test_db):
+        cluster = add_cluster(test_db, "cluster-1", "Alice")
+        add_face(None, np.array([1.0, 1.0]), cluster_id=cluster, frame_id="frame-1")
+        assert db_get_cluster_mean_embeddings() == []
+
+
+# ##############################
+# Cannot-link units
+# ##############################
+
+
+class TestClusterMediaPairs:
+    def test_covers_photos_and_keyframes(self, test_db):
+        """A cluster may hold one face per photo and one per keyframe."""
+        cluster = add_cluster(test_db, "cluster-1", "Alice")
+        add_face("img-1", cluster_id=cluster)
+        add_face(None, cluster_id=cluster, frame_id="frame-1")
+        add_face("img-2")  # unassigned faces take no slot
+
+        assert db_get_cluster_media_pairs() == {
+            ("cluster-1", "img-1"),
+            ("cluster-1", "frame-1"),
+        }
+
+
+# ##############################
+# Video keyframe faces
+# ##############################
+
+
+def _legacy_faces_schema(db_path: str) -> None:
+    """Recreate the pre-frame_id faces table, as a shipped database has it."""
+    conn = sqlite3.connect(db_path)
+    conn.execute("DROP TABLE IF EXISTS faces")
+    conn.execute(
+        """
+        CREATE TABLE faces (
+            face_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            image_id TEXT,
+            cluster_id INTEGER,
+            embeddings TEXT,
+            confidence REAL,
+            bbox TEXT,
+            FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
+            FOREIGN KEY (cluster_id) REFERENCES face_clusters(cluster_id)
+                ON DELETE SET NULL
+        )
+        """
+    )
+    conn.execute(
+        "INSERT INTO faces (image_id, embeddings) VALUES ('legacy-img', '[[0.1]]')"
+    )
+    conn.commit()
+    conn.close()
+
+
+def _columns(db_path: str, table: str) -> set:
+    conn = sqlite3.connect(db_path)
+    try:
+        return {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+    finally:
+        conn.close()
+
+
+class TestFrameIdColumn:
+    def test_fresh_table_has_frame_id(self, test_db):
+        assert "frame_id" in _columns(test_db, "faces")
+
+    def test_creates_frame_id_index(self, test_db):
+        conn = sqlite3.connect(test_db)
+        indexes = {
+            row[0]
+            for row in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")
+        }
+        conn.close()
+        assert "ix_faces_frame_id" in indexes
+
+    def test_migrates_a_legacy_table(self, test_db):
+        """A database shipped before frame_id existed gains the column, and its
+        rows survive -- CREATE IF NOT EXISTS alone would silently skip it."""
+        _legacy_faces_schema(test_db)
+        assert "frame_id" not in _columns(test_db, "faces")
+
+        db_create_faces_table()
+
+        assert "frame_id" in _columns(test_db, "faces")
+        conn = sqlite3.connect(test_db)
+        rows = conn.execute("SELECT image_id, frame_id FROM faces").fetchall()
+        conn.close()
+        assert rows == [("legacy-img", None)]
+
+    def test_migration_is_idempotent(self, test_db):
+        _legacy_faces_schema(test_db)
+        db_create_faces_table()
+        db_create_faces_table()  # must not raise on the second pass
+        assert "frame_id" in _columns(test_db, "faces")
+
+
+class TestVideoFaces:
+    def test_stores_a_face_against_a_keyframe(self, test_db):
+        face_id = add_face(image_id=None, frame_id="frame-1")
+
+        conn = sqlite3.connect(test_db)
+        image_id, frame_id = conn.execute(
+            "SELECT image_id, frame_id FROM faces WHERE face_id = ?", (face_id,)
+        ).fetchone()
+        conn.close()
+        assert image_id is None
+        assert frame_id == "frame-1"
+
+    def test_photo_faces_leave_frame_id_null(self, test_db):
+        face_id = add_face("img-1")
+
+        conn = sqlite3.connect(test_db)
+        (frame_id,) = conn.execute(
+            "SELECT frame_id FROM faces WHERE face_id = ?", (face_id,)
+        ).fetchone()
+        conn.close()
+        assert frame_id is None
+
+    def test_rejects_both_ids(self, test_db):
+        with pytest.raises(ValueError):
+            add_face("img-1", frame_id="frame-1")
+
+    def test_rejects_neither_id(self, test_db):
+        with pytest.raises(ValueError):
+            add_face(image_id=None)
+
+    def test_unassigned_faces_expose_frame_id(self, test_db):
+        add_face(image_id=None, frame_id="frame-1")
+
+        (face,) = db_get_faces_unassigned_clusters()
+        assert face["frame_id"] == "frame-1"
+        assert face["image_id"] is None
+
+    def test_cluster_name_listing_exposes_frame_id(self, test_db):
+        cluster = add_cluster(test_db, "cluster-1", "Alice")
+        add_face(image_id=None, frame_id="frame-1", cluster_id=cluster)
+
+        (face,) = db_get_all_faces_with_cluster_names()
+        assert face["frame_id"] == "frame-1"
+        assert face["cluster_name"] == "Alice"
+
+    def test_deleting_one_videos_keyframe_faces_spares_photos(self, test_db):
+        """A scan that died part-way through a video clears what it wrote, so
+        the retry cannot store the same faces twice."""
+        add_face(image_id=None, frame_id="frame-1")
+        add_face(image_id=None, frame_id="frame-1")
+        add_face("img-1")
+
+        assert db_delete_keyframe_faces_for_video("vid-1") == 2
+
+        conn = sqlite3.connect(test_db)
+        rows = conn.execute("SELECT image_id, frame_id FROM faces").fetchall()
+        conn.close()
+        assert rows == [("img-1", None)]
+
+    def test_deleting_faces_for_a_video_without_any_is_harmless(self, test_db):
+        assert db_delete_keyframe_faces_for_video("vid-1") == 0
+
+
+class TestVideoFaceCascade:
+    def test_deleting_a_video_removes_its_frame_faces(self, test_db, monkeypatch):
+        """Two-hop cascade: videos -> video_frames -> faces. Photo faces must be
+        untouched."""
+        from app.database import folders as folders_db
+        from app.database import yolo_mapping as yolo_db
+
+        monkeypatch.setattr(folders_db, "DATABASE_PATH", test_db)
+        monkeypatch.setattr(yolo_db, "DATABASE_PATH", test_db)
+
+        # Beyond the fixture's tables, deleting a video walks video_classes,
+        # which references mappings, so those parents must exist too.
+        folders_db.db_create_folders_table()
+        yolo_db.db_create_YOLO_classes_table()
+
+        add_face("img-1")
+        add_face(image_id=None, frame_id="frame-1")
+
+        with closing(sqlite3.connect(test_db)) as conn:
+            conn.execute("PRAGMA foreign_keys = ON")
+            conn.execute("DELETE FROM videos WHERE id = 'vid-1'")
+            conn.commit()
+            remaining = conn.execute("SELECT image_id, frame_id FROM faces").fetchall()
+
+        assert remaining == [("img-1", None)]

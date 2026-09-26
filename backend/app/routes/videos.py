@@ -1,14 +1,25 @@
-from fastapi import APIRouter, HTTPException, Query, status
-from typing import List, Optional
-from pydantic import BaseModel, ValidationError
+import threading
+from concurrent.futures import Future, ProcessPoolExecutor
 
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from starlette.datastructures import State
+from typing import List, Optional
+from pydantic import BaseModel
+
+from app.database.video_frames import db_count_video_face_scan_progress
 from app.database.videos import (
     db_get_all_videos,
     db_get_videos_by_ids,
     db_toggle_video_favourite_status,
     db_get_video_by_id,
 )
-from app.schemas.videos import ErrorResponse
+from app.routes.dependencies import get_state
+from app.schemas.videos import ErrorResponse, VideoData
+from app.utils.videos import (
+    video_util_backfill_video_faces,
+    video_util_face_detection_enabled,
+    video_util_to_video_data,
+)
 from app.logging.setup_logging import get_logger
 
 # Initialize logger
@@ -17,58 +28,10 @@ router = APIRouter()
 
 
 # Response Models
-class VideoMetadataModel(BaseModel):
-    name: str
-    date_created: Optional[str]
-    width: int
-    height: int
-    duration: Optional[float] = None
-    fps: Optional[float] = None
-    file_location: str
-    file_size: int
-    item_type: str
-
-
-class VideoData(BaseModel):
-    id: str
-    path: str
-    folder_id: str
-    thumbnailPath: Optional[str]
-    metadata: VideoMetadataModel
-    isFavourite: bool
-    favouritedAt: Optional[str] = None
-    tags: Optional[List[str]] = None
-
-
 class GetAllVideosResponse(BaseModel):
     success: bool
     message: str
     data: List[VideoData]
-
-
-def _to_video_data(videos: List[dict]) -> List[VideoData]:
-    """Build per row: one record with unusable metadata shouldn't 500 the
-    whole listing and hide every other video."""
-    video_data = []
-    for video in videos:
-        try:
-            video_data.append(
-                VideoData(
-                    id=video["id"],
-                    path=video["path"],
-                    folder_id=video["folder_id"],
-                    thumbnailPath=video["thumbnailPath"],
-                    metadata=video["metadata"],
-                    isFavourite=video.get("isFavourite", False),
-                    favouritedAt=video.get("favouritedAt"),
-                    tags=video["tags"],
-                )
-            )
-        except ValidationError as e:
-            logger.warning(
-                f"Skipping video {video.get('id')} with invalid metadata: {e}"
-            )
-    return video_data
 
 
 @router.get(
@@ -79,7 +42,7 @@ def _to_video_data(videos: List[dict]) -> List[VideoData]:
 def get_all_videos():
     """Get all videos from the database."""
     try:
-        video_data = _to_video_data(db_get_all_videos())
+        video_data = video_util_to_video_data(db_get_all_videos())
 
         return GetAllVideosResponse(
             success=True,
@@ -108,7 +71,9 @@ def search_videos_by_tag(tag: str = Query(..., description="Tag name to search f
     try:
         from app.database.video_frames import db_get_video_ids_by_tag
 
-        video_data = _to_video_data(db_get_videos_by_ids(db_get_video_ids_by_tag(tag)))
+        video_data = video_util_to_video_data(
+            db_get_videos_by_ids(db_get_video_ids_by_tag(tag))
+        )
 
         return GetAllVideosResponse(
             success=True,
@@ -235,7 +200,7 @@ def semantic_search_videos(
         # find, which would silently shift every score onto the wrong video.
         by_id = {
             video.id: video
-            for video in _to_video_data(
+            for video in video_util_to_video_data(
                 db_get_videos_by_ids([video_id for video_id, _ in ranked])
             )
         }
@@ -266,6 +231,139 @@ def semantic_search_videos(
                 success=False,
                 error="Internal server error",
                 message=f"Unable to search videos: {str(e)}",
+            ).model_dump(),
+        )
+
+
+def post_video_face_scan_sequence() -> bool:
+    """Scan already-tagged videos for people, then join what it finds to the
+    photo clusters. Module-level so the process pool can pickle it."""
+    from app.utils.face_clusters import cluster_util_attach_keyframe_faces
+
+    try:
+        video_util_backfill_video_faces()
+        cluster_util_attach_keyframe_faces()
+    except Exception:
+        logger.exception("Error scanning videos for faces")
+        return False
+    return True
+
+
+class FaceScanStatusData(BaseModel):
+    total: int
+    scanned: int
+    pending: int
+    # State of the scan started from Settings; a sync's own pass isn't tracked
+    running: bool = False
+    failed: bool = False
+
+
+class FaceScanStatusResponse(BaseModel):
+    success: bool
+    message: str
+    data: FaceScanStatusData
+
+
+# Sync routes run on a threadpool, so two clicks could both see no scan running
+_face_scan_lock = threading.Lock()
+
+
+def _face_scan_status(app_state: State) -> FaceScanStatusData:
+    total, scanned = db_count_video_face_scan_progress()
+    scan: Optional[Future] = getattr(app_state, "video_face_scan", None)
+    running = scan is not None and not scan.done()
+    failed = (
+        scan is not None
+        and scan.done()
+        and (scan.cancelled() or scan.exception() is not None or not scan.result())
+    )
+    return FaceScanStatusData(
+        total=total,
+        scanned=scanned,
+        pending=total - scanned,
+        running=running,
+        failed=failed,
+    )
+
+
+@router.post(
+    "/scan-faces",
+    response_model=FaceScanStatusResponse,
+    responses={code: {"model": ErrorResponse} for code in [400, 500]},
+)
+def scan_video_faces(
+    app_state: State = Depends(get_state),
+) -> FaceScanStatusResponse:
+    """Start a background pass over videos tagged before finding people in
+    videos was turned on. Returns how many it has to get through."""
+    try:
+        if not video_util_face_detection_enabled():
+            raise ValueError(
+                "Turn on 'Find People in Videos' in Settings before scanning"
+            )
+
+        # Kept on app state so the status endpoint can report a running or
+        # failed scan; a second click while one is running is a no-op.
+        with _face_scan_lock:
+            if not _face_scan_status(app_state).running:
+                executor: ProcessPoolExecutor = app_state.executor
+                app_state.video_face_scan = executor.submit(
+                    post_video_face_scan_sequence
+                )
+
+        status_data = _face_scan_status(app_state)
+        return FaceScanStatusResponse(
+            success=True,
+            message=f"Scanning {status_data.pending} video(s) for people",
+            data=status_data,
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ErrorResponse(
+                success=False,
+                error="Validation Error",
+                message=str(e),
+            ).model_dump(),
+        )
+    except Exception as e:
+        logger.error(f"Error starting the video face scan: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message=f"Unable to start the video face scan: {str(e)}",
+            ).model_dump(),
+        )
+
+
+@router.get(
+    "/face-scan-status",
+    response_model=FaceScanStatusResponse,
+    responses={500: {"model": ErrorResponse}},
+)
+def get_video_face_scan_status(
+    app_state: State = Depends(get_state),
+) -> FaceScanStatusResponse:
+    """How far the face scan has got, for a caller polling its progress."""
+    try:
+        status_data = _face_scan_status(app_state)
+        return FaceScanStatusResponse(
+            success=True,
+            message=f"{status_data.scanned} of {status_data.total} video(s) scanned",
+            data=status_data,
+        )
+
+    except Exception as e:
+        logger.error(f"Error reading the video face scan status: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message=f"Unable to read the video face scan status: {str(e)}",
             ).model_dump(),
         )
 

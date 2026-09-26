@@ -1312,6 +1312,80 @@
         }
       }
     },
+    "/videos/scan-faces": {
+      "post": {
+        "tags": [
+          "Videos"
+        ],
+        "summary": "Scan Video Faces",
+        "description": "Start a background pass over videos tagged before finding people in\nvideos was turned on. Returns how many it has to get through.",
+        "operationId": "scan_video_faces_videos_scan_faces_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FaceScanStatusResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/videos/face-scan-status": {
+      "get": {
+        "tags": [
+          "Videos"
+        ],
+        "summary": "Get Video Face Scan Status",
+        "description": "How far the face scan has got, for a caller polling its progress.",
+        "operationId": "get_video_face_scan_status_videos_face_scan_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FaceScanStatusResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/videos/purge-frame-cache": {
       "post": {
         "tags": [
@@ -2931,6 +3005,11 @@
           "face_count": {
             "type": "integer",
             "title": "Face Count"
+          },
+          "video_count": {
+            "type": "integer",
+            "title": "Video Count",
+            "default": 0
           }
         },
         "type": "object",
@@ -3244,6 +3323,61 @@
         ],
         "title": "ErrorResponseEnvelope",
         "description": "How an ErrorResponse actually reaches the client.\n\nHTTPException nests whatever it is given under `detail`, so documenting\nErrorResponse alone would describe a shape no client ever receives."
+      },
+      "FaceScanStatusData": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "scanned": {
+            "type": "integer",
+            "title": "Scanned"
+          },
+          "pending": {
+            "type": "integer",
+            "title": "Pending"
+          },
+          "running": {
+            "type": "boolean",
+            "title": "Running",
+            "default": false
+          },
+          "failed": {
+            "type": "boolean",
+            "title": "Failed",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "scanned",
+          "pending"
+        ],
+        "title": "FaceScanStatusData"
+      },
+      "FaceScanStatusResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/FaceScanStatusData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "FaceScanStatusResponse"
       },
       "FaceSearchRequest": {
         "properties": {
@@ -3640,6 +3774,19 @@
           "total_images": {
             "type": "integer",
             "title": "Total Images"
+          },
+          "videos": {
+            "items": {
+              "$ref": "#/components/schemas/VideoData"
+            },
+            "type": "array",
+            "title": "Videos",
+            "default": []
+          },
+          "total_videos": {
+            "type": "integer",
+            "title": "Total Videos",
+            "default": 0
           }
         },
         "type": "object",
@@ -5255,6 +5402,19 @@
           "match_mode": {
             "type": "string",
             "title": "Match Mode"
+          },
+          "videos": {
+            "items": {
+              "$ref": "#/components/schemas/MultiPersonSearchVideo"
+            },
+            "type": "array",
+            "title": "Videos",
+            "default": []
+          },
+          "total_videos": {
+            "type": "integer",
+            "title": "Total Videos",
+            "default": 0
           }
         },
         "type": "object",
@@ -5375,6 +5535,81 @@
           "success"
         ],
         "title": "MultiPersonSearchResponse"
+      },
+      "MultiPersonSearchVideo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "folder_id": {
+            "type": "string",
+            "title": "Folder Id"
+          },
+          "thumbnailPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnailpath"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/VideoMetadataModel"
+          },
+          "isFavourite": {
+            "type": "boolean",
+            "title": "Isfavourite"
+          },
+          "favouritedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Favouritedat"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "match_count": {
+            "type": "integer",
+            "title": "Match Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "folder_id",
+          "thumbnailPath",
+          "metadata",
+          "isFavourite",
+          "match_count"
+        ],
+        "title": "MultiPersonSearchVideo",
+        "description": "A matching video, as the videos routes return them plus the rank."
       },
       "PurgeFrameCacheResponse": {
         "properties": {
@@ -6205,6 +6440,17 @@
             ],
             "title": "Video Frame Interval"
           },
+          "Video_Face_Detection": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Face Detection"
+          },
           "memories": {
             "anyOf": [
               {
@@ -6266,6 +6512,11 @@
             "minimum": 0.5,
             "title": "Video Frame Interval",
             "default": 5.0
+          },
+          "Video_Face_Detection": {
+            "type": "boolean",
+            "title": "Video Face Detection",
+            "default": false
           },
           "memories": {
             "$ref": "#/components/schemas/MemoriesPreferences"
@@ -6375,7 +6626,8 @@
           "metadata",
           "isFavourite"
         ],
-        "title": "VideoData"
+        "title": "VideoData",
+        "description": "One video as every route returns it: the videos listing, semantic search\nand the face cluster surfaces all hand the frontend this shape."
       },
       "VideoMetadataModel": {
         "properties": {

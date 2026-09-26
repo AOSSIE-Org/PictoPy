@@ -17,6 +17,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          # MyPy compares the exact PR base and head commits below.
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Markdown lint
@@ -56,6 +58,8 @@ jobs:
           pip install -r requirements-lint.txt
 
       - name: Run Linters
+        env:
+          SKIP: mypy-backend,mypy-sync-microservice
         run: |
           cd frontend
           npm run lint:check
@@ -66,6 +70,37 @@ jobs:
           cd ..
           cd frontend/src-tauri
           cargo fmt -- --check
+
+      - name: Run MyPy on changed Python files
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if ! git rev-parse --verify --quiet "${BASE_SHA}^{commit}" > /dev/null || \
+            ! git rev-parse --verify --quiet "${HEAD_SHA}^{commit}" > /dev/null; then
+            echo "Unable to resolve pull request commits for MyPy."
+            exit 1
+          fi
+
+          mapfile -t backend_files < <(
+            git diff --name-only --diff-filter=ACMR "$BASE_SHA...$HEAD_SHA" -- ':(glob)backend/**/*.py'
+          )
+          mapfile -t sync_files < <(
+            git diff --name-only --diff-filter=ACMR "$BASE_SHA...$HEAD_SHA" -- ':(glob)sync-microservice/**/*.py'
+          )
+
+          if (( ${#backend_files[@]} > 0 )); then
+            mypy --config-file backend/pyproject.toml "${backend_files[@]}"
+          fi
+
+          if (( ${#sync_files[@]} > 0 )); then
+            mypy --config-file sync-microservice/pyproject.toml "${sync_files[@]}"
+          fi
+
+          if (( ${#backend_files[@]} == 0 && ${#sync_files[@]} == 0 )); then
+            echo "No changed Python files to type check."
+          fi
 
   # Frontend Test Job
   frontend:

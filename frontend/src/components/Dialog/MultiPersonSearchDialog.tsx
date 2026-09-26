@@ -13,7 +13,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PersonAvatar } from '@/components/PersonAvatar';
-import { getPersonName, getPhotoCountText } from '@/utils/personUtils';
+import {
+  facePhotoToImage,
+  getPersonName,
+  getPhotoCountText,
+} from '@/utils/personUtils';
 import { Switch } from '@/components/ui/switch';
 import { usePictoMutation } from '@/hooks/useQueryExtension';
 import {
@@ -21,9 +25,9 @@ import {
   MultiPersonSearchRequest,
 } from '@/api/api-functions/face_clusters';
 import { setImages } from '@/features/imageSlice';
+import { setVideos } from '@/features/videoSlice';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
-import type { Image } from '@/types/Media';
 
 interface MultiPersonSearchDialogProps {
   open: boolean;
@@ -52,27 +56,21 @@ export function MultiPersonSearchDialog({
       fetchMultiPersonSearch(req),
     onSuccess: (data) => {
       const images = data?.data?.images;
+      const videos = data?.data?.videos ?? [];
       dispatch(hideLoader());
 
-      if (!images || images.length === 0) {
+      if ((!images || images.length === 0) && videos.length === 0) {
         dispatch(
           showInfoDialog({
             title: 'No Matches Found',
-            message: 'No photos found for the selected people.',
+            message: 'No photos or videos found for the selected people.',
             variant: 'info',
           }),
         );
         return;
       }
 
-      const mappedImages = images.map((img: any) => ({
-        id: img.id,
-        path: img.path,
-        thumbnailPath: img.thumbnailPath || '',
-        metadata: img.metadata,
-        folder_id: '',
-        isTagged: true,
-      })) as Image[];
+      const mappedImages = (images ?? []).map(facePhotoToImage);
 
       const selectedNames = [...selectedIds]
         .map((id) => {
@@ -82,6 +80,7 @@ export function MultiPersonSearchDialog({
         .filter((name): name is string => name !== null);
 
       dispatch(setImages(mappedImages));
+      dispatch(setVideos(videos));
       onSearchActivated?.(selectedNames, matchMode);
       onOpenChange(false);
     },
@@ -109,7 +108,7 @@ export function MultiPersonSearchDialog({
         <DialogHeader>
           <DialogTitle>Search by Multiple People</DialogTitle>
           <DialogDescription>
-            Select one or more people to find photos containing them.
+            Select one or more people to find photos and videos containing them.
           </DialogDescription>
         </DialogHeader>
 
@@ -148,8 +147,8 @@ export function MultiPersonSearchDialog({
           </div>
           <p className="text-muted-foreground mt-1.5 text-xs">
             {matchMode === 'match_any'
-              ? 'Photos containing ANY of the selected people'
-              : 'Photos containing ALL of the selected people'}
+              ? 'Photos and videos containing ANY of the selected people'
+              : 'Photos and videos containing ALL of the selected people'}
           </p>
         </div>
 
@@ -224,7 +223,10 @@ export function MultiPersonSearchDialog({
                       {getPersonName(cluster)}
                     </span>
                     <span className="text-muted-foreground text-[10px]">
-                      {getPhotoCountText(cluster.face_count)}
+                      {getPhotoCountText(
+                        cluster.face_count,
+                        cluster.video_count,
+                      )}
                     </span>
                   </button>
                 );
