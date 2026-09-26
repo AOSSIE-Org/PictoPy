@@ -56,7 +56,9 @@ const DialogCheckbox: React.FC<DialogCheckboxProps> = ({
 }) => (
   <div
     className={`flex gap-3 ${hint ? 'items-start' : 'items-center'} ${
-      card ? 'rounded-xl border border-border/60 p-4 transition-colors hover:border-border' : ''
+      card
+        ? 'border-border/60 hover:border-border rounded-xl border p-4 transition-colors'
+        : ''
     }`}
   >
     <input
@@ -67,7 +69,10 @@ const DialogCheckbox: React.FC<DialogCheckboxProps> = ({
       className="accent-primary mt-0.5 h-4 w-4 cursor-pointer"
     />
     <div className="space-y-1">
-      <Label htmlFor={id} className={`cursor-pointer ${card ? 'text-sm font-medium' : 'text-sm'}`}>
+      <Label
+        htmlFor={id}
+        className={`cursor-pointer ${card ? 'text-sm font-medium' : 'text-sm'}`}
+      >
         {label}
       </Label>
       {hint && (
@@ -109,7 +114,9 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         <DialogHeader className="space-y-3">
           <span
             className={`flex h-11 w-11 items-center justify-center rounded-full ${
-              destructive ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'
+              destructive
+                ? 'bg-destructive/10 text-destructive'
+                : 'bg-primary/10 text-primary'
             }`}
           >
             {destructive ? (

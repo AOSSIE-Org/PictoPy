@@ -230,24 +230,24 @@ export function MediaView({
       />
 
       <ConfirmDialog
-  open={showDeleteDialog}
-  onOpenChange={setShowDeleteDialog}
-  title="Delete photo"
-  description="Remove this Photo from PictoPy"
-  confirmLabel="Delete"
-  onConfirm={handleConfirmDelete}
-  checkboxLabel="Delete from Computer"
-  checkboxChecked={deleteFromDevice}
-  onCheckboxChange={setDeleteFromDevice}
-  checkboxHint={
-    deleteFromDevice
-      ? 'The file will be permanently deleted from its folder. This cannot be undone.'
-      : 'Removed from your PictoPy gallery. The file stays in its folder.'
-  }
-  checkboxHintDestructive={deleteFromDevice}
-  dontShowAgainChecked={dontShowAgain}
-  onDontShowAgainChange={setDontShowAgain}
-/>
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="Delete photo"
+        description="Remove this Photo from PictoPy"
+        confirmLabel="Delete"
+        onConfirm={handleConfirmDelete}
+        checkboxLabel="Delete from Computer"
+        checkboxChecked={deleteFromDevice}
+        onCheckboxChange={setDeleteFromDevice}
+        checkboxHint={
+          deleteFromDevice
+            ? 'The file will be permanently deleted from its folder. This cannot be undone.'
+            : 'Removed from your PictoPy gallery. The file stays in its folder.'
+        }
+        checkboxHintDestructive={deleteFromDevice}
+        dontShowAgainChecked={dontShowAgain}
+        onDontShowAgainChange={setDontShowAgain}
+      />
 
       {/* Main viewer area */}
       <div
