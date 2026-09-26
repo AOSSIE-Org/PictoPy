@@ -4,13 +4,10 @@ import {
   ChevronDown,
   Zap,
   Trash2,
-  Video,
+  Clapperboard,
   HardDrive,
   Sparkles,
-  ClockFading,
   Bell,
-  ScanFace,
-  Users,
 } from 'lucide-react';
 
 import { Label } from '@/components/ui/label';
@@ -29,13 +26,9 @@ import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
 import { useUserPreferences } from '@/hooks/useUserPreferences';
-import { usePictoQuery } from '@/hooks/useQueryExtension';
+import { useDeleteFromComputerPreference } from '@/hooks/useDeleteFromComputerPreference';
 import type { UpdateUserPreferencesRequest } from '@/api/api-functions/user_preferences';
-import {
-  getVideoFaceScanStatus,
-  purgeVideoFrameCache,
-  startVideoFaceScan,
-} from '@/api/api-functions';
+import { purgeVideoFrameCache } from '@/api/api-functions';
 import SettingsCard from './SettingsCard';
 import { cn, formatTierLabel } from '@/lib/utils';
 import { BACKEND_URL } from '@/config/Backend';
@@ -63,18 +56,18 @@ const UserPreferencesCard: React.FC = () => {
     updateYoloModelSize,
     toggleGpuAcceleration,
     updateVideoFrameInterval,
-    toggleVideoFaceDetection,
     updateMemoriesPreferences,
     isUpdating,
     refetch,
   } = useUserPreferences();
+  const { deleteFromComputer, setDeleteFromComputer } =
+    useDeleteFromComputerPreference();
   const [installedTiers, setInstalledTiers] = useState<ModelTier[]>([]);
   const [loadingTiers, setLoadingTiers] = useState(true);
   const [tierFetchError, setTierFetchError] = useState<string | null>(null);
   const [purgeState, setPurgeState] = useState<'idle' | 'purging' | 'done'>(
     'idle',
   );
-  const [startingScan, setStartingScan] = useState(false);
   // Collapsed by default: video tagging is a niche setting, so it stays out
   // of the way until a user with videos goes looking for it.
   const [videoSettingsOpen, setVideoSettingsOpen] = useState(false);
@@ -97,35 +90,6 @@ const UserPreferencesCard: React.FC = () => {
       setPurgeState('idle');
     }
   }, []);
-
-  // Counted in the database rather than reported by the pass itself, so the
-  // numbers are still right for a scan a folder sync started.
-  const faceScanQuery = usePictoQuery({
-    queryKey: ['videos', 'face-scan-status'],
-    queryFn: getVideoFaceScanStatus,
-    enabled: preferences.Video_Face_Detection,
-    refetchInterval: (query) =>
-      query.state.data?.data?.running ? 2000 : false,
-    refetchIntervalInBackground: true,
-  });
-  const faceScan = faceScanQuery.successData;
-  const pendingScans = faceScan?.pending ?? 0;
-  // The backend reports whether its scan is running or died, so a crashed
-  // worker ends the polling and re-enables the button instead of hanging.
-  const scanning = faceScan?.running ?? false;
-  const scanFailed = (faceScan?.failed ?? false) && pendingScans > 0;
-  const everythingScanned = pendingScans === 0 && (faceScan?.total ?? 0) > 0;
-
-  const handleScanVideoFaces = useCallback(async () => {
-    setStartingScan(true);
-    try {
-      await startVideoFaceScan();
-    } catch (err) {
-      console.error('Failed to start the video face scan', err);
-    }
-    await faceScanQuery.refetch();
-    setStartingScan(false);
-  }, [faceScanQuery]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -310,6 +274,32 @@ const UserPreferencesCard: React.FC = () => {
           </div>
         </div>
 
+        {/* Delete From Computer Setting */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <Label
+              htmlFor="delete-from-computer"
+              className="text-foreground text-sm font-medium"
+            >
+              Delete From Computer
+            </Label>
+            <p className="text-muted-foreground text-xs">
+              When on, deleting a photo also removes the original file from
+              this device by default. You can still override this per photo
+              when deleting.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Trash2 className="h-4 w-4 text-gray-500" />
+            <Switch
+              className="cursor-pointer"
+              id="delete-from-computer"
+              checked={deleteFromComputer}
+              onCheckedChange={setDeleteFromComputer}
+            />
+          </div>
+        </div>
+
         {/* Video Tagging: a collapsible group so these niche controls don't
             clutter the panel for users who only have photos. */}
         <div className="border-border rounded-lg border">
@@ -321,7 +311,7 @@ const UserPreferencesCard: React.FC = () => {
             className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg p-4 text-left transition-colors"
           >
             <div className="flex items-start gap-3">
-              <Video className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
+              <Clapperboard className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
               <div className="space-y-1">
                 <span className="text-foreground text-sm font-medium">
                   Video Tagging
@@ -386,69 +376,6 @@ const UserPreferencesCard: React.FC = () => {
                 </DropdownMenu>
               </div>
 
-              {/* Finding people in videos */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <Label
-                    htmlFor="video-face-detection"
-                    className="text-foreground text-sm font-medium"
-                  >
-                    Find People in Videos
-                  </Label>
-                  <p className="text-muted-foreground text-xs">
-                    Look for faces in video keyframes so videos show up under
-                    the people in them. Slower to tag.
-                  </p>
-                </div>
-                <Switch
-                  className="cursor-pointer"
-                  id="video-face-detection"
-                  checked={preferences.Video_Face_Detection}
-                  onCheckedChange={() =>
-                    toggleVideoFaceDetection().catch(console.warn)
-                  }
-                />
-              </div>
-
-              {/* Catching up videos tagged before the setting was turned on.
-                  Hidden while it is off, when there is nothing to scan for. */}
-              {preferences.Video_Face_Detection && (
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <Label className="text-foreground text-sm font-medium">
-                      Existing Videos
-                    </Label>
-                    <p className="text-muted-foreground text-xs">
-                      {scanning
-                        ? `Looking for people — ${faceScan?.scanned ?? 0} of ${faceScan?.total ?? 0} done. This takes a while and keeps going in the background.`
-                        : everythingScanned
-                          ? `All ${faceScan?.total} videos have been searched for people.`
-                          : scanFailed
-                            ? `The last scan stopped with an error. ${pendingScans} video(s) still to search.`
-                            : `${pendingScans} video(s) tagged before this was turned on have not been searched for people yet.`}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-gray-500" />
-                    <Button
-                      variant="outline"
-                      className="cursor-pointer"
-                      disabled={startingScan || scanning || everythingScanned}
-                      onClick={handleScanVideoFaces}
-                    >
-                      <ScanFace className="mr-2 h-4 w-4" />
-                      {scanning
-                        ? 'Scanning...'
-                        : everythingScanned
-                          ? 'All scanned'
-                          : scanFailed
-                            ? 'Retry scan'
-                            : 'Scan videos'}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
               {/* Video Frame Cache */}
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
@@ -492,7 +419,7 @@ const UserPreferencesCard: React.FC = () => {
             className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg p-4 text-left transition-colors"
           >
             <div className="flex items-start gap-3">
-              <ClockFading className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
+              <Sparkles className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
               <div className="space-y-1">
                 <span className="text-foreground text-sm font-medium">
                   Memories

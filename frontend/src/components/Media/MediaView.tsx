@@ -21,6 +21,12 @@ import { useSlideshow } from '@/hooks/useSlideshow';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 import { useToggleFav } from '../../hooks/useToggleFav';
 import { useDeleteImages } from '@/hooks/useDeleteImages';
+import {
+  getDeleteFromComputerPreference,
+  setDeleteFromComputerPreference,
+  getSkipDeleteConfirmationPreference,
+  setSkipDeleteConfirmationPreference,
+} from '@/hooks/useDeleteFromComputerPreference';
 import { useLocation } from 'react-router';
 import { ROUTES } from '@/constants/routes';
 
@@ -52,6 +58,7 @@ export function MediaView({
   const [resetSignal, setResetSignal] = useState(0);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteFromDevice, setDeleteFromDevice] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
 
   // Custom hooks
   const { viewState, handlers } = useImageViewControls();
@@ -92,16 +99,35 @@ export function MediaView({
   const { toggleFavourite } = useToggleFav();
   const { deleteImages } = useDeleteImages();
 
-  /** Start unticked every time, so a previous tick never causes a file deletion. */
+  /**
+   * Opens the delete dialog — unless "Don't show again" was checked before,
+   * in which case it deletes immediately using the Settings preference,
+   * with no dialog shown at all.
+   */
   const handleOpenDeleteDialog = useCallback(() => {
-    setDeleteFromDevice(false);
+    if (getSkipDeleteConfirmationPreference()) {
+      if (!currentImage?.id) return;
+      deleteImages({
+        imageIds: [currentImage.id],
+        deleteFromDevice: getDeleteFromComputerPreference(),
+      });
+      return;
+    }
+    setDeleteFromDevice(getDeleteFromComputerPreference());
+    setDontShowAgain(false);
     setShowDeleteDialog(true);
-  }, []);
+  }, [currentImage, deleteImages]);
 
   const handleConfirmDelete = useCallback(() => {
     if (!currentImage?.id) return;
+    if (dontShowAgain) {
+      setSkipDeleteConfirmationPreference(true);
+      // This choice becomes the default for every future silent delete, so
+      // keep the Settings toggle in sync with it.
+      setDeleteFromComputerPreference(deleteFromDevice);
+    }
     deleteImages({ imageIds: [currentImage.id], deleteFromDevice });
-  }, [currentImage, deleteImages, deleteFromDevice]);
+  }, [currentImage, deleteImages, deleteFromDevice, dontShowAgain]);
 
   // Loop to first image handler for slideshow
   const handleLoopToStart = useCallback(() => {
@@ -204,22 +230,24 @@ export function MediaView({
       />
 
       <ConfirmDialog
-        open={showDeleteDialog}
-        onOpenChange={setShowDeleteDialog}
-        title="Delete photo"
-        description="Remove this Photo from PictoPy"
-        confirmLabel="Delete"
-        onConfirm={handleConfirmDelete}
-        checkboxLabel="Delete from Computer"
-        checkboxChecked={deleteFromDevice}
-        onCheckboxChange={setDeleteFromDevice}
-        checkboxHint={
-          deleteFromDevice
-            ? 'The file will be permanently deleted from its folder. This cannot be undone.'
-            : 'Removed from your PictoPy gallery. The file stays in its folder.'
-        }
-        checkboxHintDestructive={deleteFromDevice}
-      />
+  open={showDeleteDialog}
+  onOpenChange={setShowDeleteDialog}
+  title="Delete photo"
+  description="Remove this Photo from PictoPy"
+  confirmLabel="Delete"
+  onConfirm={handleConfirmDelete}
+  checkboxLabel="Delete from Computer"
+  checkboxChecked={deleteFromDevice}
+  onCheckboxChange={setDeleteFromDevice}
+  checkboxHint={
+    deleteFromDevice
+      ? 'The file will be permanently deleted from its folder. This cannot be undone.'
+      : 'Removed from your PictoPy gallery. The file stays in its folder.'
+  }
+  checkboxHintDestructive={deleteFromDevice}
+  dontShowAgainChecked={dontShowAgain}
+  onDontShowAgainChange={setDontShowAgain}
+/>
 
       {/* Main viewer area */}
       <div
