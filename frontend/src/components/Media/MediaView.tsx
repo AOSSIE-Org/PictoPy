@@ -120,11 +120,11 @@ export function MediaView({
 
   const handleConfirmDelete = useCallback(() => {
     if (!currentImage?.id) return;
+    // Whatever was chosen in the dialog becomes the new default for next
+    // time, independent of whether "don't show again" was also checked.
+    setDeleteFromComputerPreference(deleteFromDevice);
     if (dontShowAgain) {
       setSkipDeleteConfirmationPreference(true);
-      // This choice becomes the default for every future silent delete, so
-      // keep the Settings toggle in sync with it.
-      setDeleteFromComputerPreference(deleteFromDevice);
     }
     deleteImages({ imageIds: [currentImage.id], deleteFromDevice });
   }, [currentImage, deleteImages, deleteFromDevice, dontShowAgain]);
@@ -214,7 +214,7 @@ export function MediaView({
   // console.log(currentImage);
   const currentImageAlt = `image-${currentViewIndex}`;
   return (
-    <div className="fixed inset-0 z-50 mt-0 flex flex-col bg-gradient-to-b from-white/95 to-white/98 backdrop-blur-lg dark:from-black/95 dark:to-black/98">
+    <div className="fixed inset-0 z-50 mt-0 flex flex-col bg-linear-to-b from-white/95 to-white/98 backdrop-blur-lg dark:from-black/95 dark:to-black/98">
       {/* Controls */}
       <MediaViewControls
         showInfo={showInfo}

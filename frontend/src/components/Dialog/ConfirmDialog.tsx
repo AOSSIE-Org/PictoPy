@@ -66,6 +66,7 @@ const DialogCheckbox: React.FC<DialogCheckboxProps> = ({
       type="checkbox"
       checked={checked}
       onChange={(e) => onChange(e.target.checked)}
+      aria-describedby={hint ? `${id}-hint` : undefined}
       className="accent-primary mt-0.5 h-4 w-4 cursor-pointer"
     />
     <div className="space-y-1">
@@ -77,6 +78,7 @@ const DialogCheckbox: React.FC<DialogCheckboxProps> = ({
       </Label>
       {hint && (
         <p
+          id={`${id}-hint`}
           className={
             hintDestructive
               ? 'text-destructive text-sm leading-relaxed'
@@ -110,7 +112,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full !max-w-[520px] rounded-2xl p-7">
+      <DialogContent className="w-full max-w-[520px]! rounded-2xl p-7">
         <DialogHeader className="space-y-3">
           <span
             className={`flex h-11 w-11 items-center justify-center rounded-full ${
