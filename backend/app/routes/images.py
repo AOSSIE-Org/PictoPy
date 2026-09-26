@@ -418,7 +418,7 @@ def delete_images(request: DeleteImagesRequest):
             detail=ErrorResponse(
                 success=False,
                 error="Internal server error",
-                message=f"Unable to delete images: {e!s}",
+                message="Unable to delete images.",
             ).model_dump(),
         )
 

@@ -173,10 +173,28 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
     cursor = conn.cursor()
 
     try:
+        # excluded_image_paths stores normcased+abspath'd paths (see
+        # _normalise_path / db_exclude_image_paths); image_records carry the
+        # raw path the scan walked off disk, so the exclusion check below
+        # needs its own normalised copy to actually match.
+        params = [
+            {**record, "path_norm": _normalise_path(record["path"])}
+            for record in image_records
+        ]
         cursor.executemany(
             """
             INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged, isEmbedded, latitude, longitude, captured_at)
-            VALUES (:id, :path, :folder_id, :thumbnailPath, :metadata, :isTagged, COALESCE(:isEmbedded, 0), :latitude, :longitude, :captured_at)
+            SELECT :id, :path, :folder_id, :thumbnailPath, :metadata, :isTagged, COALESCE(:isEmbedded, 0), :latitude, :longitude, :captured_at
+            WHERE NOT EXISTS (
+                -- Recheck exclusion here, inside this insert's own
+                -- transaction, instead of trusting the caller's snapshot from
+                -- db_get_excluded_image_paths(). SQLite serializes writers,
+                -- so whichever of this insert or a concurrent
+                -- db_exclude_image_paths() commits first is what the other
+                -- one sees -- closing the TOCTOU window where a scan could
+                -- re-insert a photo the user just deleted.
+                SELECT 1 FROM excluded_image_paths WHERE path = :path_norm
+            )
             ON CONFLICT(path) DO UPDATE SET
                 folder_id=excluded.folder_id,
                 thumbnailPath=excluded.thumbnailPath,
@@ -196,7 +214,7 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
                 -- overwrite a bad one a previous extractor guessed.
                 captured_at=excluded.captured_at
             """,
-            image_records,
+            params,
         )
         conn.commit()
         return True
