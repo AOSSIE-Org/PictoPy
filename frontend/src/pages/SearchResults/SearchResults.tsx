@@ -36,7 +36,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, AlertCircle, Users } from 'lucide-react';
 import { resolvePeopleQuery } from '@/utils/peopleQuery';
-import { formatPeopleTitle, getPersonName } from '@/utils/personUtils';
+import {
+  facePhotoToImage,
+  formatPeopleTitle,
+  getPersonName,
+} from '@/utils/personUtils';
 
 interface TagSearchResult extends APIResponse {
   resultType: 'tag';
@@ -284,21 +288,9 @@ export const SearchResults = () => {
       dispatch(hideLoader());
     } else if (isPeopleSuccess) {
       setPeopleSearchError(null);
-      const images = (peopleData?.data?.images ?? []) as Array<
-        Partial<Image> & { id: string; path: string }
-      >;
-      dispatch(
-        setImages(
-          images.map((img) => ({
-            id: img.id,
-            path: img.path,
-            thumbnailPath: img.thumbnailPath || '',
-            metadata: img.metadata,
-            folder_id: '',
-            isTagged: true,
-          })) as Image[],
-        ),
-      );
+      const images = peopleData?.data?.images ?? [];
+      dispatch(setImages(images.map(facePhotoToImage)));
+      dispatch(setVideos(peopleData?.data?.videos ?? []));
       dispatch(hideLoader());
     }
 
@@ -362,6 +354,24 @@ export const SearchResults = () => {
     dispatch,
   ]);
 
+  // Shared by people search and tag/semantic search, which both return videos
+  const videoSection = displayVideos.length > 0 && (
+    <>
+      <h2 className="mb-4 text-xl font-semibold">Videos</h2>
+      <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        {displayVideos.map((video, index) => (
+          <div key={video.id} className="group relative">
+            <VideoCard
+              video={video}
+              className="w-full transition-transform duration-200 group-hover:scale-105"
+              onClick={() => dispatch(setCurrentVideoViewIndex(index))}
+            />
+          </div>
+        ))}
+      </div>
+    </>
+  );
+
   return (
     <div>
       <div className="my-6 flex items-center justify-between">
@@ -382,8 +392,8 @@ export const SearchResults = () => {
             <Users className="text-muted-foreground h-4 w-4 shrink-0" />
             <span className="text-muted-foreground text-sm">
               {peopleQuery.matchMode === 'match_any'
-                ? 'Photos with any of:'
-                : 'Photos with all of:'}
+                ? 'Photos and videos with any of:'
+                : 'Photos and videos with all of:'}
             </span>
             {peopleQuery.matched.map((cluster) => (
               <Badge
@@ -447,7 +457,6 @@ export const SearchResults = () => {
           <p>Please enter a search term to find photos and videos.</p>
         </div>
       ) : isPeopleQuery ? (
-        // People search is face-cluster backed, so it covers photos only.
         peopleSearchError ? (
           <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
             <AlertCircle className="text-destructive mb-4 h-12 w-12" />
@@ -456,26 +465,31 @@ export const SearchResults = () => {
             </h3>
             <p>{peopleSearchError}</p>
           </div>
-        ) : displayImages.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {displayImages.map((image, index) => (
-              <div key={image.id} className="group relative">
-                <ImageCard
-                  image={image}
-                  imageIndex={index}
-                  className="w-full transition-transform duration-200 group-hover:scale-105"
-                  onClick={() => dispatch(setCurrentViewIndex(index))}
-                />
+        ) : displayImages.length > 0 || displayVideos.length > 0 ? (
+          <>
+            {displayImages.length > 0 && (
+              <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {displayImages.map((image, index) => (
+                  <div key={image.id} className="group relative">
+                    <ImageCard
+                      image={image}
+                      imageIndex={index}
+                      className="w-full transition-transform duration-200 group-hover:scale-105"
+                      onClick={() => dispatch(setCurrentViewIndex(index))}
+                    />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+            {videoSection}
+          </>
         ) : (
           isPeopleSuccess && (
             <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
               <p>
                 {peopleQuery?.matchMode === 'match_all'
-                  ? 'No photos found with all of these people in them.'
-                  : 'No photos found with these people in them.'}
+                  ? 'No photos or videos found with all of these people in them.'
+                  : 'No photos or videos found with these people in them.'}
               </p>
             </div>
           )
@@ -523,24 +537,7 @@ export const SearchResults = () => {
               <span>Couldn't load video results: {videoSearchError}</span>
             </div>
           ) : (
-            displayVideos.length > 0 && (
-              <>
-                <h2 className="mb-4 text-xl font-semibold">Videos</h2>
-                <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                  {displayVideos.map((video, index) => (
-                    <div key={video.id} className="group relative">
-                      <VideoCard
-                        video={video}
-                        className="w-full transition-transform duration-200 group-hover:scale-105"
-                        onClick={() =>
-                          dispatch(setCurrentVideoViewIndex(index))
-                        }
-                      />
-                    </div>
-                  ))}
-                </div>
-              </>
-            )
+            videoSection
           )}
 
           {/* Both searches succeeded but nothing matched. */}

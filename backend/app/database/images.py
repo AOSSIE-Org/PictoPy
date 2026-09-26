@@ -1,4 +1,5 @@
 # Standard library imports
+import os
 import sqlite3
 from typing import Any, Dict, List, Mapping, Tuple, TypedDict, Union, Optional
 import json
@@ -40,6 +41,7 @@ class ImageRecord(TypedDict, total=False):
     latitude: Optional[float]
     longitude: Optional[float]
     captured_at: Optional[datetime]
+    favouritedAt: Optional[datetime]
 
 
 class UntaggedImageRecord(TypedDict):
@@ -50,6 +52,14 @@ class UntaggedImageRecord(TypedDict):
     folder_id: FolderId
     thumbnailPath: str
     metadata: Mapping[str, Any]
+
+
+class ImageSyncState(TypedDict):
+    """What a rescan needs in order to tell an unchanged file from a new one."""
+
+    thumbnailPath: Optional[str]
+    file_size: Optional[int]
+    file_mtime: Optional[int]
 
 
 ImageClassPair = Tuple[ImageId, ClassId]
@@ -81,6 +91,7 @@ def db_create_images_table() -> None:
             latitude REAL,
             longitude REAL,
             captured_at DATETIME,
+            favouritedAt DATETIME,
             FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
         )
     """
@@ -97,6 +108,13 @@ def db_create_images_table() -> None:
     cursor.execute(
         "CREATE INDEX IF NOT EXISTS ix_images_favourite_captured_at ON images(isFavourite, captured_at)"
     )
+
+    # favouritedAt: when the image was last favourited (NULL if never, or
+    # pre-dates this column). Guarded ALTER because shipped databases predate
+    # it and CREATE IF NOT EXISTS won't add it.
+    cursor.execute("PRAGMA table_info(images)")
+    if "favouritedAt" not in {row[1] for row in cursor.fetchall()}:
+        cursor.execute("ALTER TABLE images ADD COLUMN favouritedAt DATETIME")
 
     # Create new image_classes junction table
     cursor.execute(
@@ -184,17 +202,18 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
     try:
         # Build the query with optional WHERE clause
         query = """
-            SELECT 
-                i.id, 
-                i.path, 
-                i.folder_id, 
-                i.thumbnailPath, 
-                i.metadata, 
+            SELECT
+                i.id,
+                i.path,
+                i.folder_id,
+                i.thumbnailPath,
+                i.metadata,
                 i.isTagged,
                 i.isFavourite,
                 i.latitude,
                 i.longitude,
                 i.captured_at,
+                i.favouritedAt,
                 m.name as tag_name
             FROM images i
             LEFT JOIN image_classes_display ic ON i.id = ic.image_id
@@ -225,6 +244,7 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
             latitude,
             longitude,
             captured_at,
+            favourited_at,
             tag_name,
         ) in results:
             if image_id not in images_dict:
@@ -246,6 +266,7 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
                     "captured_at": (
                         captured_at if captured_at else None
                     ),  # SQLite returns string
+                    "favouritedAt": favourited_at if favourited_at else None,
                     "tags": [],
                 }
 
@@ -466,6 +487,72 @@ def db_get_images_by_folder_ids(
         conn.close()
 
 
+def _as_int(value: Any) -> Optional[int]:
+    """A metadata blob is whatever a past scan wrote; non-numeric means unknown."""
+    try:
+        return int(value)
+    except (TypeError, ValueError, OverflowError):
+        # OverflowError is not a ValueError: JSON reads 1e309 as inf, and this
+        # query runs once for every folder, so letting it escape would abort the
+        # whole scan rather than one file.
+        return None
+
+
+def db_get_image_sync_state_by_folder_ids(
+    folder_ids: List[FolderId],
+) -> Dict[ImagePath, ImageSyncState]:
+    """
+    Map stored image paths to the size and mtime recorded when each was last read.
+
+    Keyed by normcased absolute path, because the caller matches against paths it
+    just walked off disk and Windows hands back inconsistent casing.
+    """
+    if not folder_ids:
+        return {}
+
+    conn = _connect()
+    cursor = conn.cursor()
+    state: Dict[ImagePath, ImageSyncState] = {}
+
+    try:
+        placeholders = ",".join("?" for _ in folder_ids)
+        cursor.execute(
+            f"""
+            SELECT path, thumbnailPath, metadata
+            FROM images
+            WHERE folder_id IN ({placeholders})
+            """,
+            folder_ids,
+        )
+
+        for path, thumbnail_path, metadata in cursor.fetchall():
+            if not path:
+                continue
+
+            parsed: Mapping[str, Any] = {}
+            if metadata:
+                try:
+                    loaded = json.loads(metadata)
+                    if isinstance(loaded, dict):
+                        parsed = loaded
+                except (json.JSONDecodeError, TypeError):
+                    # An unreadable blob just means this row gets re-read.
+                    pass
+
+            state[os.path.normcase(os.path.abspath(path))] = ImageSyncState(
+                thumbnailPath=thumbnail_path,
+                file_size=_as_int(parsed.get("file_size")),
+                file_mtime=_as_int(parsed.get("file_mtime")),
+            )
+
+        return state
+    except sqlite3.Error as e:
+        logger.error(f"Error getting image sync state by folder IDs: {e}")
+        return {}
+    finally:
+        conn.close()
+
+
 def db_delete_images_by_ids(image_ids: List[ImageId]) -> bool:
     """
     Delete multiple images from the database by their IDs.
@@ -511,7 +598,11 @@ def db_toggle_image_favourite_status(image_id: str) -> bool:
         cursor.execute(
             """
             UPDATE images
-            SET isFavourite = CASE WHEN isFavourite = 1 THEN 0 ELSE 1 END
+            SET favouritedAt = CASE
+                    WHEN isFavourite = 1 THEN favouritedAt
+                    ELSE CURRENT_TIMESTAMP
+                END,
+                isFavourite = CASE WHEN isFavourite = 1 THEN 0 ELSE 1 END
             WHERE id = ?
             """,
             (image_id,),
@@ -565,7 +656,7 @@ def _group_image_rows_with_tags(
     rows: List[Tuple], images_dict: Dict[str, dict]
 ) -> None:
     """
-    Group flat image+tag join rows (the shared 11-column SELECT shape used by
+    Group flat image+tag join rows (the shared 12-column SELECT shape used by
     db_search_images_by_tag and db_get_images_by_ids) into images_dict, keyed
     by image_id, aggregating tag_name into a deduplicated "tags" list.
     Mutates images_dict in place so callers can accumulate across chunks.
@@ -581,6 +672,7 @@ def _group_image_rows_with_tags(
         latitude,
         longitude,
         captured_at,
+        favourited_at,
         tag_name_result,
     ) in rows:
         if image_id not in images_dict:
@@ -595,6 +687,7 @@ def _group_image_rows_with_tags(
                 "latitude": latitude,
                 "longitude": longitude,
                 "captured_at": captured_at if captured_at else None,
+                "favouritedAt": favourited_at if favourited_at else None,
                 "tags": [],
             }
 
@@ -633,6 +726,7 @@ def db_search_images_by_tag(tag_name: str) -> List[dict]:
                 i.latitude,
                 i.longitude,
                 i.captured_at,
+                i.favouritedAt,
                 m.name as tag_name
             FROM images i
             LEFT JOIN image_classes_display ic ON i.id = ic.image_id
@@ -691,6 +785,7 @@ def db_get_images_by_ids(image_ids: List[str]) -> List[dict]:
                     i.latitude,
                     i.longitude,
                     i.captured_at,
+                    i.favouritedAt,
                     m.name as tag_name
                 FROM images i
                 LEFT JOIN image_classes_display ic ON i.id = ic.image_id

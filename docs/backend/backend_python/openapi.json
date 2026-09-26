@@ -412,19 +412,8 @@
           "Albums"
         ],
         "summary": "Get Albums",
+        "description": "Get all albums. Always returns both locked and unlocked albums.",
         "operationId": "get_albums_albums__get",
-        "parameters": [
-          {
-            "name": "show_hidden",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Show Hidden"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -432,6 +421,35 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/GetAlbumsResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Albums"
+        ],
+        "summary": "Create Album",
+        "operationId": "create_album_albums__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAlbumRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateAlbumResponse"
                 }
               }
             }
@@ -447,22 +465,25 @@
             }
           }
         }
-      },
+      }
+    },
+    "/albums/from-memory": {
       "post": {
         "tags": [
           "Albums"
         ],
-        "summary": "Create Album",
-        "operationId": "create_album_albums__post",
+        "summary": "Create Album From Memory",
+        "description": "Copy a memory's photos into a new album.\n\nThe memory itself is left untouched, so the same one can be converted\nagain under a different name. Any clips are left behind: album_images\nreferences images, and albums have no video support.",
+        "operationId": "create_album_from_memory_albums_from_memory_post",
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateAlbumRequest"
+                "$ref": "#/components/schemas/CreateAlbumFromMemoryRequest"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
@@ -470,7 +491,47 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateAlbumResponse"
+                  "$ref": "#/components/schemas/CreateAlbumFromMemoryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseEnvelope"
                 }
               }
             }
@@ -1244,6 +1305,80 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/videos/scan-faces": {
+      "post": {
+        "tags": [
+          "Videos"
+        ],
+        "summary": "Scan Video Faces",
+        "description": "Start a background pass over videos tagged before finding people in\nvideos was turned on. Returns how many it has to get through.",
+        "operationId": "scan_video_faces_videos_scan_faces_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FaceScanStatusResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/videos/face-scan-status": {
+      "get": {
+        "tags": [
+          "Videos"
+        ],
+        "summary": "Get Video Face Scan Status",
+        "description": "How far the face scan has got, for a caller polling its progress.",
+        "operationId": "get_video_face_scan_status_videos_face_scan_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FaceScanStatusResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__videos__ErrorResponse"
                 }
               }
             }
@@ -2263,6 +2398,211 @@
         }
       }
     },
+    "/share/interfaces": {
+      "get": {
+        "tags": [
+          "Share"
+        ],
+        "summary": "Get Interfaces",
+        "description": "Candidate addresses, best guess first.\n\nMachines with virtual adapters routinely surface several, so the caller is\nexpected to show this list rather than silently trust the first entry.",
+        "operationId": "get_interfaces_share_interfaces_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetInterfacesResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareErrorResponseEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/share/": {
+      "get": {
+        "tags": [
+          "Share"
+        ],
+        "summary": "Get Shares",
+        "operationId": "get_shares_share__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetSharesResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareErrorResponseEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/share/albums/{album_id}": {
+      "post": {
+        "tags": [
+          "Share"
+        ],
+        "summary": "Create Share",
+        "description": "Issue a share token and make sure the network listener is up.\n\nAn album's local lock is deliberately not consulted: locking protects the\nalbum inside PictoPy, while sharing carries its own authorization \u2014 the\noptional password on this request, which is hashed and never read back.",
+        "operationId": "create_share_share_albums__album_id__post",
+        "parameters": [
+          {
+            "name": "album_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Album Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/CreateShareRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateShareResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareErrorResponseEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareErrorResponseEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/share/{token}": {
+      "delete": {
+        "tags": [
+          "Share"
+        ],
+        "summary": "Revoke Share",
+        "operationId": "revoke_share_share__token__delete",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevokeShareResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareErrorResponseEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareErrorResponseEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/models/status": {
       "get": {
         "tags": [
@@ -2582,9 +2922,47 @@
             "type": "string",
             "title": "Description"
           },
-          "is_hidden": {
+          "is_locked": {
             "type": "boolean",
-            "title": "Is Hidden"
+            "title": "Is Locked"
+          },
+          "cover_image_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Image Path"
+          },
+          "image_count": {
+            "type": "integer",
+            "title": "Image Count",
+            "default": 0
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
           }
         },
         "type": "object",
@@ -2592,7 +2970,7 @@
           "album_id",
           "album_name",
           "description",
-          "is_hidden"
+          "is_locked"
         ],
         "title": "Album"
       },
@@ -2627,6 +3005,11 @@
           "face_count": {
             "type": "integer",
             "title": "Face Count"
+          },
+          "video_count": {
+            "type": "integer",
+            "title": "Video Count",
+            "default": 0
           }
         },
         "type": "object",
@@ -2637,6 +3020,66 @@
           "face_count"
         ],
         "title": "ClusterMetadata"
+      },
+      "CreateAlbumFromMemoryData": {
+        "properties": {
+          "album_id": {
+            "type": "string",
+            "title": "Album Id"
+          },
+          "image_count": {
+            "type": "integer",
+            "title": "Image Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "album_id",
+          "image_count"
+        ],
+        "title": "CreateAlbumFromMemoryData"
+      },
+      "CreateAlbumFromMemoryRequest": {
+        "properties": {
+          "memory_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Memory Id"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "memory_id",
+          "name"
+        ],
+        "title": "CreateAlbumFromMemoryRequest"
+      },
+      "CreateAlbumFromMemoryResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/CreateAlbumFromMemoryData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "CreateAlbumFromMemoryResponse"
       },
       "CreateAlbumRequest": {
         "properties": {
@@ -2657,9 +3100,9 @@
             "title": "Description",
             "default": ""
           },
-          "is_hidden": {
+          "is_locked": {
             "type": "boolean",
-            "title": "Is Hidden",
+            "title": "Is Locked",
             "default": false
           },
           "password": {
@@ -2697,6 +3140,58 @@
           "album_id"
         ],
         "title": "CreateAlbumResponse"
+      },
+      "CreateShareRequest": {
+        "properties": {
+          "expires_in_minutes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires In Minutes"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "title": "CreateShareRequest"
+      },
+      "CreateShareResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Share"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "CreateShareResponse"
       },
       "DeleteFoldersData": {
         "properties": {
@@ -2815,6 +3310,74 @@
           "data"
         ],
         "title": "DeleteMemoryResponse"
+      },
+      "ErrorResponseEnvelope": {
+        "properties": {
+          "detail": {
+            "$ref": "#/components/schemas/app__schemas__album__ErrorResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorResponseEnvelope",
+        "description": "How an ErrorResponse actually reaches the client.\n\nHTTPException nests whatever it is given under `detail`, so documenting\nErrorResponse alone would describe a shape no client ever receives."
+      },
+      "FaceScanStatusData": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "scanned": {
+            "type": "integer",
+            "title": "Scanned"
+          },
+          "pending": {
+            "type": "integer",
+            "title": "Pending"
+          },
+          "running": {
+            "type": "boolean",
+            "title": "Running",
+            "default": false
+          },
+          "failed": {
+            "type": "boolean",
+            "title": "Failed",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "scanned",
+          "pending"
+        ],
+        "title": "FaceScanStatusData"
+      },
+      "FaceScanStatusResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/FaceScanStatusData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "FaceScanStatusResponse"
       },
       "FaceSearchRequest": {
         "properties": {
@@ -3211,6 +3774,19 @@
           "total_images": {
             "type": "integer",
             "title": "Total Images"
+          },
+          "videos": {
+            "items": {
+              "$ref": "#/components/schemas/VideoData"
+            },
+            "type": "array",
+            "title": "Videos",
+            "default": []
+          },
+          "total_videos": {
+            "type": "integer",
+            "title": "Total Videos",
+            "default": 0
           }
         },
         "type": "object",
@@ -3329,6 +3905,27 @@
         ],
         "title": "GetClustersResponse"
       },
+      "GetInterfacesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ShareInterface"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "data"
+        ],
+        "title": "GetInterfacesResponse"
+      },
       "GetMemoriesData": {
         "properties": {
           "memories": {
@@ -3404,6 +4001,27 @@
           "data"
         ],
         "title": "GetMemoryResponse"
+      },
+      "GetSharesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Share"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "data"
+        ],
+        "title": "GetSharesResponse"
       },
       "GetTodayMemoryData": {
         "properties": {
@@ -3581,6 +4199,17 @@
           "isFavourite": {
             "type": "boolean",
             "title": "Isfavourite"
+          },
+          "favouritedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Favouritedat"
           },
           "tags": {
             "anyOf": [
@@ -4773,6 +5402,19 @@
           "match_mode": {
             "type": "string",
             "title": "Match Mode"
+          },
+          "videos": {
+            "items": {
+              "$ref": "#/components/schemas/MultiPersonSearchVideo"
+            },
+            "type": "array",
+            "title": "Videos",
+            "default": []
+          },
+          "total_videos": {
+            "type": "integer",
+            "title": "Total Videos",
+            "default": 0
           }
         },
         "type": "object",
@@ -4894,6 +5536,81 @@
         ],
         "title": "MultiPersonSearchResponse"
       },
+      "MultiPersonSearchVideo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "folder_id": {
+            "type": "string",
+            "title": "Folder Id"
+          },
+          "thumbnailPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnailpath"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/VideoMetadataModel"
+          },
+          "isFavourite": {
+            "type": "boolean",
+            "title": "Isfavourite"
+          },
+          "favouritedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Favouritedat"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "match_count": {
+            "type": "integer",
+            "title": "Match Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "folder_id",
+          "thumbnailPath",
+          "metadata",
+          "isFavourite",
+          "match_count"
+        ],
+        "title": "MultiPersonSearchVideo",
+        "description": "A matching video, as the videos routes return them plus the rank."
+      },
       "PurgeFrameCacheResponse": {
         "properties": {
           "success": {
@@ -4993,6 +5710,24 @@
         ],
         "title": "RenameClusterResponse"
       },
+      "RevokeShareResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "RevokeShareResponse"
+      },
       "ScoredVideoData": {
         "properties": {
           "id": {
@@ -5024,6 +5759,17 @@
           "isFavourite": {
             "type": "boolean",
             "title": "Isfavourite"
+          },
+          "favouritedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Favouritedat"
           },
           "tags": {
             "anyOf": [
@@ -5096,6 +5842,17 @@
             "type": "boolean",
             "title": "Isfavourite"
           },
+          "favouritedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Favouritedat"
+          },
           "tags": {
             "anyOf": [
               {
@@ -5140,6 +5897,143 @@
           "tier"
         ],
         "title": "SetupRequest"
+      },
+      "Share": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "album_id": {
+            "type": "string",
+            "title": "Album Id"
+          },
+          "album_name": {
+            "type": "string",
+            "title": "Album Name"
+          },
+          "image_count": {
+            "type": "integer",
+            "title": "Image Count"
+          },
+          "port": {
+            "type": "integer",
+            "title": "Port"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "is_protected": {
+            "type": "boolean",
+            "title": "Is Protected"
+          },
+          "urls": {
+            "items": {
+              "$ref": "#/components/schemas/ShareUrl"
+            },
+            "type": "array",
+            "title": "Urls"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "album_id",
+          "album_name",
+          "image_count",
+          "port",
+          "created_at",
+          "is_protected",
+          "urls"
+        ],
+        "title": "Share"
+      },
+      "ShareErrorResponseEnvelope": {
+        "properties": {
+          "detail": {
+            "$ref": "#/components/schemas/app__schemas__share__ErrorResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ShareErrorResponseEnvelope",
+        "description": "How an ErrorResponse actually reaches the client.\n\nHTTPException nests whatever it is given under `detail`, so documenting\nErrorResponse alone would describe a shape no client ever receives."
+      },
+      "ShareInterface": {
+        "properties": {
+          "interface": {
+            "type": "string",
+            "title": "Interface"
+          },
+          "ip": {
+            "type": "string",
+            "title": "Ip"
+          },
+          "is_default_route": {
+            "type": "boolean",
+            "title": "Is Default Route"
+          },
+          "looks_virtual": {
+            "type": "boolean",
+            "title": "Looks Virtual"
+          },
+          "is_up": {
+            "type": "boolean",
+            "title": "Is Up"
+          },
+          "is_link_local": {
+            "type": "boolean",
+            "title": "Is Link Local"
+          }
+        },
+        "type": "object",
+        "required": [
+          "interface",
+          "ip",
+          "is_default_route",
+          "looks_virtual",
+          "is_up",
+          "is_link_local"
+        ],
+        "title": "ShareInterface",
+        "description": "One address the share could be advertised on, best guess first."
+      },
+      "ShareUrl": {
+        "properties": {
+          "interface": {
+            "type": "string",
+            "title": "Interface"
+          },
+          "ip": {
+            "type": "string",
+            "title": "Ip"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "interface",
+          "ip",
+          "url"
+        ],
+        "title": "ShareUrl"
       },
       "ShutdownResponse": {
         "properties": {
@@ -5408,9 +6302,9 @@
             "title": "Description",
             "default": ""
           },
-          "is_hidden": {
+          "is_locked": {
             "type": "boolean",
-            "title": "Is Hidden"
+            "title": "Is Locked"
           },
           "current_password": {
             "anyOf": [
@@ -5438,7 +6332,7 @@
         "type": "object",
         "required": [
           "name",
-          "is_hidden"
+          "is_locked"
         ],
         "title": "UpdateAlbumRequest"
       },
@@ -5546,6 +6440,17 @@
             ],
             "title": "Video Frame Interval"
           },
+          "Video_Face_Detection": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Face Detection"
+          },
           "memories": {
             "anyOf": [
               {
@@ -5607,6 +6512,11 @@
             "minimum": 0.5,
             "title": "Video Frame Interval",
             "default": 5.0
+          },
+          "Video_Face_Detection": {
+            "type": "boolean",
+            "title": "Video Face Detection",
+            "default": false
           },
           "memories": {
             "$ref": "#/components/schemas/MemoriesPreferences"
@@ -5681,6 +6591,17 @@
             "type": "boolean",
             "title": "Isfavourite"
           },
+          "favouritedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Favouritedat"
+          },
           "tags": {
             "anyOf": [
               {
@@ -5705,7 +6626,8 @@
           "metadata",
           "isFavourite"
         ],
-        "title": "VideoData"
+        "title": "VideoData",
+        "description": "One video as every route returns it: the videos listing, semantic search\nand the face cluster surfaces all hand the frontend this shape."
       },
       "VideoMetadataModel": {
         "properties": {
@@ -5891,6 +6813,29 @@
         ],
         "title": "ToggleFavouriteRequest"
       },
+      "app__schemas__album__ErrorResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": false
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "error"
+        ],
+        "title": "ErrorResponse"
+      },
       "app__schemas__face_clusters__ErrorResponse": {
         "properties": {
           "success": {
@@ -6003,6 +6948,29 @@
         ],
         "title": "ErrorResponse",
         "description": "Error response model"
+      },
+      "app__schemas__share__ErrorResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": false
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "error"
+        ],
+        "title": "ErrorResponse"
       },
       "app__schemas__user_preferences__ErrorResponse": {
         "properties": {

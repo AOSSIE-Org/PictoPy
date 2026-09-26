@@ -226,7 +226,7 @@
 }
 
 .thin-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: var(--muted-foreground); 
+  background-color: var(--muted-foreground);
 }
 
 .no-select {

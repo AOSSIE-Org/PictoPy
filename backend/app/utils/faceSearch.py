@@ -1,11 +1,12 @@
-import uuid
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
-from app.config.settings import CONFIDENCE_PERCENT, DEFAULT_FACENET_MODEL
-from app.database.faces import get_all_face_embeddings
+from app.config.settings import CONFIDENCE_PERCENT
+from app.database.faces import db_get_all_video_face_embeddings, get_all_face_embeddings
+from app.database.videos import db_get_videos_by_ids
 from app.models.FaceDetector import FaceDetector
-from app.models.FaceNet import FaceNet
+from app.schemas.videos import VideoData
 from app.utils.FaceNet import FaceNet_util_cosine_similarity
+from app.utils.videos import video_util_to_video_data
 
 
 class BoundingBox(BaseModel):
@@ -30,6 +31,8 @@ class GetAllImagesResponse(BaseModel):
     success: bool
     message: str
     data: List[ImageData]
+    # Videos the same face was found in, best match first.
+    videos: List[VideoData] = []
 
 
 def perform_face_search(image_path: str) -> GetAllImagesResponse:
@@ -43,32 +46,31 @@ def perform_face_search(image_path: str) -> GetAllImagesResponse:
         GetAllImagesResponse: Search result containing matched images.
     """
     fd = FaceDetector()
-    fn = FaceNet(DEFAULT_FACENET_MODEL)
 
     try:
         matches = []
-        image_id = str(uuid.uuid4())
 
         try:
-            result = fd.detect_faces(image_id, image_path, forSearch=True)
+            result = fd.detect_faces(image_path)
         except Exception as e:
             return GetAllImagesResponse(
                 success=False,
                 message=f"Failed to process image: {str(e)}",
                 data=[],
             )
-        if not result or result["num_faces"] == 0:
+        if not result or not result["embeddings"]:
             return GetAllImagesResponse(
                 success=True,
                 message="No faces detected in the image.",
                 data=[],
             )
 
-        process_face = result["processed_faces"][0]
-        new_embedding = fn.get_embedding(process_face)
+        # The detector already ran FaceNet on this crop; no second model needed.
+        new_embedding = result["embeddings"][0]
 
         images = get_all_face_embeddings()
-        if not images:
+        video_faces = db_get_all_video_face_embeddings()
+        if not images and not video_faces:
             return GetAllImagesResponse(
                 success=True,
                 message="No face embeddings available for comparison.",
@@ -93,14 +95,31 @@ def perform_face_search(image_path: str) -> GetAllImagesResponse:
                     )
                 )
 
+        # Several keyframe faces can belong to one video, so rank each video by
+        # its best-matching face rather than listing it once per keyframe.
+        best_by_video: Dict[str, float] = {}
+        for face in video_faces:
+            similarity = FaceNet_util_cosine_similarity(
+                new_embedding, face["embeddings"]
+            )
+            if similarity >= CONFIDENCE_PERCENT:
+                video_id = face["video_id"]
+                if similarity > best_by_video.get(video_id, 0.0):
+                    best_by_video[video_id] = similarity
+
+        ranked = sorted(best_by_video, key=lambda v: best_by_video[v], reverse=True)
+        videos = video_util_to_video_data(db_get_videos_by_ids(ranked))
+
         return GetAllImagesResponse(
             success=True,
-            message=f"Successfully retrieved {len(matches)} matching images.",
+            message=(
+                f"Successfully retrieved {len(matches)} matching images "
+                f"and {len(videos)} matching video(s)."
+            ),
             data=matches,
+            videos=videos,
         )
 
     finally:
         if "fd" in locals() and fd is not None:
             fd.close()
-        if "fn" in locals() and fn is not None:
-            fn.close()

@@ -5,19 +5,23 @@ import uuid
 import datetime
 import json
 import logging
+import sqlite3
 from typing import List, Optional, Tuple, Dict, Any, Mapping
 from PIL import Image, ExifTags
 from pathlib import Path
 
 from app.config.settings import THUMBNAIL_IMAGES_PATH
 from app.database.images import (
+    ImageSyncState,
     db_bulk_insert_images,
     db_get_untagged_images,
     db_update_image_tagged_status,
     db_insert_image_classes_batch,
+    db_get_image_sync_state_by_folder_ids,
     db_get_images_by_folder_ids,
     db_delete_images_by_ids,
 )
+from app.database.faces import db_insert_face_embeddings_by_image_id
 from app.models.FaceDetector import FaceDetector
 from app.models.ObjectClassifier import ObjectClassifier
 from app.logging.setup_logging import get_logger
@@ -55,6 +59,13 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
         all_image_records = []
         all_folder_ids = []
 
+        # One query up front. The watcher calls sync-folder on any file change,
+        # so this walk reruns constantly over folders that are almost entirely
+        # unchanged, and rereading each file is the expensive part.
+        known_state = db_get_image_sync_state_by_folder_ids(
+            [folder_id for _, folder_id, _ in folder_data]
+        )
+
         # Process each folder in the provided data
         for folder_path, folder_id, recursive in folder_data:
             try:
@@ -72,7 +83,7 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
 
                 # Step 3: Prepare image records for this folder
                 folder_image_records = image_util_prepare_image_records(
-                    image_files, folder_path_to_id
+                    image_files, folder_path_to_id, known_state
                 )
                 all_image_records.extend(folder_image_records)
 
@@ -225,9 +236,24 @@ def image_util_classify_and_face_detect_images(
 
             # Step 3: Detect faces if "person" class is present
             if classes and 0 in classes:
-                result = face_detector.detect_faces(image_id, image_path)
+                result = face_detector.detect_faces(image_path)
+                if result and result["embeddings"]:
+                    try:
+                        db_insert_face_embeddings_by_image_id(
+                            image_id,
+                            result["embeddings"],
+                            confidence=result["confidences"],
+                            bbox=result["bboxes"],
+                        )
+                    except sqlite3.IntegrityError:
+                        # The image can be deleted during inference, which fails
+                        # the faces FK; skip it rather than abort the whole pass.
+                        logger.info(
+                            f"Image {image_id} was removed during tagging; skipping"
+                        )
+                        continue
                 if result:
-                    total_faces_skipped += result.get("faces_skipped", 0)
+                    total_faces_skipped += result["faces_skipped"]
 
             # Step 4: Update the image status in the database
             db_update_image_tagged_status(image_id, True)
@@ -239,8 +265,46 @@ def image_util_classify_and_face_detect_images(
     return total_faces_skipped
 
 
+def image_util_is_unchanged(
+    image_path: str, recorded: Optional[ImageSyncState]
+) -> bool:
+    """
+    True when the file and its thumbnail both match what the last scan recorded.
+
+    A row written before file_mtime was tracked has no mtime to compare, so it
+    gets reread once and carries the field from then on.
+    """
+    if not recorded:
+        return False
+
+    recorded_size = recorded.get("file_size")
+    recorded_mtime = recorded.get("file_mtime")
+    if recorded_size is None or recorded_mtime is None:
+        return False
+
+    try:
+        stats = os.stat(image_path)
+    except OSError:
+        return False
+
+    if stats.st_size != recorded_size or int(stats.st_mtime) != recorded_mtime:
+        return False
+
+    # Skipping the file means keeping its existing thumbnail, so that thumbnail
+    # has to still be there. Zero bytes is a half-written one, not a usable one.
+    thumbnail_path = recorded.get("thumbnailPath")
+    if not thumbnail_path:
+        return False
+    try:
+        return os.path.getsize(thumbnail_path) > 0
+    except OSError:
+        return False
+
+
 def image_util_prepare_image_records(
-    image_files: List[str], folder_path_to_id: Dict[str, int]
+    image_files: List[str],
+    folder_path_to_id: Dict[str, int],
+    known_state: Optional[Dict[str, ImageSyncState]] = None,
 ) -> List[Dict]:
     """
     Prepare image records with thumbnails for database insertion.
@@ -249,18 +313,27 @@ def image_util_prepare_image_records(
     Args:
         image_files: List of image file paths
         folder_path_to_id: Dictionary mapping folder paths to IDs
+        known_state: Size/mtime recorded for already-stored paths. Files matching
+            it are left alone; omit to reread every file.
 
     Returns:
         List of image record dictionaries ready for database insertion
     """
     image_records = []
     extractor = MetadataExtractor()
+    known_state = known_state or {}
+    skipped = 0
 
     for image_path in image_files:
         folder_id = image_util_find_folder_id_for_image(image_path, folder_path_to_id)
 
         if not folder_id:
             continue  # Skip if no matching folder ID found
+
+        recorded = known_state.get(os.path.normcase(os.path.abspath(image_path)))
+        if image_util_is_unchanged(image_path, recorded):
+            skipped += 1
+            continue
 
         image_id = str(uuid.uuid4())
         thumbnail_name = f"thumbnail_{image_id}.jpg"
@@ -282,7 +355,8 @@ def image_util_prepare_image_records(
                 latitude, longitude, captured_at = extractor.extract_all(metadata_json)
 
                 # Log GPS extraction results
-                if latitude and longitude:
+                # (0 is a valid coordinate, so test for None rather than truthiness)
+                if latitude is not None and longitude is not None:
                     logger.info(
                         f"GPS extracted for {os.path.basename(image_path)}: ({latitude}, {longitude})"
                     )
@@ -317,6 +391,9 @@ def image_util_prepare_image_records(
             }
 
             image_records.append(image_record)
+
+    if skipped:
+        logger.info(f"Skipped {skipped} unchanged image(s) during rescan")
 
     return image_records
 
@@ -597,6 +674,7 @@ def image_util_extract_metadata(image_path: str) -> dict:
             "height": 0,
             "file_location": image_path,
             "file_size": 0,
+            "file_mtime": 0,
             "item_type": "unknown",
         }
 
@@ -662,6 +740,10 @@ def image_util_extract_metadata(image_path: str) -> dict:
                 "height": height,
                 "file_location": image_path,
                 "file_size": stats.st_size,
+                # Whole seconds: external drives are often FAT/exFAT, whose
+                # coarser mtime would otherwise never compare equal to its own
+                # float from a previous scan.
+                "file_mtime": int(stats.st_mtime),
                 "item_type": mime_type,
             }
 
@@ -681,6 +763,7 @@ def image_util_extract_metadata(image_path: str) -> dict:
                 "date_source": DATE_SOURCE_FILESYSTEM,
                 "file_location": image_path,
                 "file_size": stats.st_size,
+                "file_mtime": int(stats.st_mtime),
                 "width": 0,
                 "height": 0,
                 "item_type": "unknown",
@@ -695,6 +778,7 @@ def image_util_extract_metadata(image_path: str) -> dict:
             "height": 0,
             "file_location": image_path,
             "file_size": 0,
+            "file_mtime": 0,
             "item_type": "unknown",
         }
 

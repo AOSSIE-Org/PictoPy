@@ -250,11 +250,39 @@ describe('SearchResults Page', () => {
       );
 
       expect(
-        await screen.findByText('Photos with all of:'),
+        await screen.findByText('Photos and videos with all of:'),
       ).toBeInTheDocument();
       // The people path replaces tag/semantic search rather than joining it.
       expect(searchImagesByTag).not.toHaveBeenCalled();
       expect(searchVideosByTag).not.toHaveBeenCalled();
+    });
+
+    test('videos the people appear in are shown, even with no photos', async () => {
+      (fetchMultiPersonSearch as jest.Mock).mockResolvedValue({
+        success: true,
+        data: {
+          images: [],
+          total: 0,
+          match_mode: 'match_all',
+          videos: [
+            {
+              id: 'v1',
+              path: '/together.mp4',
+              thumbnailPath: '/together-thumb.jpg',
+              folder_id: 'f1',
+              match_count: 2,
+            },
+          ],
+          total_videos: 1,
+        },
+      });
+
+      renderWithQuery('Person A and Person B');
+
+      expect(await screen.findByText('Videos')).toBeInTheDocument();
+      expect(
+        screen.queryByText(/No photos or videos found/i),
+      ).not.toBeInTheDocument();
     });
 
     test('"or" between names searches for any of them', async () => {
@@ -273,10 +301,12 @@ describe('SearchResults Page', () => {
       );
 
       expect(
-        await screen.findByText('Photos with any of:'),
+        await screen.findByText('Photos and videos with any of:'),
       ).toBeInTheDocument();
       expect(
-        await screen.findByText(/No photos found with these people in them/i),
+        await screen.findByText(
+          /No photos or videos found with these people in them/i,
+        ),
       ).toBeInTheDocument();
     });
 

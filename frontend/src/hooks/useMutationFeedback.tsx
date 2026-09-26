@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useDispatch } from 'react-redux';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
@@ -77,13 +77,23 @@ export const useMutationFeedback = (
     onError,
   } = options;
 
+  const onSuccessRef = useRef(onSuccess);
+  const onErrorRef = useRef(onError);
+  onSuccessRef.current = onSuccess;
+  onErrorRef.current = onError;
+
   const { isPending, isSuccess, isError, error } = mutationState;
 
-  // Handle loading state
+  // Handle loading state. Gated on showLoading entirely -- not just for
+  // showLoader -- so a call with showLoading: false never touches the
+  // (global, single-owner) loader, even once its own isPending goes false.
+  // Otherwise a second feedback call for the same surface would hide a
+  // loader that a sibling call is still legitimately showing.
   useEffect(() => {
-    if (showLoading && isPending) {
+    if (!showLoading) return;
+    if (isPending) {
       dispatch(showLoader(loadingMessage));
-    } else if (!isPending) {
+    } else {
       dispatch(hideLoader());
     }
   }, [isPending, showLoading, loadingMessage, dispatch]);
@@ -99,18 +109,11 @@ export const useMutationFeedback = (
         }),
       );
 
-      if (onSuccess) {
-        onSuccess();
+      if (onSuccessRef.current) {
+        onSuccessRef.current();
       }
     }
-  }, [
-    isSuccess,
-    showSuccess,
-    successTitle,
-    successMessage,
-    dispatch,
-    onSuccess,
-  ]);
+  }, [isSuccess, showSuccess, successTitle, successMessage, dispatch]);
 
   // Handle error state
   useEffect(() => {
@@ -125,11 +128,11 @@ export const useMutationFeedback = (
         }),
       );
 
-      if (onError) {
-        onError(error);
+      if (onErrorRef.current) {
+        onErrorRef.current(error);
       }
     }
-  }, [isError, showError, errorTitle, errorMessage, error, dispatch, onError]);
+  }, [isError, showError, errorTitle, errorMessage, error, dispatch]);
 
   // Return original state for convenience
   return mutationState;

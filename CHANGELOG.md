@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0-alpha] - 2026-09-16
+
+### Added
+
+- Unify images and videos into a single, sortable Favorites gallery (#1527)
+- Share an album over the local network, beyond it, or behind a password; convert a memory into an album; and polish album sorting, grid, and detail-page layout (#1453, #1456, #1469, #1471, #1473, #1478, #1517)
+- Keep Face Collection from pushing tagged images below the fold, and add a themed scrollbar and tag toggle (#1431, #1457)
+- Improve Model Manager window sizing and card layout (#1449)
+- Text-based multi-person face search, backed by a new SigLIP2 semantic embedding pipeline and a predefined semantic vocabulary with cached AI tags (#1377, #1389, #1446)
+- Clean up loading states during folder management (#1443)
+- Move memory settings into the Settings page (#1438)
+- Improve viewer control visibility: dark-theme nav arrows that disable at the edges, and video controls on bright video (#1423, #1432)
+- Smart Memories: persisted, scored photo collections with a story viewer (#1430)
+- Add profile picture upload support (#1424)
+- Add light theme support to the Image and Video viewers (#1421)
+- Add a dedicated Videos page and extend AI tagging to video files via YouTube-style keyframe sampling (#1402, #1413)
+- Add auto-start and minimize-to-tray support (#1301)
+- Implement the albums feature, with create, edit, delete, and image management (#610)
+
+### Changed
+
+- Index files in parallel instead of in series, and skip unchanged files when rescanning a folder, for faster scans (#1464, #1481)
+- Add lazy loading and dynamic alt text to image cards, improving gallery performance and accessibility (#1336)
+
+### Fixed
+
+- Fix cropped-image handling in the add-images crop dialog (#1466)
+- Fix an infinite "Searching by meaning..." loading state on back navigation and repeated searches (#1447)
+- Serialize inference on shared SigLIP ONNX sessions, and exclude the CoreML provider for SigLIP2 on macOS (#1386, #1445)
+- Normalize whitespace in search queries (#1437)
+- Show an error dialog when adding a folder that's already tracked (#1427)
+- Keep GPS coordinates of 0 instead of dropping them during metadata extraction (#1425)
+- Improve adaptive face clustering and the Face Collection showcase, and remove stale clusters left behind after folder deletion (#1023, #1392, #1394)
+- Fix the navbar disappearing on scroll; it now only returns at the top of the page (#1387)
+- Automatically backfill semantic embeddings after installing a model (#1382)
+- Fix folders appearing empty when AI tagging is enabled before indexing completes (#1380)
+- Fix the database path resolved by reset_database.py (#1378)
+- Fix accessibility and controls-visibility issues in the Netflix-style video player (#1333, #1374)
+
+### Other
+
+- Consolidate PR-labeling and duplicate-issue-detection workflows, run lint on `pull_request` so fork PRs are linted, and run lint checks without requiring maintainer approval (#1441, #1442, #1448, #1530)
+- Documentation: backend API docs, backend routes directory structure, and a README download-section fix (#1367, #1384, #1494)
+- Fix review findings in the agent instructions (#1454)
+- Test coverage: images DB, videos/model tests to 100%, Model API endpoints, database metadata/YOLO mapping, and albums/faces (#1238, #1341, #1342, #1343, #1362, #1410)
+- Add agent instructions to the codebase (#1408)
+
+**Contributors:** @AbiramiR-27, @Akshit-Tyagi-05, @Dotify71, @Mansi2007275, @NancyWei123, @Prince-ES, @SiddharthJiyani, @Takitxt, @VanshajPoonia, @Yashu-svg, @akshajtiwari, @g-k-s-03, @prawnsgupta, @priyanshunitr, @rohan-pandeyy, @sanskar-singh-2403, @yellstales
+
+---
+
 ## [1.2.0] - 2026-07-16
 
 ### Added

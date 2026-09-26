@@ -3,8 +3,15 @@ import { useDispatch, useSelector } from 'react-redux';
 import { FaceCollections } from '@/components/FaceCollections';
 import { Image } from '@/types/Media';
 import { setImages } from '@/features/imageSlice';
+import {
+  setCurrentViewIndex as setCurrentVideoViewIndex,
+  setVideos,
+} from '@/features/videoSlice';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { selectImages } from '@/features/imageSelectors';
+import { selectIsVideoViewOpen, selectVideos } from '@/features/videoSelectors';
+import { VideoCard } from '@/components/Media/VideoCard';
+import { VideoPlayerOverlay } from '@/components/VideoPlayer/VideoPlayerOverlay';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
 import {
@@ -18,19 +25,38 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatPeopleTitle } from '@/utils/personUtils';
 import { RankedGallery } from '@/components/Media/RankedGallery';
-import { GallerySortDropdown } from '@/components/GallerySortDropdown';
+import {
+  GALLERY_SORT_OPTIONS,
+  GallerySortDropdown,
+  type GallerySortValue,
+} from '@/components/GallerySortDropdown';
+import { usePersistedSort } from '@/hooks/usePersistedSort';
+
+const AI_TAGGING_SORT_STORAGE_KEY = 'pictopy-ai-tagging-sort';
+
+// Derived from the options above so a removed sort stops being restorable.
+const GALLERY_SORT_VALUES = GALLERY_SORT_OPTIONS.map((option) => option.value);
 
 export const AITagging = () => {
   const dispatch = useDispatch();
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
-  const [sortMode, setSortMode] = useState<'best_match' | 'date'>('best_match');
+  const [sortMode, setSortMode] = usePersistedSort<GallerySortValue>(
+    AI_TAGGING_SORT_STORAGE_KEY,
+    'best_match',
+    GALLERY_SORT_VALUES,
+  );
   const [searchState, setSearchState] = useState<{
     active: boolean;
     peopleNames: string[];
     matchMode: 'match_any' | 'match_all';
   }>({ active: false, peopleNames: [], matchMode: 'match_any' });
   const taggedImages = useSelector(selectImages);
+  // Only while a people search is active: otherwise the slice still holds
+  // whatever the videos page last loaded, which is not a result of this page.
+  const searchVideos = useSelector(selectVideos);
+  const isVideoViewOpen = useSelector(selectIsVideoViewOpen);
+  const matchedVideos = searchState.active ? searchVideos : [];
   const {
     data: imagesData,
     isLoading: imagesLoading,
@@ -67,6 +93,7 @@ export const AITagging = () => {
     if (images) {
       dispatch(setImages(images));
     }
+    dispatch(setVideos([]));
   };
 
   return (
@@ -149,11 +176,33 @@ export const AITagging = () => {
                 scrollContainerRef={scrollableRef}
               />
             )
-          ) : (
+          ) : matchedVideos.length === 0 ? (
+            // A search can match only videos, which render below
             <EmptyAITaggingState />
+          ) : null}
+
+          {/* Videos the selected people appear in */}
+          {matchedVideos.length > 0 && (
+            <>
+              <h2 className="mt-6 mb-4 text-xl font-semibold">Videos</h2>
+              <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {matchedVideos.map((video, index) => (
+                  <div key={video.id} className="group relative">
+                    <VideoCard
+                      video={video}
+                      className="w-full transition-transform duration-200 group-hover:scale-105"
+                      onClick={() => dispatch(setCurrentVideoViewIndex(index))}
+                    />
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>
+      {isVideoViewOpen && matchedVideos.length > 0 && (
+        <VideoPlayerOverlay videos={matchedVideos} />
+      )}
       {monthMarkers.length > 0 &&
         !(searchState.active && sortMode === 'best_match') && (
           <TimelineScrollbar

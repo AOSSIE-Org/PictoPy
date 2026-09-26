@@ -10,7 +10,7 @@ Date: 2025-12-14
 
 import json
 from datetime import datetime
-from typing import Optional, Tuple, Dict, Any
+from typing import Optional, Tuple, Dict, Any, Iterable
 
 from app.logging.setup_logging import get_logger
 
@@ -45,26 +45,87 @@ class MetadataExtractor:
         """Initialize the metadata extractor."""
         pass
 
+    @staticmethod
+    def _resolve_coordinate(
+        field: str, candidates: Iterable[Any], limit: float
+    ) -> Optional[float]:
+        """
+        Return the first candidate that is usable as a coordinate.
+
+        Candidates are supplied in order of preference and each one is converted
+        and range checked in turn. A candidate is skipped when it is absent
+        (None or a blank string), cannot be read as a number, or falls outside
+        the valid range, so a malformed or out-of-range value in a preferred
+        field does not mask a good value in a less preferred one.
+
+        Zero is deliberately kept: it is a real location on the equator and the
+        prime meridian, but it is falsy in Python, so an `a or b` fallback chain
+        would silently discard it.
+
+        Args:
+            field: Field name, used only for log messages
+            candidates: Candidate values, in order of preference
+            limit: Largest valid magnitude (90 for latitude, 180 for longitude)
+
+        Returns:
+            The first usable coordinate, or None if no candidate qualifies
+        """
+        for value in candidates:
+            if value is None:
+                continue
+            if isinstance(value, str) and not value.strip():
+                continue
+            # bool is a subclass of int, so float(True) would otherwise pass as 1.0
+            if isinstance(value, bool):
+                logger.warning(f"Ignoring boolean {field}: {value!r}")
+                continue
+
+            try:
+                number = float(value)
+            except (ValueError, TypeError, OverflowError):
+                # OverflowError covers integers too large to become a float,
+                # which JSON metadata can carry with no size limit
+                logger.warning(f"Ignoring unreadable {field}: {value!r}")
+                continue
+
+            # Also rejects NaN, which fails every comparison
+            if not -limit <= number <= limit:
+                logger.warning(f"Ignoring out-of-range {field}: {number}")
+                continue
+
+            return number
+
+        return None
+
     def extract_gps_coordinates(
         self, metadata: Dict[str, Any]
     ) -> Tuple[Optional[float], Optional[float]]:
         """
         Extract GPS coordinates from metadata dictionary.
 
-        Supports multiple metadata structures:
+        Supports multiple metadata structures, checked in order of preference:
         - Top-level: {"latitude": 28.6, "longitude": 77.2}
         - Nested EXIF: {"exif": {"gps": {"latitude": 28.6, "longitude": 77.2}}}
         - Alternative names: lat, lon, Latitude, Longitude
+
+        Latitude and longitude are resolved independently, and each falls
+        through to the next source when a value is missing, unreadable or out of
+        range, so a coordinate pair may be assembled from two different sources.
 
         Args:
             metadata: Parsed metadata dictionary
 
         Returns:
-            Tuple of (latitude, longitude) or (None, None) if not found
+            Tuple of (latitude, longitude), or (None, None) when either half
+            cannot be resolved, since one coordinate on its own is not a location
 
         Validates:
             - Latitude: -90 to 90
             - Longitude: -180 to 180
+
+        Note:
+            A coordinate of 0 is a real location, not a missing value, so it is
+            kept rather than falling through to the next source.
         """
         latitude = None
         longitude = None
@@ -73,43 +134,42 @@ class MetadataExtractor:
             if not isinstance(metadata, dict):
                 return None, None
 
-            # Method 1: Direct top-level fields
-            lat = metadata.get("latitude")
-            lon = metadata.get("longitude")
+            # Nested 'exif' -> 'gps' structure, when the image has one
+            exif = metadata.get("exif")
+            exif = exif if isinstance(exif, dict) else {}
+            gps = exif.get("gps")
+            gps = gps if isinstance(gps, dict) else {}
 
-            # Method 2: Check nested 'exif' -> 'gps' structure
-            if not lat or not lon:
-                exif = metadata.get("exif", {})
-                if isinstance(exif, dict):
-                    gps = exif.get("gps", {})
-                    if isinstance(gps, dict):
-                        lat = lat or gps.get("latitude")
-                        lon = lon or gps.get("longitude")
+            # Direct top-level fields, then nested EXIF GPS, then the
+            # alternative spellings some sources use.
+            latitude = self._resolve_coordinate(
+                "latitude",
+                (
+                    metadata.get("latitude"),
+                    gps.get("latitude"),
+                    metadata.get("lat"),
+                    metadata.get("Latitude"),
+                ),
+                90.0,
+            )
+            longitude = self._resolve_coordinate(
+                "longitude",
+                (
+                    metadata.get("longitude"),
+                    gps.get("longitude"),
+                    metadata.get("lon"),
+                    metadata.get("Longitude"),
+                ),
+                180.0,
+            )
 
-            # Method 3: Check alternative field names
-            if not lat or not lon:
-                lat = lat or metadata.get("lat") or metadata.get("Latitude")
-                lon = lon or metadata.get("lon") or metadata.get("Longitude")
-
-            # Validate and convert coordinates
-            if lat is not None and lon is not None:
-                try:
-                    lat = float(lat)
-                    lon = float(lon)
-
-                    # Sanity check: valid coordinate ranges
-                    if -90 <= lat <= 90 and -180 <= lon <= 180:
-                        latitude = lat
-                        longitude = lon
-                    else:
-                        logger.warning(
-                            f"Invalid coordinate range: lat={lat}, lon={lon}"
-                        )
-                except (ValueError, TypeError) as e:
-                    logger.warning(f"Could not convert coordinates to float: {e}")
+            # A lone latitude or longitude is not a usable location
+            if latitude is None or longitude is None:
+                return None, None
 
         except Exception as e:
             logger.error(f"Unexpected error extracting GPS coordinates: {e}")
+            return None, None
 
         return latitude, longitude
 
@@ -202,7 +262,7 @@ class MetadataExtractor:
                         try:
                             captured_at = datetime.strptime(date_str, fmt)
                             break
-                        except (ValueError, TypeError):
+                        except (ValueError, TypeError, OverflowError):
                             continue
 
                 if not captured_at:

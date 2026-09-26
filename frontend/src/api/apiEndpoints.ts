@@ -13,6 +13,8 @@ export const videosEndpoints = {
   semanticSearch: (query: string) =>
     `/videos/semantic-search?query=${encodeURIComponent(query)}`,
   purgeFrameCache: '/videos/purge-frame-cache',
+  scanFaces: '/videos/scan-faces',
+  faceScanStatus: '/videos/face-scan-status',
 };
 
 export const faceClustersEndpoints = {
@@ -42,6 +44,29 @@ export const userPreferencesEndpoints = {
 
 export const healthEndpoints = {
   healthCheck: '/health',
+};
+
+export const albumsEndpoints = {
+  getAllAlbums: '/albums/',
+  getAlbumById: (albumId: string) => `/albums/${albumId}`,
+  createAlbum: '/albums/',
+  createAlbumFromMemory: '/albums/from-memory',
+  updateAlbum: (albumId: string) => `/albums/${albumId}`,
+  deleteAlbum: (albumId: string) => `/albums/${albumId}`,
+  addImagesToAlbum: (albumId: string) => `/albums/${albumId}/images`,
+  getAlbumImages: (albumId: string) => `/albums/${albumId}/images/get`,
+  removeImageFromAlbum: (albumId: string, imageId: string) =>
+    `/albums/${albumId}/images/${imageId}`,
+  removeMultipleImagesFromAlbum: (albumId: string) =>
+    `/albums/${albumId}/images`,
+};
+
+export const shareEndpoints = {
+  getShares: '/share/',
+  getInterfaces: '/share/interfaces',
+  createShare: (albumId: string) =>
+    `/share/albums/${encodeURIComponent(albumId)}`,
+  revokeShare: (token: string) => `/share/${encodeURIComponent(token)}`,
 };
 
 export const memoriesEndpoints = {

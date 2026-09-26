@@ -187,7 +187,7 @@ export const InstalledTab: React.FC<InstalledTabProps> = ({
             No standard tiers installed.
           </p>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {standardTiers.map(
               ({ tier, objectModelKey, faceModelKey, combinedSize }) => {
                 const isActive = preferences.YOLO_model_size === tier;
@@ -260,7 +260,7 @@ export const InstalledTab: React.FC<InstalledTabProps> = ({
       {hasSemanticBundle && (
         <section>
           <h2 className="mb-4 text-lg font-semibold">Additional Features</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <div className="bg-card flex flex-col justify-between rounded-xl border p-5 shadow-sm">
               <div>
                 <div className="mb-2 flex items-center justify-between">
@@ -301,7 +301,7 @@ export const InstalledTab: React.FC<InstalledTabProps> = ({
       {requiredModels.length > 0 && (
         <section>
           <h2 className="mb-4 text-lg font-semibold">Always Installed</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {requiredModels.map(({ key, name, size_mb }) => {
               const isFaceNet =
                 key.includes('facenet') ||

@@ -5,5 +5,5 @@ from starlette.datastructures import State
 
 
 def get_state(request: Request) -> State:
-    """Application state, which is where the shared executor lives."""
+    """Application state, which is where the shared executors live."""
     return request.app.state
