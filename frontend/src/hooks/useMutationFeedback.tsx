@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useDispatch } from 'react-redux';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
@@ -8,6 +8,7 @@ type MutationState = {
   isSuccess?: boolean;
   isError?: boolean;
   error?: Error | unknown;
+  errorMessage?: string;
 };
 
 type FeedbackOptions = {
@@ -76,7 +77,7 @@ export const useMutationFeedback = (
     onError,
   } = options;
 
-  const { isPending, isSuccess, isError, error } = mutationState;
+  const { isPending, isSuccess, isError, error, errorMessage: stateErrorMessage } = mutationState;
 
   // Handle loading state
   useEffect(() => {
@@ -111,21 +112,33 @@ export const useMutationFeedback = (
     onSuccess,
   ]);
 
+  const lastShownErrorMsg = useRef<string | null>(null);
+
+  // Clear last shown error when error is resolved
+  useEffect(() => {
+    if (!isError) {
+      lastShownErrorMsg.current = null;
+    }
+  }, [isError]);
+
   // Handle error state
   useEffect(() => {
     if (isError && showError) {
-      const errorMsg = error instanceof Error ? error.message : errorMessage;
+      const errorMsg = stateErrorMessage || (error instanceof Error ? error.message : errorMessage);
 
-      dispatch(
-        showInfoDialog({
-          title: errorTitle,
-          message: errorMsg,
-          variant: 'error',
-        }),
-      );
+      if (lastShownErrorMsg.current !== errorMsg) {
+        lastShownErrorMsg.current = errorMsg;
+        dispatch(
+          showInfoDialog({
+            title: errorTitle,
+            message: errorMsg,
+            variant: 'error',
+          }),
+        );
 
-      if (onError) {
-        onError(error);
+        if (onError) {
+          onError(error);
+        }
       }
     }
   }, [isError, showError, errorTitle, errorMessage, error, dispatch, onError]);

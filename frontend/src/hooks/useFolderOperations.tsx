@@ -25,13 +25,16 @@ export const useFolderOperations = () => {
   const foldersQuery = usePictoQuery({
     queryKey: ['folders'],
     queryFn: getAllFolders,
+    staleTime: 1000,
+    refetchOnWindowFocus: false,
+    retryOnMount: false,
   });
 
   const taggingStatusQuery = usePictoQuery({
     queryKey: ['folders', 'tagging-status'],
     queryFn: getFoldersTaggingStatus,
     staleTime: 1000,
-    refetchInterval: 1000,
+    refetchInterval: (query: any) => query.state.errorUpdateCount > 0 ? false : 1000,
     refetchIntervalInBackground: true,
     enabled: folders.some((f) => f.AI_Tagging),
     retry: 2, // Retry failed requests up to 2 times before giving up
@@ -45,6 +48,8 @@ export const useFolderOperations = () => {
       isPending: foldersQuery.isLoading,
       isSuccess: foldersQuery.isSuccess,
       isError: foldersQuery.isError,
+      error: foldersQuery.error,
+      errorMessage: foldersQuery.errorMessage,
     },
     {
       loadingMessage: 'Loading folders',
