@@ -1,7 +1,7 @@
 # Standard library imports
 import os
 import sqlite3
-from typing import Any, Dict, List, Mapping, Tuple, TypedDict, Union, Optional
+from typing import Any, Dict, List, Mapping, Set, Tuple, TypedDict, Union, Optional
 import json
 
 from datetime import datetime
@@ -72,6 +72,15 @@ def _connect() -> sqlite3.Connection:
     return conn
 
 
+def _normalise_path(path: ImagePath) -> ImagePath:
+    """Key a path the way the folder scan compares them.
+
+    The scan matches stored paths against paths it just walked off disk, and
+    Windows hands back inconsistent casing.
+    """
+    return os.path.normcase(os.path.abspath(path))
+
+
 def db_create_images_table() -> None:
     conn = _connect()
     cursor = conn.cursor()
@@ -137,6 +146,20 @@ def db_create_images_table() -> None:
     if "score" not in {row[1] for row in cursor.fetchall()}:
         cursor.execute("ALTER TABLE image_classes ADD COLUMN score REAL")
 
+    # Paths the user removed from the gallery but kept on disk. The folder scan
+    # skips these, otherwise the watcher's next sync-folder would re-import the
+    # file and the photo would reappear. Cascading off folders means removing and
+    # re-adding a folder clears its exclusions, which is the only way back.
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS excluded_image_paths (
+            path TEXT PRIMARY KEY,
+            folder_id TEXT,
+            FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
+        )
+    """
+    )
+
     conn.commit()
     conn.close()
 
@@ -150,10 +173,28 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
     cursor = conn.cursor()
 
     try:
+        # excluded_image_paths stores normcased+abspath'd paths (see
+        # _normalise_path / db_exclude_image_paths); image_records carry the
+        # raw path the scan walked off disk, so the exclusion check below
+        # needs its own normalised copy to actually match.
+        params = [
+            {**record, "path_norm": _normalise_path(record["path"])}
+            for record in image_records
+        ]
         cursor.executemany(
             """
             INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged, isEmbedded, latitude, longitude, captured_at)
-            VALUES (:id, :path, :folder_id, :thumbnailPath, :metadata, :isTagged, COALESCE(:isEmbedded, 0), :latitude, :longitude, :captured_at)
+            SELECT :id, :path, :folder_id, :thumbnailPath, :metadata, :isTagged, COALESCE(:isEmbedded, 0), :latitude, :longitude, :captured_at
+            WHERE NOT EXISTS (
+                -- Recheck exclusion here, inside this insert's own
+                -- transaction, instead of trusting the caller's snapshot from
+                -- db_get_excluded_image_paths(). SQLite serializes writers,
+                -- so whichever of this insert or a concurrent
+                -- db_exclude_image_paths() commits first is what the other
+                -- one sees -- closing the TOCTOU window where a scan could
+                -- re-insert a photo the user just deleted.
+                SELECT 1 FROM excluded_image_paths WHERE path = :path_norm
+            )
             ON CONFLICT(path) DO UPDATE SET
                 folder_id=excluded.folder_id,
                 thumbnailPath=excluded.thumbnailPath,
@@ -173,7 +214,7 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
                 -- overwrite a bad one a previous extractor guessed.
                 captured_at=excluded.captured_at
             """,
-            image_records,
+            params,
         )
         conn.commit()
         return True
@@ -539,7 +580,7 @@ def db_get_image_sync_state_by_folder_ids(
                     # An unreadable blob just means this row gets re-read.
                     pass
 
-            state[os.path.normcase(os.path.abspath(path))] = ImageSyncState(
+            state[_normalise_path(path)] = ImageSyncState(
                 thumbnailPath=thumbnail_path,
                 file_size=_as_int(parsed.get("file_size")),
                 file_mtime=_as_int(parsed.get("file_mtime")),
@@ -584,6 +625,59 @@ def db_delete_images_by_ids(image_ids: List[ImageId]) -> bool:
         logger.error(f"Error deleting images: {e}")
         conn.rollback()
         return False
+    finally:
+        conn.close()
+
+
+def db_exclude_image_paths(entries: List[Tuple[ImagePath, Optional[FolderId]]]) -> bool:
+    """
+    Record image paths the user removed from the gallery but kept on disk.
+
+    Args:
+        entries: (path, folder_id) pairs. folder_id ties the row to its folder so
+            removing the folder clears the exclusion.
+
+    Returns:
+        True if the paths were recorded, False otherwise
+    """
+    if not entries:
+        return True
+
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        cursor.executemany(
+            """
+            INSERT OR IGNORE INTO excluded_image_paths (path, folder_id)
+            VALUES (?, ?)
+            """,
+            [(_normalise_path(path), folder_id) for path, folder_id in entries],
+        )
+        conn.commit()
+        logger.info(f"Excluded {len(entries)} image path(s) from future scans")
+        return True
+    except sqlite3.Error as e:
+        logger.error(f"Error excluding image paths: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
+def db_get_excluded_image_paths() -> Set[ImagePath]:
+    """Paths the folder scan must not re-import, keyed like the scan compares them."""
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("SELECT path FROM excluded_image_paths")
+        return {row[0] for row in cursor.fetchall() if row[0]}
+    except sqlite3.Error as e:
+        # An unreadable exclusion list must not stop the scan; worst case a
+        # removed photo reappears, which is better than importing nothing.
+        logger.error(f"Error getting excluded image paths: {e}")
+        return set()
     finally:
         conn.close()
 

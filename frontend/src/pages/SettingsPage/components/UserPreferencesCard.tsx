@@ -30,7 +30,9 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
+import { useDeleteFromComputerPreference } from '@/hooks/useDeleteFromComputerPreference';
 import type { UpdateUserPreferencesRequest } from '@/api/api-functions/user_preferences';
+
 import {
   getVideoFaceScanStatus,
   purgeVideoFrameCache,
@@ -68,6 +70,8 @@ const UserPreferencesCard: React.FC = () => {
     isUpdating,
     refetch,
   } = useUserPreferences();
+  const { deleteFromComputer, setDeleteFromComputer } =
+    useDeleteFromComputerPreference();
   const [installedTiers, setInstalledTiers] = useState<ModelTier[]>([]);
   const [loadingTiers, setLoadingTiers] = useState(true);
   const [tierFetchError, setTierFetchError] = useState<string | null>(null);
@@ -306,6 +310,32 @@ const UserPreferencesCard: React.FC = () => {
               onCheckedChange={() =>
                 toggleGpuAcceleration().catch(console.warn)
               }
+            />
+          </div>
+        </div>
+
+        {/* Delete From Computer Setting */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <Label
+              htmlFor="delete-from-computer"
+              className="text-foreground text-sm font-medium"
+            >
+              Delete From Computer
+            </Label>
+            <p className="text-muted-foreground text-xs">
+              When on, deleting a photo also removes the original file from this
+              device by default. You can still override this per photo when
+              deleting.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Trash2 className="h-4 w-4 text-gray-500" />
+            <Switch
+              className="cursor-pointer"
+              id="delete-from-computer"
+              checked={deleteFromComputer}
+              onCheckedChange={setDeleteFromComputer}
             />
           </div>
         </div>

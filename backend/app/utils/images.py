@@ -5,8 +5,9 @@ import uuid
 import datetime
 import json
 import logging
+from typing import Iterable, List, Optional, Tuple, Dict, Any, Mapping
 import sqlite3
-from typing import List, Optional, Tuple, Dict, Any, Mapping
+
 from PIL import Image, ExifTags
 from pathlib import Path
 
@@ -19,7 +20,10 @@ from app.database.images import (
     db_insert_image_classes_batch,
     db_get_image_sync_state_by_folder_ids,
     db_get_images_by_folder_ids,
+    db_get_images_by_ids,
     db_delete_images_by_ids,
+    db_exclude_image_paths,
+    db_get_excluded_image_paths,
 )
 from app.database.faces import db_insert_face_embeddings_by_image_id
 from app.models.FaceDetector import FaceDetector
@@ -66,6 +70,10 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
             [folder_id for _, folder_id, _ in folder_data]
         )
 
+        # Photos the user removed from the gallery but kept on disk. Without this
+        # the next sync-folder would import them straight back.
+        excluded_paths = db_get_excluded_image_paths()
+
         # Process each folder in the provided data
         for folder_path, folder_id, recursive in folder_data:
             try:
@@ -74,6 +82,11 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
 
                 # Step 1: Get all image files from current folder
                 image_files = image_util_get_images_from_folder(folder_path, recursive)
+                image_files = [
+                    path
+                    for path in image_files
+                    if os.path.normcase(os.path.abspath(path)) not in excluded_paths
+                ]
 
                 if not image_files:
                     continue  # No images in this folder, continue to next
@@ -451,6 +464,29 @@ def image_util_generate_thumbnail(
         return False
 
 
+def image_util_remove_files(file_paths: Iterable[Optional[str]]) -> List[str]:
+    """Delete files, tolerating ones that are already gone.
+
+    Returns the paths that could not be deleted, so callers can report them
+    instead of pretending the file is gone.
+    """
+    failed: List[str] = []
+
+    for file_path in file_paths:
+        if not file_path:
+            continue
+        try:
+            os.remove(file_path)
+            logger.info(f"Removed file: {file_path}")
+        except FileNotFoundError:
+            pass  # Already gone is the outcome we wanted.
+        except OSError as e:
+            logger.error(f"Error removing file {file_path}: {e}")
+            failed.append(file_path)
+
+    return failed
+
+
 def image_util_remove_obsolete_images(folder_id_list: List[int]) -> int:
     """
     Remove obsolete images that no longer exist in the filesystem.
@@ -464,22 +500,67 @@ def image_util_remove_obsolete_images(folder_id_list: List[int]) -> int:
     existing_db_images = db_get_images_by_folder_ids(folder_id_list)
 
     obsolete_images = []
+    obsolete_thumbnails = []
     for image_id, image_path, thumbnail_path in existing_db_images:
         if not os.path.exists(image_path):
             obsolete_images.append(image_id)
-            # Also remove thumbnail if it exists
-            if thumbnail_path and os.path.exists(thumbnail_path):
-                try:
-                    os.remove(thumbnail_path)
-                    logger.info(f"Removed obsolete thumbnail: {thumbnail_path}")
-                except OSError as e:
-                    logger.error(f"Error removing thumbnail {thumbnail_path}: {e}")
+            obsolete_thumbnails.append(thumbnail_path)
 
     if obsolete_images:
+        image_util_remove_files(obsolete_thumbnails)
         db_delete_images_by_ids(obsolete_images)
         logger.info(f"Removed {len(obsolete_images)} obsolete image(s) from database")
 
     return len(obsolete_images)
+
+
+def image_util_delete_images(
+    image_ids: List[str], delete_from_device: bool = False
+) -> Dict[str, List[str]]:
+    """Delete images from the gallery, optionally deleting the files as well.
+
+    Args:
+        image_ids: Images to delete.
+        delete_from_device: True also deletes each file from its folder on disk.
+            False leaves the files alone and records their paths so a later
+            folder scan does not re-import them.
+
+    Returns:
+        {"deleted_ids": ids removed, "failed_paths": files that could not be deleted}
+    """
+    images = db_get_images_by_ids(image_ids)
+    if not images:
+        return {"deleted_ids": [], "failed_paths": []}
+
+    failed_paths: List[str] = []
+    deletable: List[dict] = []
+
+    if delete_from_device:
+        # Delete the file first: a row is only dropped once its file is actually
+        # gone, so a permission error never leaves the gallery claiming a photo
+        # was deleted while the file is still sitting in the folder.
+        for image in images:
+            failed = image_util_remove_files([image["path"]])
+            if failed:
+                failed_paths.extend(failed)
+            else:
+                deletable.append(image)
+    else:
+        deletable = list(images)
+        # db_get_images_by_ids hands folder_id back as "" when the image has none,
+        # and the foreign key needs a real folder id or NULL.
+        db_exclude_image_paths(
+            [(image["path"], image.get("folder_id") or None) for image in deletable]
+        )
+
+    # Thumbnails are PictoPy's own cache, so they go in both modes.
+    image_util_remove_files([image.get("thumbnailPath") for image in deletable])
+
+    deleted_ids = [image["id"] for image in deletable]
+    if deleted_ids:
+        db_delete_images_by_ids(deleted_ids)
+
+    return {"deleted_ids": deleted_ids, "failed_paths": failed_paths}
 
 
 def image_util_create_folder_path_mapping(

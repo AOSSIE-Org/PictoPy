@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from typing import List, Optional
 from app.database.images import db_get_all_images
 from app.schemas.images import ErrorResponse
-from app.utils.images import image_util_parse_metadata
+from app.utils.images import image_util_parse_metadata, image_util_delete_images
 from pydantic import BaseModel
 from app.database.images import (
     db_toggle_image_favourite_status,
@@ -98,13 +98,13 @@ def get_all_images(
             data=image_data,
         )
 
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
                 success=False,
                 error="Internal server error",
-                message=f"Unable to retrieve images: {str(e)}",
+                message="Unable to retrieve images.",
             ).model_dump(),
         )
 
@@ -356,6 +356,70 @@ def toggle_favourite(req: ToggleFavouriteRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal server error: {e}",
+        )
+
+
+class DeleteImagesRequest(BaseModel):
+    image_ids: List[str]
+    # True also deletes each file from its folder on disk. False keeps the files
+    # and only removes them from the gallery.
+    delete_from_device: bool = False
+
+
+class DeleteImagesData(BaseModel):
+    deleted_ids: List[str]
+    failed_paths: List[str]
+
+
+class DeleteImagesResponse(BaseModel):
+    success: bool
+    message: str
+    data: DeleteImagesData
+
+
+@router.delete(
+    "/delete-images",
+    response_model=DeleteImagesResponse,
+    responses={code: {"model": ErrorResponse} for code in [400, 500]},
+)
+def delete_images(request: DeleteImagesRequest):
+    """Delete images from the gallery, optionally from the device as well."""
+    try:
+        if not request.image_ids:
+            raise ValueError("No image IDs provided")
+
+        result = image_util_delete_images(
+            request.image_ids,
+            request.delete_from_device,
+        )
+
+        return DeleteImagesResponse(
+            success=True,
+            message=f"Successfully deleted {len(result['deleted_ids'])} image(s)",
+            data=DeleteImagesData(
+                deleted_ids=result["deleted_ids"],
+                failed_paths=result["failed_paths"],
+            ),
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ErrorResponse(
+                success=False,
+                error="Validation Error",
+                message=str(e),
+            ).model_dump(),
+        )
+    except Exception as e:
+        logger.error(f"Error deleting images: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ErrorResponse(
+                success=False,
+                error="Internal server error",
+                message="Unable to delete images.",
+            ).model_dump(),
         )
 
 
