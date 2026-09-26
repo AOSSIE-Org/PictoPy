@@ -1,11 +1,17 @@
-import os
+import asyncio
 import hashlib
 import logging
-import asyncio
+import os
+from collections.abc import Callable
 from pathlib import Path
-from typing import Optional, Callable
+
 import httpx
-from app.models.model_registry import MODEL_REGISTRY, get_model_path
+
+from app.models.model_registry import (
+    MODEL_REGISTRY,
+    get_model_path,
+    is_model_available,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +37,7 @@ async def verify_sha256(file_path: str, expected_sha256: str) -> bool:
 async def ensure_model(
     model_key: str,
     max_retries: int = 3,
-    progress_callback: Optional[Callable[[float, int, int], None]] = None,
+    progress_callback: Callable[[float, int, int], None] | None = None,
 ) -> str:
     """
     Ensure a model is present on disk and valid.
@@ -40,6 +46,9 @@ async def ensure_model(
     """
     if model_key not in MODEL_REGISTRY:
         raise ValueError(f"Unknown model key: {model_key}")
+
+    if not is_model_available(model_key):
+        raise ValueError(f"Model '{model_key}' is not available for download.")
 
     spec = MODEL_REGISTRY[model_key]
     model_path = get_model_path(model_key)

@@ -1,31 +1,37 @@
-import os
-import json
-import uuid
 import asyncio
+import json
+import logging
+import os
+import uuid
 from concurrent.futures import ProcessPoolExecutor
-from typing import Dict, List
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from starlette.datastructures import State
-from app.models.model_registry import MODEL_REGISTRY, TIER_MODELS, get_model_path
+
+from app.database.metadata import db_get_metadata
+from app.models.model_registry import (
+    MODEL_REGISTRY,
+    TIER_MODELS,
+    get_model_path,
+    is_model_available,
+)
 from app.models.session_registry import (
-    try_mark_model_for_deletion,
-    release_model_deletion_mark,
     _registry_lock,
+    release_model_deletion_mark,
+    try_mark_model_for_deletion,
 )
 from app.routes.dependencies import get_state
 from app.utils.hardware_detect import get_hardware_info
 from app.utils.images import image_util_process_unembedded_images
+from app.utils.model_downloader import ensure_model
 from app.utils.semantic_labels import (
     semantic_util_build_label_embeddings,
     semantic_util_score_images,
 )
-from app.utils.model_downloader import ensure_model
-from app.database.metadata import db_get_metadata
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +43,7 @@ SEMANTIC_FEATURES = ("semantic_vision", "semantic_text")
 
 
 def submit_embedding_backfill_if_semantic(
-    model_keys: List[str], executor: ProcessPoolExecutor
+    model_keys: list[str], executor: ProcessPoolExecutor
 ) -> None:
     """Run the SigLIP2 embedding pass after a semantic model install.
 
@@ -65,10 +71,10 @@ class DownloadTaskEntry:
     listener_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
 
-download_tasks: Dict[str, DownloadTaskEntry] = {}
+download_tasks: dict[str, DownloadTaskEntry] = {}
 
 # Serialize downloads per model_key so concurrent tasks never write the same file path.
-_model_download_locks: Dict[str, asyncio.Lock] = {}
+_model_download_locks: dict[str, asyncio.Lock] = {}
 _model_lock_registry_lock = asyncio.Lock()
 
 
@@ -108,7 +114,7 @@ def get_model_status():
     status_dict = {}
     for key, spec in MODEL_REGISTRY.items():
         # Hide placeholder models that aren't actually ready/uploaded yet
-        if spec["url"] == "PLACEHOLDER_URL" or spec["sha256"] == "PLACEHOLDER_SHA256":
+        if not is_model_available(key):
             continue
 
         path = get_model_path(key)
@@ -135,7 +141,7 @@ def get_hardware_recommendation():
         logger.error(f"Failed to get hardware info: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to detect hardware: {str(e)}",
+            detail=f"Failed to detect hardware: {e!s}",
         )
 
 
@@ -206,7 +212,7 @@ async def delete_model(model_key: str):
                 logger.error(f"Failed to delete model {model_key}: {e}")
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Failed to delete model: {str(e)}",
+                    detail=f"Failed to delete model: {e!s}",
                 )
         else:
             return {
@@ -229,11 +235,12 @@ async def setup_models(request: SetupRequest, app_state: State = Depends(get_sta
             detail=f"Invalid tier '{request.tier}'. Valid tiers are: {list(TIER_MODELS.keys())}",
         )
 
-    models_to_download = (
+    raw_models = (
         TIER_MODELS[request.tier]
         if request.tier == "required"
         else TIER_MODELS[request.tier] + REQUIRED_MODELS
     )
+    models_to_download = [k for k in raw_models if is_model_available(k)]
 
     task_id = str(uuid.uuid4())
     queue = asyncio.Queue()
@@ -297,6 +304,12 @@ async def start_download_model(model_key: str, app_state: State = Depends(get_st
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Model key '{model_key}' not found in registry.",
+        )
+
+    if not is_model_available(model_key):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Model '{model_key}' is not available for download.",
         )
 
     task_id = str(uuid.uuid4())

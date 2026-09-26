@@ -1,21 +1,25 @@
-import os
 import asyncio
-import sys
 import json
+import os
+import sys
 import uuid
+from unittest.mock import AsyncMock, MagicMock, call, patch
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock, AsyncMock, call
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+import app.routes.models as models_module
+from app.models.model_registry import is_model_available
 from app.routes.models import (
-    router as models_router,
     DownloadTaskEntry,
     submit_embedding_backfill_if_semantic,
 )
-import app.routes.models as models_module
+from app.routes.models import (
+    router as models_router,
+)
 from app.utils.images import image_util_process_unembedded_images
 from app.utils.semantic_labels import (
     semantic_util_build_label_embeddings,
@@ -754,6 +758,16 @@ class TestStartDownloadModel:
             detail = json_response["detail"]
             assert "doesnotexist" in detail
 
+    def test_placeholder_model_key_returns_400(
+        self, mock_model_registry_with_placeholder
+    ):
+        with patch(
+            "app.routes.models.MODEL_REGISTRY", mock_model_registry_with_placeholder
+        ):
+            response = client.post("/models/download/siglip2_large_vision")
+            assert response.status_code == 400
+            assert "not available for download" in response.json()["detail"]
+
     # --- Response structure ---
 
     def test_success_is_true(self, download_facenet_response):
@@ -953,11 +967,10 @@ class TestEmbeddingBackfillTrigger:
         executor = MagicMock()
         with patch.object(app.state, "executor", executor, create=True), patch(
             "app.routes.models.ensure_model", new=AsyncMock()
-        ):
-            with TestClient(app) as local_client:
-                response = local_client.post("/models/setup", json={"tier": tier})
-                assert response.status_code == 200
-                self._drain_until_complete(local_client, response.json()["task_id"])
+        ), TestClient(app) as local_client:
+            response = local_client.post("/models/setup", json={"tier": tier})
+            assert response.status_code == 200
+            self._drain_until_complete(local_client, response.json()["task_id"])
         return executor
 
     def test_setup_semantic_tier_triggers_backfill(self):
@@ -978,11 +991,10 @@ class TestEmbeddingBackfillTrigger:
         executor = MagicMock()
         with patch.object(app.state, "executor", executor, create=True), patch(
             "app.routes.models.ensure_model", new=AsyncMock()
-        ):
-            with TestClient(app) as local_client:
-                response = local_client.post("/models/download/siglip2_base_vision")
-                assert response.status_code == 200
-                self._drain_until_complete(local_client, response.json()["task_id"])
+        ), TestClient(app) as local_client:
+            response = local_client.post("/models/download/siglip2_base_vision")
+            assert response.status_code == 200
+            self._drain_until_complete(local_client, response.json()["task_id"])
         executor.submit.assert_has_calls(
             [
                 call(semantic_util_build_label_embeddings),
@@ -990,3 +1002,33 @@ class TestEmbeddingBackfillTrigger:
                 call(semantic_util_score_images),
             ]
         )
+
+
+class TestModelAvailability:
+    def test_is_model_available(self, mock_model_registry_with_placeholder):
+        with patch(
+            "app.models.model_registry.MODEL_REGISTRY",
+            mock_model_registry_with_placeholder,
+        ):
+            assert is_model_available("yolo_nano") is True
+            assert is_model_available("siglip2_large_vision") is False
+            assert is_model_available("siglip2_url_placeholder_only") is False
+            assert is_model_available("siglip2_sha_placeholder_only") is False
+            assert is_model_available("nonexistent_key") is False
+
+    @pytest.mark.asyncio
+    async def test_ensure_model_raises_for_placeholder(
+        self, mock_model_registry_with_placeholder
+    ):
+        from app.utils.model_downloader import ensure_model
+
+        with patch(
+            "app.utils.model_downloader.MODEL_REGISTRY",
+            mock_model_registry_with_placeholder,
+        ), patch(
+            "app.models.model_registry.MODEL_REGISTRY",
+            mock_model_registry_with_placeholder,
+        ), pytest.raises(
+            ValueError, match="not available for download"
+        ):
+            await ensure_model("siglip2_large_vision")
