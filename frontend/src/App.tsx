@@ -8,6 +8,7 @@ import { GlobalLoader } from './components/Loader/GlobalLoader';
 import { InfoDialog } from './components/Dialog/InfoDialog';
 import GlobalAlert from './components/GlobalAlert/GlobalAlert';
 import { LibraryProcessingIndicator } from './components/BackgroundTasks/LibraryProcessingIndicator';
+import { MemoryNotificationListener } from './components/Memories/MemoryNotificationListener';
 import { useSelector } from 'react-redux';
 import { RootState } from './app/store';
 const App: React.FC = () => {
@@ -25,6 +26,7 @@ const App: React.FC = () => {
         <BrowserRouter>
           <AppRoutes />
           <LibraryProcessingIndicator />
+          <MemoryNotificationListener />
         </BrowserRouter>
         <GlobalLoader loading={loading} message={message} />
         <InfoDialog

@@ -96,6 +96,7 @@
     {
       "identifier": "opener:allow-open-url",
       "allow": [{ "url": "https://aossie-org.github.io/*" }]
-    }
+    },
+    "notification:default"
   ]
 }
