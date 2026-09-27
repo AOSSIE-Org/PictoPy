@@ -419,8 +419,12 @@ def image_util_generate_thumbnail(
     image_path: str, thumbnail_path: str, size: Tuple[int, int] = (600, 600)
 ) -> bool:
     """Generate thumbnail for a single image."""
+    from PIL import ImageOps
     try:
         with Image.open(image_path) as img:
+            # Apply EXIF orientation to ensure portrait photos are upright
+            img = ImageOps.exif_transpose(img)
+            
             img.thumbnail(size)
 
             # Convert to RGB if the image has an alpha channel or is not RGB
