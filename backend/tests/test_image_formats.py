@@ -5,8 +5,6 @@ Tests for image_util_is_valid_image() accepting the additional formats
 
 import os
 import tempfile
-import os
-import tempfile
 from typing import Iterator
 
 import pytest
