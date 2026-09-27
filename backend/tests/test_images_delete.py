@@ -164,6 +164,31 @@ class TestGalleryOnlyDelete:
 
         assert db_get_excluded_image_paths() == set()
 
+    def test_a_rolled_back_transaction_keeps_the_row_and_is_reported(
+        self, library, test_db
+    ):
+        """
+        Regression test for a CodeRabbit finding: db_exclude_and_delete_images
+        used to return [] both when there was nothing to do and when its
+        transaction failed and rolled back, so a real failure looked
+        identical to "successfully deleted zero images" -- the row, the
+        thumbnail, and the exclusion all silently stayed exactly as if
+        nothing had gone wrong, and the caller had no way to tell.
+        """
+        image_id, path, thumbnail_path = _first(test_db)
+
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(
+                "app.utils.images.db_exclude_and_delete_images", lambda *a, **k: None
+            )
+            result = image_util_delete_images([image_id])
+
+        assert result["deleted_ids"] == []
+        assert result["failed_paths"] == [path]
+        assert image_id in [row[0] for row in _rows(test_db)]
+        assert os.path.exists(thumbnail_path)
+        assert db_get_excluded_image_paths() == set()
+
 
 class TestDeleteFromDevice:
     def test_the_file_and_the_row_both_go(self, library, test_db):
@@ -197,6 +222,32 @@ class TestDeleteFromDevice:
         assert result["deleted_ids"] == []
         assert result["failed_paths"] == [path]
         assert image_id in [row[0] for row in _rows(test_db)]
+
+    def test_a_db_failure_after_the_file_is_gone_is_reported(self, library, test_db):
+        """
+        Regression test for a CodeRabbit finding: image_util_delete_images
+        used to call db_delete_images_by_ids() without checking its result,
+        so a rolled-back database delete after the file was already removed
+        from disk was reported as a success -- the id came back in
+        deleted_ids, its thumbnail was dropped, and there was no signal that
+        the database row (now pointing at a missing file) was still there.
+        """
+        image_id, path, thumbnail_path = _first(test_db)
+
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(
+                "app.utils.images.db_delete_images_by_ids", lambda ids: False
+            )
+            result = image_util_delete_images([image_id], delete_from_device=True)
+
+        assert result["deleted_ids"] == []
+        assert result["failed_paths"] == [path]
+        # The file itself really is gone -- that part happened before the
+        # DB call and can't be undone -- but the row and thumbnail must be
+        # left alone since the delete never actually committed.
+        assert not os.path.exists(path)
+        assert image_id in [row[0] for row in _rows(test_db)]
+        assert os.path.exists(thumbnail_path)
 
 
 class TestUnknownIds:

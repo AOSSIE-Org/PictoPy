@@ -526,7 +526,11 @@ def image_util_delete_images(
             folder scan does not re-import them.
 
     Returns:
-        {"deleted_ids": ids removed, "failed_paths": files that could not be deleted}
+        {"deleted_ids": ids whose database row was actually removed,
+         "failed_paths": paths that did not end up fully deleted -- either the
+         file itself could not be removed, or the database delete failed
+         after the file was already gone (delete_from_device=True), or the
+         exclude+delete transaction failed outright (delete_from_device=False)}
     """
     images = db_get_images_by_ids(image_ids)
     if not images:
@@ -547,9 +551,18 @@ def image_util_delete_images(
             else:
                 deletable.append(image)
 
-        deleted_ids = [image["id"] for image in deletable]
-        if deleted_ids:
-            db_delete_images_by_ids(deleted_ids)
+        candidate_ids = [image["id"] for image in deletable]
+        if candidate_ids:
+            if db_delete_images_by_ids(candidate_ids):
+                deleted_ids = candidate_ids
+            else:
+                # The files above are already gone from disk, but the row
+                # delete failed and was rolled back, so none of these rows
+                # actually went away. Don't claim them as deleted, don't
+                # touch their thumbnails, and flag their paths so the caller
+                # knows these files were removed but need to be restored.
+                failed_paths.extend(image["path"] for image in deletable)
+                deletable = []
     else:
         deletable = list(images)
         # db_get_images_by_ids hands folder_id back as "" when the image has none,
@@ -560,11 +573,18 @@ def image_util_delete_images(
         # Exclusion insert and row delete share one transaction, so a failure
         # partway through can't leave the file re-importable (row gone, no
         # exclusion) or the exclusion orphaned (row still there).
-        deleted_ids = db_exclude_and_delete_images(
+        exclude_and_delete_result = db_exclude_and_delete_images(
             entries, [image["id"] for image in deletable]
         )
-        deleted = set(deleted_ids)
-        deletable = [image for image in deletable if image["id"] in deleted]
+        if exclude_and_delete_result is None:
+            # Transaction failed and was rolled back -- nothing was excluded
+            # or deleted, so don't report any of these as removed.
+            failed_paths.extend(image["path"] for image in deletable)
+            deletable = []
+        else:
+            deleted_ids = exclude_and_delete_result
+            deleted = set(deleted_ids)
+            deletable = [image for image in deletable if image["id"] in deleted]
 
     # Thumbnails are PictoPy's own cache, so they go in both modes -- only for
     # images whose row delete actually committed.

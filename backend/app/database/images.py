@@ -668,7 +668,7 @@ def db_exclude_image_paths(entries: List[Tuple[ImagePath, Optional[FolderId]]]) 
 def db_exclude_and_delete_images(
     entries: List[Tuple[ImagePath, Optional[FolderId]]],
     image_ids: List[ImageId],
-) -> List[ImageId]:
+) -> Optional[List[ImageId]]:
     """
     Record gallery-only exclusions and delete their image rows in one transaction.
 
@@ -685,8 +685,10 @@ def db_exclude_and_delete_images(
         image_ids: IDs of the same images, whose rows should be deleted.
 
     Returns:
-        image_ids, unchanged, if the transaction committed; an empty list if
-        it failed, so callers can treat the images as not deleted.
+        image_ids, unchanged, if the transaction committed (an empty list only
+        when both inputs were empty to begin with); None if the transaction
+        failed and was rolled back, so callers can tell "nothing to do" apart
+        from "the delete failed" instead of treating both as an empty success.
     """
     if not entries and not image_ids:
         return []
@@ -718,7 +720,7 @@ def db_exclude_and_delete_images(
     except sqlite3.Error as e:
         logger.error(f"Error excluding and deleting images: {e}")
         conn.rollback()
-        return []
+        return None
     finally:
         conn.close()
 
