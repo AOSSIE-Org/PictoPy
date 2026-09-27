@@ -503,7 +503,7 @@ def image_util_create_folder_path_mapping(
 
 def image_util_find_folder_id_for_image(
     image_path: str, folder_path_to_id: Dict[str, int]
-) -> int:
+) -> Optional[int]:
     """
     Find the most specific folder ID for a given image path.
 
