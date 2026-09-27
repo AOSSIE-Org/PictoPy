@@ -12,7 +12,11 @@ from app.database.face_clusters import (
     db_get_all_clusters_with_face_counts,
     db_get_images_by_cluster_id,
     db_get_images_by_face_clusters,
+    db_get_video_ids_by_cluster_id,
+    db_get_video_matches_by_face_clusters,
 )
+from app.database.videos import db_get_videos_by_ids
+from app.utils.videos import video_util_to_video_data
 from starlette.datastructures import State
 
 from app.routes.dependencies import get_state
@@ -34,6 +38,7 @@ from app.schemas.face_clusters import (
     MultiPersonSearchResponse,
     MultiPersonSearchData,
     MultiPersonSearchImage,
+    MultiPersonSearchVideo,
 )
 from app.schemas.images import FaceSearchRequest, InputType
 from app.utils.faceSearch import perform_face_search
@@ -173,6 +178,7 @@ def get_all_clusters():
                 cluster_id=cluster["cluster_id"],
                 cluster_name=cluster["cluster_name"],
                 face_count=cluster["face_count"],
+                video_count=cluster["video_count"],
                 face_image_base64=cluster["face_image_base64"],
             )
             for cluster in clusters_data
@@ -232,14 +238,25 @@ def get_cluster_images(cluster_id: str):
             for img in images_data
         ]
 
+        # Step 4: Videos the same person appears in, as the videos routes
+        # return them, so the frontend renders them with the same card.
+        videos = video_util_to_video_data(
+            db_get_videos_by_ids(db_get_video_ids_by_cluster_id(cluster_id))
+        )
+
         return GetClusterImagesResponse(
             success=True,
-            message=f"Successfully retrieved {len(images)} image(s) for cluster '{cluster_id}'",
+            message=(
+                f"Successfully retrieved {len(images)} image(s) and "
+                f"{len(videos)} video(s) for cluster '{cluster_id}'"
+            ),
             data=GetClusterImagesData(
                 cluster_id=cluster_id,
                 cluster_name=cluster["cluster_name"],
                 images=images,
                 total_images=len(images),
+                videos=videos,
+                total_videos=len(videos),
             ),
         )
 
@@ -439,13 +456,33 @@ def search_images_by_multiple_faces(body: MultiPersonSearchRequest):
             for row in rows
         ]
 
+        # Same people, in videos. Keyed rather than zipped: db_get_videos_by_ids
+        # drops ids it can't find, which would shift counts onto other videos.
+        matches = db_get_video_matches_by_face_clusters(
+            body.cluster_ids, body.match_mode
+        )
+        match_counts = dict(matches)
+        videos = [
+            MultiPersonSearchVideo(
+                **video.model_dump(), match_count=match_counts[video.id]
+            )
+            for video in video_util_to_video_data(
+                db_get_videos_by_ids([video_id for video_id, _ in matches])
+            )
+        ]
+
         return MultiPersonSearchResponse(
             success=True,
-            message=f"Found {len(images)} image(s) matching the selected people.",
+            message=(
+                f"Found {len(images)} image(s) and {len(videos)} video(s) "
+                "matching the selected people."
+            ),
             data=MultiPersonSearchData(
                 images=images,
                 total=len(images),
                 match_mode=body.match_mode,
+                videos=videos,
+                total_videos=len(videos),
             ),
         )
     except HTTPException:

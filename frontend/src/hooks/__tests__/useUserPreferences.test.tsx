@@ -26,6 +26,7 @@ const baseline: UserPreferencesData = {
   YOLO_model_size: 'medium',
   GPU_Acceleration: false,
   Video_Frame_Interval: 5,
+  Video_Face_Detection: false,
   memories: {
     enabled: true,
     notifications_enabled: false,
@@ -135,6 +136,17 @@ describe('useUserPreferences', () => {
     // A whole-object PUT would carry a concurrent edit's stale value along
     // with it, so each write names only its own key.
     expect(sentBodies()).toEqual([{ Video_Frame_Interval: 10 }]);
+  });
+
+  it('toggles video face detection on its own key', async () => {
+    const result = await mountLoaded();
+
+    await act(async () => {
+      await result.current.toggleVideoFaceDetection();
+    });
+
+    expect(sentBodies()).toEqual([{ Video_Face_Detection: true }]);
+    expect(result.current.preferences.Video_Face_Detection).toBe(true);
   });
 
   it('builds a queued write from what landed before it', async () => {
