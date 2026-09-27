@@ -443,6 +443,21 @@ def delete_folders(request: DeleteFoldersRequest):
             ).model_dump(),
         )
     except Exception as e:
+        # Surface a clear, actionable message when the DB is still locked
+        # after all automatic retries (background indexing still running).
+        err_str = str(e)
+        if "database is locked" in err_str:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Database busy",
+                    message=(
+                        "The database is currently busy with background "
+                        "indexing. Please wait a moment and try again."
+                    ),
+                ).model_dump(),
+            )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ErrorResponse(
