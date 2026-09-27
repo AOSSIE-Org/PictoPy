@@ -665,6 +665,64 @@ def db_exclude_image_paths(entries: List[Tuple[ImagePath, Optional[FolderId]]]) 
         conn.close()
 
 
+def db_exclude_and_delete_images(
+    entries: List[Tuple[ImagePath, Optional[FolderId]]],
+    image_ids: List[ImageId],
+) -> List[ImageId]:
+    """
+    Record gallery-only exclusions and delete their image rows in one transaction.
+
+    db_exclude_image_paths() and db_delete_images_by_ids() each commit on their
+    own connection, so calling them back to back is not atomic: if the
+    exclusion insert fails, the row can still be deleted and a later scan
+    re-imports the file; if the row delete fails after the exclusion commits,
+    the exclusion is left behind pointing at a photo that is still in the
+    gallery. Sharing one connection and transaction here means both happen or
+    neither does.
+
+    Args:
+        entries: (path, folder_id) pairs to record in excluded_image_paths.
+        image_ids: IDs of the same images, whose rows should be deleted.
+
+    Returns:
+        image_ids, unchanged, if the transaction committed; an empty list if
+        it failed, so callers can treat the images as not deleted.
+    """
+    if not entries and not image_ids:
+        return []
+
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        if entries:
+            cursor.executemany(
+                """
+                INSERT OR IGNORE INTO excluded_image_paths (path, folder_id)
+                VALUES (?, ?)
+                """,
+                [(_normalise_path(path), folder_id) for path, folder_id in entries],
+            )
+        if image_ids:
+            placeholders = ",".join("?" for _ in image_ids)
+            cursor.execute(
+                f"DELETE FROM images WHERE id IN ({placeholders})",
+                image_ids,
+            )
+        conn.commit()
+        logger.info(
+            f"Excluded {len(entries)} image path(s) and deleted {cursor.rowcount} "
+            "image row(s) atomically"
+        )
+        return list(image_ids)
+    except sqlite3.Error as e:
+        logger.error(f"Error excluding and deleting images: {e}")
+        conn.rollback()
+        return []
+    finally:
+        conn.close()
+
+
 def db_get_excluded_image_paths() -> Set[ImagePath]:
     """Paths the folder scan must not re-import, keyed like the scan compares them."""
     conn = _connect()

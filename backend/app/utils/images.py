@@ -22,7 +22,7 @@ from app.database.images import (
     db_get_images_by_folder_ids,
     db_get_images_by_ids,
     db_delete_images_by_ids,
-    db_exclude_image_paths,
+    db_exclude_and_delete_images,
     db_get_excluded_image_paths,
 )
 from app.database.faces import db_insert_face_embeddings_by_image_id
@@ -534,6 +534,7 @@ def image_util_delete_images(
 
     failed_paths: List[str] = []
     deletable: List[dict] = []
+    deleted_ids: List[str] = []
 
     if delete_from_device:
         # Delete the file first: a row is only dropped once its file is actually
@@ -545,20 +546,29 @@ def image_util_delete_images(
                 failed_paths.extend(failed)
             else:
                 deletable.append(image)
+
+        deleted_ids = [image["id"] for image in deletable]
+        if deleted_ids:
+            db_delete_images_by_ids(deleted_ids)
     else:
         deletable = list(images)
         # db_get_images_by_ids hands folder_id back as "" when the image has none,
         # and the foreign key needs a real folder id or NULL.
-        db_exclude_image_paths(
-            [(image["path"], image.get("folder_id") or None) for image in deletable]
+        entries = [
+            (image["path"], image.get("folder_id") or None) for image in deletable
+        ]
+        # Exclusion insert and row delete share one transaction, so a failure
+        # partway through can't leave the file re-importable (row gone, no
+        # exclusion) or the exclusion orphaned (row still there).
+        deleted_ids = db_exclude_and_delete_images(
+            entries, [image["id"] for image in deletable]
         )
+        deleted = set(deleted_ids)
+        deletable = [image for image in deletable if image["id"] in deleted]
 
-    # Thumbnails are PictoPy's own cache, so they go in both modes.
+    # Thumbnails are PictoPy's own cache, so they go in both modes -- only for
+    # images whose row delete actually committed.
     image_util_remove_files([image.get("thumbnailPath") for image in deletable])
-
-    deleted_ids = [image["id"] for image in deletable]
-    if deleted_ids:
-        db_delete_images_by_ids(deleted_ids)
 
     return {"deleted_ids": deleted_ids, "failed_paths": failed_paths}
 

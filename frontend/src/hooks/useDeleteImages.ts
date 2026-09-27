@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useDispatch } from 'react-redux';
 import { usePictoMutation } from '@/hooks/useQueryExtension';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
+import { showInfoDialog } from '@/features/infoDialogSlice';
 import { deleteImages } from '@/api/api-functions/images';
 import { removeImages } from '@/features/imageSlice';
 
@@ -22,11 +23,26 @@ export const useDeleteImages = () => {
         delete_from_device: deleteFromDevice,
       }),
     autoInvalidateTags: ['images'],
-    onSuccess: (data, { imageIds }) => {
-      // Drop them from the store straight away so the viewer moves on instead of
-      // waiting for the refetch. Fall back to what was asked for if the backend
-      // response has no data, so the UI never keeps showing a deleted photo.
-      dispatch(removeImages(data.data?.deleted_ids ?? imageIds));
+    onSuccess: (data) => {
+      const { deleted_ids: deletedIds = [], failed_paths: failedPaths = [] } =
+        data.data ?? {};
+
+      // Drop only the ones that actually got deleted -- a path in
+      // failed_paths means its row is still there, so it must keep showing.
+      dispatch(removeImages(deletedIds));
+
+      if (failedPaths.length > 0) {
+        dispatch(
+          showInfoDialog({
+            title: 'Some Files Could Not Be Deleted',
+            message: `The following file(s) could not be deleted from your device: ${failedPaths
+              .map((path) => path.split('/').pop())
+              .join(', ')}`,
+            variant: 'error',
+          }),
+        );
+      }
+
       // Separate calls: autoInvalidateTags is passed through as a single queryKey
       // and matches by prefix, so neither of these matches ['images'].
       queryClient.invalidateQueries({ queryKey: ['album-images'] });
