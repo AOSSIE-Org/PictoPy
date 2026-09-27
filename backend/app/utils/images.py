@@ -10,7 +10,7 @@ from typing import List, Optional, Tuple, Dict, Any, Mapping
 from PIL import Image, ExifTags
 from pathlib import Path
 
-from app.config.settings import THUMBNAIL_IMAGES_PATH,SUPPORTED_IMAGE_EXTENSIONS
+from app.config.settings import THUMBNAIL_IMAGES_PATH, SUPPORTED_IMAGE_EXTENSIONS
 from app.database.images import (
     ImageSyncState,
     db_bulk_insert_images,
@@ -540,6 +540,7 @@ def image_util_is_valid_image(file_path: str) -> bool:
         return True
     except Exception:
         return False
+
 
 def _convert_to_degrees(value):
     """Converts a GPS coordinate value from DMS to decimal degrees."""

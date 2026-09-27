@@ -272,8 +272,18 @@ INDEXING_MAX_WORKERS = _get_env_int("INDEXING_MAX_WORKERS", 2, min_value=1, max_
 # (image_util_is_valid_image) and the /config/supported-extensions endpoint
 # consumed by the Tauri frontend's "Open Original File" command.
 SUPPORTED_IMAGE_EXTENSIONS = {
-    ".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff", ".tif", ".gif",
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".webp",
+    ".bmp",
+    ".tiff",
+    ".tif",
+    ".gif",
 }
 SUPPORTED_VIDEO_EXTENSIONS = {
-    ".mp4", ".mov", ".webm", ".m4v",
+    ".mp4",
+    ".mov",
+    ".webm",
+    ".m4v",
 }
