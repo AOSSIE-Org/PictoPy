@@ -31,25 +31,44 @@ export const setDeleteFromComputerPreference = (value: boolean): boolean => {
 
 /**
  * Whether the delete confirmation dialog should be skipped entirely — set by
- * checking "Don't show again" once. When true, deletes go straight through
- * using getDeleteFromComputerPreference() with no dialog shown. A storage
- * read failure is treated as "off" so a delete is never silently skipped.
+ * checking "Don't show again" once. The skip is anchored to the
+ * "Delete From Computer" value that was active at the moment it was granted:
+ * if that default has since changed (e.g. from Settings), the anchor no
+ * longer matches the live value and this returns false, so the dialog is
+ * shown again instead of silently deleting under a default the user never
+ * actually confirmed. A storage read failure is treated as "off" so a
+ * delete is never silently skipped.
  */
 export const getSkipDeleteConfirmationPreference = (): boolean => {
   try {
-    return localStorage.getItem(SKIP_DELETE_CONFIRM_KEY) === 'true';
+    const anchor = localStorage.getItem(SKIP_DELETE_CONFIRM_KEY);
+    return (
+      anchor !== null && anchor === String(getDeleteFromComputerPreference())
+    );
   } catch (err) {
     console.error('Failed to read delete-confirmation preference', err);
     return false;
   }
 };
 
-/** Returns true if the write succeeded. */
+/**
+ * Grants (value=true) or revokes (value=false) skipping the delete
+ * confirmation dialog. Granting anchors the skip to the CURRENT
+ * "Delete From Computer" value — see getSkipDeleteConfirmationPreference for
+ * why that anchor matters. Returns true if the write succeeded.
+ */
 export const setSkipDeleteConfirmationPreference = (
   value: boolean,
 ): boolean => {
   try {
-    localStorage.setItem(SKIP_DELETE_CONFIRM_KEY, String(value));
+    if (value) {
+      localStorage.setItem(
+        SKIP_DELETE_CONFIRM_KEY,
+        String(getDeleteFromComputerPreference()),
+      );
+    } else {
+      localStorage.removeItem(SKIP_DELETE_CONFIRM_KEY);
+    }
     return true;
   } catch (err) {
     console.error('Failed to save delete-confirmation preference', err);
