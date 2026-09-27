@@ -5,6 +5,9 @@ Tests for image_util_is_valid_image() accepting the additional formats
 
 import os
 import tempfile
+import os
+import tempfile
+from typing import Iterator
 
 import pytest
 from PIL import Image
@@ -13,12 +16,12 @@ from app.utils.images import image_util_is_valid_image
 
 
 @pytest.fixture
-def temp_dir():
+def temp_dir() -> Iterator[str]:
     with tempfile.TemporaryDirectory() as tmp:
         yield tmp
 
 
-def _make_image(path: str, fmt: str, mode: str = "RGB", size=(10, 10)):
+def _make_image(path: str, fmt: str, mode: str = "RGB", size=(10, 10)) -> None:
     img = Image.new(mode, size, color="red")
     img.save(path, fmt)
 

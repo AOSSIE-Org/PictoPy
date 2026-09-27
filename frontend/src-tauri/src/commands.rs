@@ -3,12 +3,7 @@ use std::time::Duration;
 use tauri_plugin_opener::OpenerExt;
 
 const FOLDERS_URL: &str = "http://localhost:52123/folders/all-folders";
-
-const ALLOWED_EXTENSIONS: &[&str] = &[
-    // images
-    "jpg", "jpeg", "png", "webp", "bmp", "tiff", "tif", "gif", // videos
-    "mp4", "mov", "webm", "m4v",
-];
+const EXTENSIONS_URL: &str = "http://localhost:52123/config/supported-extensions";
 
 /// Fetch the user's library folders from the Python backend (trusted source,
 /// not from frontend input) and canonicalize them.
@@ -40,6 +35,36 @@ async fn fetch_library_folders() -> Result<Vec<PathBuf>, String> {
         .collect())
 }
 
+/// Fetch the extensions the backend considers valid media (single source of
+/// truth lives in backend/app/config/settings.py), so this list never drifts
+/// from what the indexer actually accepts.
+async fn fetch_supported_extensions() -> Result<Vec<String>, String> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(5))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let body = client
+        .get(EXTENSIONS_URL)
+        .send()
+        .await
+        .map_err(|e| format!("Could not reach backend: {e}"))?
+        .text()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let json: serde_json::Value = serde_json::from_str(&body).map_err(|e| e.to_string())?;
+
+    let extensions = json["data"]["extensions"]
+        .as_array()
+        .ok_or("Unexpected backend response")?;
+
+    Ok(extensions
+        .iter()
+        .filter_map(|e| e.as_str().map(String::from))
+        .collect())
+}
+
 #[tauri::command]
 pub async fn open_image_file(app: tauri::AppHandle, path: String) -> Result<(), String> {
     // Resolve the real path (blocks `..` tricks and symlinks).
@@ -51,11 +76,16 @@ pub async fn open_image_file(app: tauri::AppHandle, path: String) -> Result<(), 
         return Err("Path is not a file".into());
     }
 
-    // Check the extension on the resolved path.
+    // Check the extension on the resolved path, against the backend's list.
+    let allowed_extensions = fetch_supported_extensions().await?;
     let is_supported = canonical
         .extension()
         .and_then(|e| e.to_str())
-        .map(|e| ALLOWED_EXTENSIONS.contains(&e.to_lowercase().as_str()))
+        .map(|e| {
+            allowed_extensions
+                .iter()
+                .any(|allowed| allowed.eq_ignore_ascii_case(e))
+        })
         .unwrap_or(false);
 
     if !is_supported {
