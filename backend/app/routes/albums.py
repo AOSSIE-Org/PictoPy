@@ -381,6 +381,13 @@ def remove_image_from_album(album_id: str = Path(...), image_id: str = Path(...)
         return SuccessResponse(
             success=True, msg="Image removed from album successfully"
         )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ErrorResponse(
+                success=False, error="Image Not Found in Album", message=str(e)
+            ).model_dump(),
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
