@@ -20,12 +20,19 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Publish stable installer asset names
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.release-tag }}
         run: |
           VERSION="${RELEASE_TAG#v}"
+          MANIFEST_VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' frontend/src-tauri/Cargo.toml | head -n 1)"
+          if [ "$VERSION" != "$MANIFEST_VERSION" ]; then
+            echo "Error: release tag version $VERSION does not match manifest version $MANIFEST_VERSION"
+            exit 1
+          fi
           mkdir stable-downloads
           gh release download "$RELEASE_TAG" \
             --repo "$GITHUB_REPOSITORY" \
