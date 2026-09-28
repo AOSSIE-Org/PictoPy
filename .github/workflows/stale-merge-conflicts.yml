@@ -70,8 +70,12 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
+          if ! LABELS=$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/labels" --jq '.[].name'); then
+            echo "Failed to list labels for PR: $PR_NUMBER" >&2
+            exit 1
+          fi
           for LABEL in "stale merge conflict" "closed stale merge conflict"; do
-            if gh api "repos/$REPO/issues/$PR_NUMBER/labels" --jq '.[].name' | grep -qx "$LABEL"; then
+            if grep -qx "$LABEL" <<<"$LABELS"; then
               gh api -X DELETE "repos/$REPO/issues/$PR_NUMBER/labels/$(echo "$LABEL" | sed 's/ /%20/g')"
               echo "Removed label: $LABEL"
             else
