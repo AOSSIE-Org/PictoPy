@@ -1,0 +1,41 @@
+name: Publish Stable Installer Downloads
+
+on:
+  workflow_call:
+    inputs:
+      release-tag:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      release-tag:
+        description: Release tag to add stable installer assets to
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish stable installer asset names
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release-tag }}
+        run: |
+          VERSION="${RELEASE_TAG#v}"
+          mkdir stable-downloads
+          gh release download "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern "PictoPy_${VERSION}_x64-setup.exe" \
+            --pattern "PictoPy_${VERSION}_amd64.deb" \
+            --dir stable-downloads
+          cp "stable-downloads/PictoPy_${VERSION}_x64-setup.exe" PictoPy-Windows-Setup.exe
+          cp "stable-downloads/PictoPy_${VERSION}_amd64.deb" PictoPy-Debian-amd64.deb
+          gh release upload "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            PictoPy-Windows-Setup.exe \
+            PictoPy-Debian-amd64.deb \
+            --clobber
