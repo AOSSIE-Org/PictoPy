@@ -254,7 +254,7 @@ def image_util_classify_and_face_detect_images(
             classes = object_classifier.get_classes(image_path)
 
             # Step 2: Insert class-image pairs if classes were detected
-            if len(classes) > 0:
+            if classes:
                 # Create image-class pairs
                 image_class_pairs = [(image_id, class_id) for class_id in classes]
                 logger.debug(f"Image-class pairs: {image_class_pairs}")
@@ -555,7 +555,7 @@ def image_util_create_folder_path_mapping(
 
 def image_util_find_folder_id_for_image(
     image_path: str, folder_path_to_id: Dict[str, int]
-) -> int:
+) -> int | None:
     """
     Find the most specific folder ID for a given image path.
 
