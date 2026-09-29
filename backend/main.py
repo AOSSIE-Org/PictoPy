@@ -61,6 +61,18 @@ from app.logging.setup_logging import (
 # Set up standard logging first
 setup_logging("backend")
 
+try:
+    import pillow_heif
+
+    pillow_heif.register_heif_opener()
+except ImportError:
+    pass
+
+try:
+    import pillow_avif  # noqa: F401
+except ImportError:
+    pass
+
 # Configure Uvicorn logging to use our custom formatter
 configure_uvicorn_logging("backend")
 

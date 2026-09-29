@@ -995,7 +995,9 @@ def _generate_cluster_face_image(
         image_path, bbox = face_data
 
         # Load the image
-        img = cv2.imread(image_path)
+        from app.utils.images import image_util_load_cv2_image
+
+        img = image_util_load_cv2_image(image_path)
         if img is None:
             return None
 

@@ -36,6 +36,8 @@ opencv-python==4.9.0.80
 orjson==3.10.3
 packaging==24.0
 pillow==10.3.0
+pillow-heif>=0.18.0
+pillow-avif-plugin>=1.4.3
 priority==2.0.0
 protobuf==5.26.1
 pydantic==2.7.1
