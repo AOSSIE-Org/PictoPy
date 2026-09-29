@@ -7,7 +7,7 @@ import json
 import logging
 import sqlite3
 from typing import List, Optional, Tuple, Dict, Any, Mapping
-from PIL import Image, ExifTags
+from PIL import Image, ExifTags, ImageOps
 from pathlib import Path
 import cv2
 import numpy as np
@@ -494,7 +494,8 @@ def image_util_load_cv2_image(image_path: str) -> np.ndarray | None:
 
     try:
         with Image.open(image_path) as pil_img:
-            rgb_img = pil_img.convert("RGB")
+            transposed_img = ImageOps.exif_transpose(pil_img)
+            rgb_img = transposed_img.convert("RGB")
             rgb_array = np.array(rgb_img)
             return cv2.cvtColor(rgb_array, cv2.COLOR_RGB2BGR)
     except Exception as e:
