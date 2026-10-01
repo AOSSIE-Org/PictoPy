@@ -45,6 +45,7 @@ python-dotenv==1.0.1
 python-multipart==0.0.9
 PyYAML==6.0.1
 rich==13.7.1
+requests>=2.31.0
 scikit-learn==1.5.1  
 scipy==1.14.0
 shellingham==1.5.4
