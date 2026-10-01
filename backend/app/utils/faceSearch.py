@@ -1,12 +1,20 @@
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel
+from typing import Optional, List, Dict, Any, Tuple
+from pydantic import BaseModel, ValidationError
 from app.config.settings import CONFIDENCE_PERCENT
-from app.database.faces import db_get_all_video_face_embeddings, get_all_face_embeddings
+from app.database.faces import (
+    db_get_all_image_face_embeddings,
+    db_get_all_video_face_embeddings,
+)
+from app.database.images import db_get_images_by_ids
 from app.database.videos import db_get_videos_by_ids
+from app.logging.setup_logging import get_logger
 from app.models.FaceDetector import FaceDetector
 from app.schemas.videos import VideoData
 from app.utils.FaceNet import FaceNet_util_cosine_similarity
+from app.utils.images import image_util_parse_metadata
 from app.utils.videos import video_util_to_video_data
+
+logger = get_logger(__name__)
 
 
 class BoundingBox(BaseModel):
@@ -24,7 +32,8 @@ class ImageData(BaseModel):
     metadata: Dict[str, Any]
     isTagged: bool
     tags: Optional[List[str]] = None
-    bboxes: BoundingBox
+    # The matching face's box, absent on faces stored before one was recorded.
+    bboxes: Optional[BoundingBox] = None
 
 
 class GetAllImagesResponse(BaseModel):
@@ -48,8 +57,6 @@ def perform_face_search(image_path: str) -> GetAllImagesResponse:
     fd = FaceDetector()
 
     try:
-        matches = []
-
         try:
             result = fd.detect_faces(image_path)
         except Exception as e:
@@ -68,42 +75,65 @@ def perform_face_search(image_path: str) -> GetAllImagesResponse:
         # The detector already ran FaceNet on this crop; no second model needed.
         new_embedding = result["embeddings"][0]
 
-        images = get_all_face_embeddings()
+        image_faces = db_get_all_image_face_embeddings()
         video_faces = db_get_all_video_face_embeddings()
-        if not images and not video_faces:
+        if not image_faces and not video_faces:
             return GetAllImagesResponse(
                 success=True,
                 message="No face embeddings available for comparison.",
                 data=[],
             )
 
-        for image in images:
+        # A group photo holds several people, so rank each image by its
+        # best-matching face and frame that one, rather than whichever face the
+        # database happened to return first.
+        best_by_image: Dict[str, Tuple[float, Optional[Dict[str, Any]]]] = {}
+        for face in image_faces:
             similarity = FaceNet_util_cosine_similarity(
-                new_embedding, image["embeddings"]
+                new_embedding, face["embeddings"]
             )
             if similarity >= CONFIDENCE_PERCENT:
+                image_id = face["image_id"]
+                previous = best_by_image.get(image_id)
+                if previous is None or similarity > previous[0]:
+                    best_by_image[image_id] = (similarity, face["bbox"])
+
+        matched_ids = sorted(
+            best_by_image, key=lambda i: best_by_image[i][0], reverse=True
+        )
+        # Loaded by id so paths, metadata and tags are only read for the images
+        # that actually matched. Row by row: one unusable record must not fail
+        # the search and hide every other match.
+        matches: List[ImageData] = []
+        for image in db_get_images_by_ids(matched_ids):
+            _, bbox = best_by_image[image["id"]]
+            try:
                 matches.append(
                     ImageData(
                         id=image["id"],
                         path=image["path"],
                         folder_id=image["folder_id"],
                         thumbnailPath=image["thumbnailPath"],
-                        metadata=image["metadata"],
+                        metadata=image_util_parse_metadata(image["metadata"]),
                         isTagged=image["isTagged"],
                         tags=image["tags"],
-                        bboxes=image["bbox"],
+                        bboxes=bbox,
                     )
+                )
+            except ValidationError as e:
+                logger.warning(
+                    f"Skipping image {image.get('id')} with invalid metadata: {e}"
                 )
 
         # Several keyframe faces can belong to one video, so rank each video by
         # its best-matching face rather than listing it once per keyframe.
         best_by_video: Dict[str, float] = {}
-        for face in video_faces:
+        for video_face in video_faces:
             similarity = FaceNet_util_cosine_similarity(
-                new_embedding, face["embeddings"]
+                new_embedding, video_face["embeddings"]
             )
             if similarity >= CONFIDENCE_PERCENT:
-                video_id = face["video_id"]
+                video_id = video_face["video_id"]
                 if similarity > best_by_video.get(video_id, 0.0):
                     best_by_video[video_id] = similarity
 

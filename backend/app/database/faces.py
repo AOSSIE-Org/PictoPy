@@ -10,6 +10,7 @@ logger = get_logger(__name__)
 # Type definitions
 FaceId = int
 ImageId = str
+VideoId = str
 FrameId = str
 ClusterId = int
 BoundingBox = Dict[str, Union[int, float]]
@@ -28,6 +29,23 @@ class FaceData(TypedDict):
     embeddings: FaceEmbedding  # Numpy array in application, stored as JSON string in DB
     confidence: Optional[float]
     bbox: Optional[BoundingBox]
+
+
+class ImageFace(TypedDict):
+    """One stored face and the photo it was found in, for face search."""
+
+    image_id: ImageId
+    embeddings: List[float]
+    # Null on rows written before the detector recorded one. The face still
+    # matches, it just cannot be framed in the result.
+    bbox: Optional[BoundingBox]
+
+
+class VideoFace(TypedDict):
+    """One stored face and the video it was found in, for face search."""
+
+    video_id: VideoId
+    embeddings: List[float]
 
 
 T = TypeVar("T")
@@ -232,7 +250,7 @@ def db_insert_face_embeddings_by_image_id(
     ]
 
 
-def db_get_all_video_face_embeddings() -> List[Dict[str, Union[str, list]]]:
+def db_get_all_video_face_embeddings() -> List[VideoFace]:
     """
     Every keyframe face with the video it came from, for face search.
 
@@ -249,11 +267,11 @@ def db_get_all_video_face_embeddings() -> List[Dict[str, Union[str, list]]]:
             """
         ).fetchall()
 
-        faces = []
+        faces: List[VideoFace] = []
         for video_id, embeddings in rows:
             try:
                 faces.append(
-                    {"video_id": video_id, "embeddings": json.loads(embeddings)}
+                    VideoFace(video_id=video_id, embeddings=json.loads(embeddings))
                 )
             except json.JSONDecodeError:
                 continue
@@ -280,77 +298,41 @@ def db_delete_keyframe_faces_for_video(video_id: str) -> int:
         conn.close()
 
 
-def get_all_face_embeddings():
+def db_get_all_image_face_embeddings() -> List[ImageFace]:
+    """
+    Every photo face with the image it was found in, for face search.
+
+    One row per face, not per image: a group photo holds several people, and
+    folding them into one row leaves everyone but the first unsearchable. The
+    caller keeps the best match per image, as it already does per video.
+
+    Only the ids are read here. The matched images are loaded afterwards by id,
+    so a library's worth of paths, metadata and tags is never built to compare
+    embeddings against.
+    """
     conn = _connect()
-    cursor = conn.cursor()
-
     try:
-        cursor.execute(
+        rows = conn.execute(
             """
-            SELECT
-                f.embeddings,
-                f.bbox,
-                i.id, 
-                i.path, 
-                i.folder_id, 
-                i.thumbnailPath, 
-                i.metadata, 
-                i.isTagged,
-                m.name as tag_name
-            FROM faces f
-            JOIN images i ON f.image_id=i.id
-            LEFT JOIN image_classes_display ic ON i.id = ic.image_id
-            LEFT JOIN mappings m ON ic.class_id = m.class_id
-        """
-        )
-        results = cursor.fetchall()
+            SELECT image_id, embeddings, bbox
+            FROM faces
+            WHERE image_id IS NOT NULL
+            """
+        ).fetchall()
 
-        from app.utils.images import image_util_parse_metadata
-
-        images_dict = {}
-        for (
-            embeddings,
-            bbox,
-            image_id,
-            path,
-            folder_id,
-            thumbnail_path,
-            metadata,
-            is_tagged,
-            tag_name,
-        ) in results:
-            if image_id not in images_dict:
-                try:
-                    embeddings_json = json.loads(embeddings)
-                    bbox_json = json.loads(bbox)
-                except json.JSONDecodeError:
-                    continue
-                images_dict[image_id] = {
-                    "embeddings": embeddings_json,
-                    "bbox": bbox_json,
-                    "id": image_id,
-                    "path": path,
-                    "folder_id": folder_id,
-                    "thumbnailPath": thumbnail_path,
-                    "metadata": image_util_parse_metadata(metadata),
-                    "isTagged": bool(is_tagged),
-                    "tags": [],
-                }
-
-            # Add tag if it exists
-            if tag_name:
-                images_dict[image_id]["tags"].append(tag_name)
-
-        # Convert to list and set tags to None if empty
-        images = []
-        for image_data in images_dict.values():
-            if not image_data["tags"]:
-                image_data["tags"] = None
-            images.append(image_data)
-
-        # Sort by path
-        images.sort(key=lambda x: x["path"])
-        return images
+        faces: List[ImageFace] = []
+        for image_id, embeddings, bbox in rows:
+            try:
+                faces.append(
+                    ImageFace(
+                        image_id=image_id,
+                        embeddings=json.loads(embeddings),
+                        bbox=json.loads(bbox) if bbox else None,
+                    )
+                )
+            except json.JSONDecodeError:
+                continue
+        return faces
     finally:
         conn.close()
 
