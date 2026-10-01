@@ -1,7 +1,7 @@
 import sqlite3
 import json
 import numpy as np
-from typing import Optional, List, Dict, Union, TypedDict
+from typing import Optional, List, Dict, TypeVar, Union, TypedDict
 from app.config.settings import DATABASE_PATH
 from app.logging.setup_logging import get_logger
 
@@ -29,6 +29,8 @@ class FaceData(TypedDict):
     confidence: Optional[float]
     bbox: Optional[BoundingBox]
 
+
+T = TypeVar("T")
 
 FaceClusterMapping = Dict[FaceId, Optional[ClusterId]]
 
@@ -183,56 +185,51 @@ def db_insert_face_embeddings(
 
         face_id = cursor.lastrowid
         conn.commit()
+        if face_id is None:
+            raise RuntimeError(f"faces insert for {image_id or frame_id} gave no rowid")
         return face_id
     finally:
         conn.close()
 
 
+def _at(values: Optional[List[T]], index: int) -> Optional[T]:
+    """One face's entry from a per-face list, or None when it has none."""
+    if values is None or index >= len(values):
+        return None
+    return values[index]
+
+
 def db_insert_face_embeddings_by_image_id(
     image_id: ImageId,
-    embeddings: Union[FaceEmbedding, List[FaceEmbedding]],
-    confidence: Optional[Union[float, List[float]]] = None,
-    bbox: Optional[Union[BoundingBox, List[BoundingBox]]] = None,
-    cluster_id: Optional[Union[ClusterId, List[ClusterId]]] = None,
-) -> Union[FaceId, List[FaceId]]:
+    embeddings: List[FaceEmbedding],
+    confidence: Optional[List[float]] = None,
+    bbox: Optional[List[BoundingBox]] = None,
+    cluster_id: Optional[List[ClusterId]] = None,
+) -> List[FaceId]:
     """
-    Insert face embeddings using image path (convenience function).
+    Store every face found in one image.
+
+    All four lists are index-aligned, which is the contract FaceDetectionResult
+    already states. A face whose entry is missing is stored with NULL rather
+    than borrowing a neighbour's value.
 
     Args:
         image_id: Image ID (uuid string)
-        embeddings: Face embedding vector (numpy array) or list of embeddings
-        confidence: Confidence score(s) for face detection (optional)
-        bbox: Bounding box coordinates or list of bounding boxes (optional)
-        cluster_id: Cluster ID(s) for the face(s) (optional)
+        embeddings: One face embedding per face
+        confidence: Detection confidence per face (optional)
+        bbox: Bounding box per face (optional)
+        cluster_id: Cluster assignment per face (optional)
     """
-
-    # Handle multiple faces in one image
-    if (
-        isinstance(embeddings, list)
-        and len(embeddings) > 0
-        and isinstance(embeddings[0], np.ndarray)
-    ):
-        face_ids = []
-        for i, emb in enumerate(embeddings):
-            conf = (
-                confidence[i]
-                if isinstance(confidence, list) and i < len(confidence)
-                else confidence
-            )
-            bb = bbox[i] if isinstance(bbox, list) and i < len(bbox) else bbox
-            cid = (
-                cluster_id[i]
-                if isinstance(cluster_id, list) and i < len(cluster_id)
-                else cluster_id
-            )
-            face_id = db_insert_face_embeddings(image_id, emb, conf, bb, cid)
-            face_ids.append(face_id)
-        return face_ids
-    else:
-        # Single face
-        return db_insert_face_embeddings(
-            image_id, embeddings, confidence, bbox, cluster_id
+    return [
+        db_insert_face_embeddings(
+            image_id,
+            emb,
+            _at(confidence, i),
+            _at(bbox, i),
+            _at(cluster_id, i),
         )
+        for i, emb in enumerate(embeddings)
+    ]
 
 
 def db_get_all_video_face_embeddings() -> List[Dict[str, Union[str, list]]]:
@@ -466,10 +463,14 @@ def db_update_face_cluster_ids_batch(
     if not face_cluster_mapping:
         return
 
-    own_connection = cursor is None
-    if own_connection:
+    # conn stays None when the caller lent us its cursor, which is also what
+    # says whether this function owns the transaction.
+    conn: Optional[sqlite3.Connection] = None
+    if cursor is None:
         conn = _connect()
-        cursor = conn.cursor()
+        db_cursor = conn.cursor()
+    else:
+        db_cursor = cursor
 
     # 1. Prepare update data outside the DB transaction.
     # mapping.get() calls could raise AttributeError if mappings are malformed;
@@ -480,31 +481,31 @@ def db_update_face_cluster_ids_batch(
             for mapping in face_cluster_mapping
         ]
     except (AttributeError, KeyError, TypeError) as e:
-        if own_connection:
+        if conn is not None:
             conn.close()
         logger.error(f"Failed to prepare face cluster update data: {e}")
         raise
 
     # 2. Database transaction — only pure DB operations here, so sqlite3.Error is safe.
     try:
-        cursor.executemany(
+        db_cursor.executemany(
             """
-            UPDATE faces 
-            SET cluster_id = ? 
+            UPDATE faces
+            SET cluster_id = ?
             WHERE face_id = ?
             """,
             update_data,
         )
 
-        if own_connection:
+        if conn is not None:
             conn.commit()
     except sqlite3.Error as e:
-        if own_connection:
+        if conn is not None:
             conn.rollback()
         logger.error(f"Error updating face cluster IDs in batch: {e}")
         raise
     finally:
-        if own_connection:
+        if conn is not None:
             conn.close()
 
 
@@ -553,7 +554,7 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]
             return []
 
         # Group embeddings by cluster_id
-        cluster_embeddings = {}
+        cluster_embeddings: Dict[ClusterId, List[FaceEmbedding]] = {}
         for row in rows:
             cluster_id, embeddings_json = row
             # Convert JSON string back to numpy array
