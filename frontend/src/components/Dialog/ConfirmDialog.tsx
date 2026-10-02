@@ -114,20 +114,22 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-[520px]! rounded-2xl p-7">
         <DialogHeader className="space-y-3">
-          <span
-            className={`flex h-11 w-11 items-center justify-center rounded-full ${
-              destructive
-                ? 'bg-destructive/10 text-destructive'
-                : 'bg-primary/10 text-primary'
-            }`}
-          >
-            {destructive ? (
-              <AlertTriangle className="h-5 w-5" />
-            ) : (
-              <Info className="h-5 w-5" />
-            )}
-          </span>
-          <DialogTitle className="text-xl font-semibold">{title}</DialogTitle>
+          <div className="flex items-center gap-4">
+            <span
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${
+                destructive
+                  ? 'bg-destructive/10 text-destructive'
+                  : 'bg-primary/10 text-primary'
+              }`}
+            >
+              {destructive ? (
+                <AlertTriangle className="h-5 w-5" />
+              ) : (
+                <Info className="h-5 w-5" />
+              )}
+            </span>
+            <DialogTitle className="text-xl font-semibold">{title}</DialogTitle>
+          </div>
           <DialogDescription className="text-sm leading-relaxed">
             {description}
           </DialogDescription>
