@@ -102,12 +102,14 @@ Set the public key in tauri.conf.json as pubkey and private key and password in 
 
 As an **example**, exporting the private key in your terminal would look like this:
 
+Each environment must generate a unique signing key and store it outside the repository.
+
 ```bash
-export TAURI_SIGNING_PRIVATE_KEY=dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWduIGVuY3J5cHRlZCBzZWNyZXQga2V5ClJXUlRZMEl5NlF2SjE3cWNXOVlQQ0JBTlNITEpOUVoyQ3ZuNTdOSkwyNE1NN2RmVWQ1a0FBQkFBQUFBQUFBQUFBQUlBQUFBQU9XOGpTSFNRd0Q4SjNSbm5Oc1E0OThIUGx6SS9lWXI3ZjJxN3BESEh1QTRiQXlkR2E5aG1oK1g0Tk5kcmFzc0IvZFZScEpubnptRkxlbDlUR2R1d1Y5OGRSYUVmUGoxNTFBcHpQZ1dSS2lHWklZVHNkV1Byd1VQSnZCdTZFWlVGOUFNVENBRlgweUU9Cg==
+export TAURI_SIGNING_PRIVATE_KEY="YOUR_PRIVATE_KEY_HERE"
 ```
 
 ```bash
-export TAURI_SIGNING_PRIVATE_KEY_PASSWORD=pass
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="YOUR_PASSWORD_HERE"
 ```
 
 ```bash
