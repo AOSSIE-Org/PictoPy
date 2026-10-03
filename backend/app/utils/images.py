@@ -537,6 +537,10 @@ def image_util_delete_images(
          after the file was already gone (delete_from_device=True), or the
          exclude+delete transaction failed outright (delete_from_device=False)}
     """
+    # db_get_images_by_ids keeps repeated ids, which would delete the same photo
+    # twice and report its id once per repeat. dict.fromkeys drops the repeats
+    # and keeps request order.
+    image_ids = list(dict.fromkeys(image_ids))
     images = db_get_images_by_ids(image_ids)
     if not images:
         return {"deleted_ids": [], "failed_paths": []}
