@@ -88,6 +88,24 @@ def _get_env_str(name: str, default: str) -> str:
     return raw
 
 
+def _get_env_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    value = raw.strip().lower()
+    if value in ("1", "true", "yes", "on"):
+        return True
+    if value in ("0", "false", "no", "off"):
+        return False
+    logger.warning(
+        "Invalid value %r for %s (expected a boolean); using default %s",
+        raw,
+        name,
+        default,
+    )
+    return default
+
+
 # SigLIP2 Configuration
 SIGLIP2_ACTIVE_CHECKPOINT = _get_env_str("SIGLIP2_ACTIVE_CHECKPOINT", "base")
 SIGLIP2_QUERY_TEMPLATE = _get_env_str(
@@ -198,14 +216,26 @@ VIDEO_MAX_FRAMES_PER_VIDEO = _get_env_int(
     "VIDEO_MAX_FRAMES_PER_VIDEO", 200, min_value=1
 )
 # Frames are saved above SigLIP2's largest input (384) so a checkpoint swap
-# doesn't require re-extraction.
-VIDEO_FRAME_MAX_DIMENSION = _get_env_int("VIDEO_FRAME_MAX_DIMENSION", 640, min_value=64)
+# doesn't require re-extraction, and large enough for faces to clear
+# PICTO_CLUSTERING_MIN_FACE_SIZE: at 640px, 82% of detected faces fell below it.
+VIDEO_FRAME_MAX_DIMENSION = _get_env_int(
+    "VIDEO_FRAME_MAX_DIMENSION", 1280, min_value=64
+)
 # A tag must appear in this many frames to describe the video; drops one-off
 # detections from a single unlucky keyframe.
 VIDEO_TAG_MIN_FRAME_SUPPORT = _get_env_int(
     "VIDEO_TAG_MIN_FRAME_SUPPORT", 2, min_value=1
 )
 VIDEO_TAG_TOP_K = _get_env_int("VIDEO_TAG_TOP_K", 15, min_value=1)
+# Off by default: keyframe faces are sound, but a full DBSCAN recluster chains
+# through them -- on a real library it fused 7 people's photo clusters into one.
+VIDEO_FACE_DETECTION = _get_env_bool("VIDEO_FACE_DETECTION", False)
+# Keyframes seconds apart rarely repeat a pose, so the dedupe is loose insurance
+# against near-identical frames; the per-video cap is what bounds crowd videos.
+VIDEO_FACE_DEDUPE_THRESHOLD = _get_env_float(
+    "VIDEO_FACE_DEDUPE_THRESHOLD", 0.92, min_value=0.0, max_value=1.0
+)
+VIDEO_MAX_FACES_PER_VIDEO = _get_env_int("VIDEO_MAX_FACES_PER_VIDEO", 40, min_value=1)
 
 # Clustering Configuration
 PICTO_CLUSTERING_EPS = _get_env_float("PICTO_CLUSTERING_EPS", 0.75, min_value=0.0)

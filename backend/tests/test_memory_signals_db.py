@@ -4,7 +4,7 @@ import tempfile
 from concurrent.futures import Future
 from contextlib import ExitStack
 from types import SimpleNamespace
-from typing import Iterator, List
+from typing import Callable, Iterator, List, Tuple
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -932,9 +932,36 @@ AI_PIPELINE_STEPS = (
     "image_util_process_unembedded_images",
     "semantic_util_score_images",
     "video_util_process_untagged_videos",
+    "video_util_backfill_video_faces",
+    "cluster_util_attach_keyframe_faces",
     "video_util_process_unembedded_frames",
     "semantic_util_score_videos",
 )
+
+
+def _pipeline_order(
+    run: Callable[[], bool], extra_steps: Tuple[str, ...] = ()
+) -> List[str]:
+    """Run a folders.py pipeline with every step mocked; return the call order."""
+    order: List[str] = []
+    with ExitStack() as stack:
+        for step in AI_PIPELINE_STEPS + extra_steps + ("db_set_tagging_completed",):
+            stack.enter_context(
+                patch.object(
+                    folders,
+                    step,
+                    side_effect=lambda *_, _s=step: order.append(_s),
+                )
+            )
+        stack.enter_context(
+            patch.object(
+                folders,
+                "_curate_memories",
+                side_effect=lambda trigger: order.append(f"curate:{trigger}"),
+            )
+        )
+        assert run() is True
+    return order
 
 
 class TestCurationHook:
@@ -961,24 +988,7 @@ class TestCurationHook:
         Curation needs semantic labels written, and the video pass can run for
         minutes, so it belongs between the two.
         """
-        order: List[str] = []
-        with ExitStack() as stack:
-            for step in AI_PIPELINE_STEPS:
-                stack.enter_context(
-                    patch.object(
-                        folders,
-                        step,
-                        side_effect=lambda *_, _s=step: order.append(_s),
-                    )
-                )
-            stack.enter_context(
-                patch.object(
-                    folders,
-                    "_curate_memories",
-                    side_effect=lambda trigger: order.append(f"curate:{trigger}"),
-                )
-            )
-            assert folders.post_AI_tagging_enabled_sequence() is True
+        order = _pipeline_order(folders.post_AI_tagging_enabled_sequence)
 
         assert order.index("semantic_util_score_images") < order.index(
             "curate:ai_tagging"
@@ -986,6 +996,30 @@ class TestCurationHook:
         assert order.index("curate:ai_tagging") < order.index(
             "video_util_process_untagged_videos"
         )
+
+    @pytest.mark.parametrize(
+        "run, extra_steps",
+        [
+            (folders.post_AI_tagging_enabled_sequence, ()),
+            (
+                lambda: folders.post_sync_folder_sequence("/photos", "f-1", []),
+                (
+                    "image_util_process_folder_images",
+                    "video_util_process_folder_videos",
+                    "API_util_restart_sync_microservice_watcher",
+                ),
+            ),
+        ],
+        ids=["ai_tagging", "sync_folder"],
+    )
+    def test_keyframe_faces_attach_after_the_video_pass(self, run, extra_steps):
+        """Keyframe faces only exist once the video pass has run, and clusters
+        must already be built from the photos to attach them to."""
+        order = _pipeline_order(run, extra_steps)
+
+        attach = order.index("cluster_util_attach_keyframe_faces")
+        assert order.index("cluster_util_face_clusters_sync") < attach
+        assert order.index("video_util_process_untagged_videos") < attach
 
     def test_folder_add_pipeline_curates_after_indexing_completes(self):
         """
