@@ -40,7 +40,9 @@ class ImageRecord(TypedDict, total=False):
     # New fields for Memories feature
     latitude: Optional[float]
     longitude: Optional[float]
-    captured_at: Optional[datetime]
+    # ISO string when built by the folder scan or read back from SQLite;
+    # datetime only if a caller builds the record in memory.
+    captured_at: Optional[Union[datetime, str]]
     favouritedAt: Optional[datetime]
 
 
@@ -492,7 +494,7 @@ def db_insert_image_classes_batch(image_class_pairs: List[ImageClassPair]) -> bo
 
 
 def db_get_images_by_folder_ids(
-    folder_ids: List[int],
+    folder_ids: List[FolderId],
 ) -> List[Tuple[ImageId, ImagePath, str]]:
     """
     Get all images that belong to the specified folder IDs.

@@ -26,7 +26,7 @@ import {
   setDeleteFromComputerPreference,
   getSkipDeleteConfirmationPreference,
   setSkipDeleteConfirmationPreference,
-} from '@/hooks/useDeleteFromComputerPreference';
+} from '@/hooks/useDeleteUserPreference';
 import { useLocation } from 'react-router';
 import { ROUTES } from '@/constants/routes';
 

@@ -13,7 +13,10 @@ from pathlib import Path
 
 from app.config.settings import THUMBNAIL_IMAGES_PATH
 from app.database.images import (
+    FolderId,
+    ImageRecord,
     ImageSyncState,
+    UntaggedImageRecord,
     db_bulk_insert_images,
     db_get_untagged_images,
     db_update_image_tagged_status,
@@ -47,7 +50,9 @@ GPS_INFO_TAG = 34853
 logger = logging.getLogger(__name__)
 
 
-def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -> bool:
+def image_util_process_folder_images(
+    folder_data: List[Tuple[str, FolderId, bool]],
+) -> bool:
     """Main function to process images in multiple folders based on provided folder data.
 
     Args:
@@ -224,7 +229,7 @@ def image_util_process_unembedded_images() -> None:
 
 
 def image_util_classify_and_face_detect_images(
-    untagged_images: List[Dict[str, str]],
+    untagged_images: List[UntaggedImageRecord],
 ) -> int:
     """Classify untagged images and detect faces if applicable."""
     object_classifier = ObjectClassifier()
@@ -316,9 +321,9 @@ def image_util_is_unchanged(
 
 def image_util_prepare_image_records(
     image_files: List[str],
-    folder_path_to_id: Dict[str, int],
+    folder_path_to_id: Dict[str, FolderId],
     known_state: Optional[Dict[str, ImageSyncState]] = None,
-) -> List[Dict]:
+) -> List[ImageRecord]:
     """
     Prepare image records with thumbnails for database insertion.
     Automatically extracts GPS coordinates and capture datetime from metadata.
@@ -386,7 +391,7 @@ def image_util_prepare_image_records(
             # Build image record with GPS data
             # ALWAYS include latitude, longitude, captured_at (even if None)
             # to satisfy SQL INSERT statement named parameters
-            image_record = {
+            image_record: ImageRecord = {
                 "id": image_id,
                 "path": image_path,
                 "folder_id": folder_id,
@@ -487,7 +492,7 @@ def image_util_remove_files(file_paths: Iterable[Optional[str]]) -> List[str]:
     return failed
 
 
-def image_util_remove_obsolete_images(folder_id_list: List[int]) -> int:
+def image_util_remove_obsolete_images(folder_id_list: List[FolderId]) -> int:
     """
     Remove obsolete images that no longer exist in the filesystem.
 
@@ -594,8 +599,8 @@ def image_util_delete_images(
 
 
 def image_util_create_folder_path_mapping(
-    folder_ids: List[Tuple[int, str]],
-) -> Dict[str, int]:
+    folder_ids: List[Tuple[FolderId, str]],
+) -> Dict[str, FolderId]:
     """
     Create a dictionary mapping folder paths to their IDs.
 
@@ -605,7 +610,7 @@ def image_util_create_folder_path_mapping(
     Returns:
         Dictionary mapping absolute folder paths to folder IDs
     """
-    folder_path_to_id: Dict[str, int] = {}
+    folder_path_to_id: Dict[str, FolderId] = {}
     for folder_id, folder_path in folder_ids:
         path = os.path.abspath(folder_path)
         folder_path_to_id[path] = folder_id
@@ -613,8 +618,8 @@ def image_util_create_folder_path_mapping(
 
 
 def image_util_find_folder_id_for_image(
-    image_path: str, folder_path_to_id: Dict[str, int]
-) -> Optional[int]:
+    image_path: str, folder_path_to_id: Dict[str, FolderId]
+) -> Optional[FolderId]:
     """
     Find the most specific folder ID for a given image path.
 

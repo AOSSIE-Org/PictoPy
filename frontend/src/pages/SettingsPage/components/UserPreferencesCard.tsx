@@ -30,7 +30,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
-import { useDeleteFromComputerPreference } from '@/hooks/useDeleteFromComputerPreference';
+import { useDeleteFromComputerPreference } from '@/hooks/useDeleteUserPreference';
 import type { UpdateUserPreferencesRequest } from '@/api/api-functions/user_preferences';
 
 import {
