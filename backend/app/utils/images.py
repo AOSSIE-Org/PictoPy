@@ -3,23 +3,30 @@ from __future__ import annotations
 import os
 import uuid
 import datetime
+from typing import Iterable, List, Optional, Tuple, Dict, Any, Mapping
 import json
 import logging
 import sqlite3
-from typing import List, Optional, Tuple, Dict, Any, Mapping
+
 from PIL import Image, ExifTags
 from pathlib import Path
 
 from app.config.settings import THUMBNAIL_IMAGES_PATH
 from app.database.images import (
+    FolderId,
+    ImageRecord,
     ImageSyncState,
+    UntaggedImageRecord,
     db_bulk_insert_images,
     db_get_untagged_images,
     db_update_image_tagged_status,
     db_insert_image_classes_batch,
     db_get_image_sync_state_by_folder_ids,
     db_get_images_by_folder_ids,
+    db_get_images_by_ids,
     db_delete_images_by_ids,
+    db_exclude_and_delete_images,
+    db_get_excluded_image_paths,
 )
 from app.database.faces import db_insert_face_embeddings_by_image_id
 from app.models.FaceDetector import FaceDetector
@@ -43,7 +50,9 @@ GPS_INFO_TAG = 34853
 logger = logging.getLogger(__name__)
 
 
-def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -> bool:
+def image_util_process_folder_images(
+    folder_data: List[Tuple[str, FolderId, bool]],
+) -> bool:
     """Main function to process images in multiple folders based on provided folder data.
 
     Args:
@@ -66,6 +75,10 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
             [folder_id for _, folder_id, _ in folder_data]
         )
 
+        # Photos the user removed from the gallery but kept on disk. Without this
+        # the next sync-folder would import them straight back.
+        excluded_paths = db_get_excluded_image_paths()
+
         # Process each folder in the provided data
         for folder_path, folder_id, recursive in folder_data:
             try:
@@ -74,6 +87,11 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
 
                 # Step 1: Get all image files from current folder
                 image_files = image_util_get_images_from_folder(folder_path, recursive)
+                image_files = [
+                    path
+                    for path in image_files
+                    if os.path.normcase(os.path.abspath(path)) not in excluded_paths
+                ]
 
                 if not image_files:
                     continue  # No images in this folder, continue to next
@@ -211,7 +229,7 @@ def image_util_process_unembedded_images() -> None:
 
 
 def image_util_classify_and_face_detect_images(
-    untagged_images: List[Dict[str, str]],
+    untagged_images: List[UntaggedImageRecord],
 ) -> int:
     """Classify untagged images and detect faces if applicable."""
     object_classifier = ObjectClassifier()
@@ -303,9 +321,9 @@ def image_util_is_unchanged(
 
 def image_util_prepare_image_records(
     image_files: List[str],
-    folder_path_to_id: Dict[str, int],
+    folder_path_to_id: Dict[str, FolderId],
     known_state: Optional[Dict[str, ImageSyncState]] = None,
-) -> List[Dict]:
+) -> List[ImageRecord]:
     """
     Prepare image records with thumbnails for database insertion.
     Automatically extracts GPS coordinates and capture datetime from metadata.
@@ -373,7 +391,7 @@ def image_util_prepare_image_records(
             # Build image record with GPS data
             # ALWAYS include latitude, longitude, captured_at (even if None)
             # to satisfy SQL INSERT statement named parameters
-            image_record = {
+            image_record: ImageRecord = {
                 "id": image_id,
                 "path": image_path,
                 "folder_id": folder_id,
@@ -451,7 +469,30 @@ def image_util_generate_thumbnail(
         return False
 
 
-def image_util_remove_obsolete_images(folder_id_list: List[int]) -> int:
+def image_util_remove_files(file_paths: Iterable[Optional[str]]) -> List[str]:
+    """Delete files, tolerating ones that are already gone.
+
+    Returns the paths that could not be deleted, so callers can report them
+    instead of pretending the file is gone.
+    """
+    failed: List[str] = []
+
+    for file_path in file_paths:
+        if not file_path:
+            continue
+        try:
+            os.remove(file_path)
+            logger.info(f"Removed file: {file_path}")
+        except FileNotFoundError:
+            pass  # Already gone is the outcome we wanted.
+        except OSError as e:
+            logger.error(f"Error removing file {file_path}: {e}")
+            failed.append(file_path)
+
+    return failed
+
+
+def image_util_remove_obsolete_images(folder_id_list: List[FolderId]) -> int:
     """
     Remove obsolete images that no longer exist in the filesystem.
 
@@ -464,27 +505,106 @@ def image_util_remove_obsolete_images(folder_id_list: List[int]) -> int:
     existing_db_images = db_get_images_by_folder_ids(folder_id_list)
 
     obsolete_images = []
+    obsolete_thumbnails = []
     for image_id, image_path, thumbnail_path in existing_db_images:
         if not os.path.exists(image_path):
             obsolete_images.append(image_id)
-            # Also remove thumbnail if it exists
-            if thumbnail_path and os.path.exists(thumbnail_path):
-                try:
-                    os.remove(thumbnail_path)
-                    logger.info(f"Removed obsolete thumbnail: {thumbnail_path}")
-                except OSError as e:
-                    logger.error(f"Error removing thumbnail {thumbnail_path}: {e}")
+            obsolete_thumbnails.append(thumbnail_path)
 
     if obsolete_images:
+        image_util_remove_files(obsolete_thumbnails)
         db_delete_images_by_ids(obsolete_images)
         logger.info(f"Removed {len(obsolete_images)} obsolete image(s) from database")
 
     return len(obsolete_images)
 
 
+def image_util_delete_images(
+    image_ids: List[str], delete_from_device: bool = False
+) -> Dict[str, List[str]]:
+    """Delete images from the gallery, optionally deleting the files as well.
+
+    Args:
+        image_ids: Images to delete.
+        delete_from_device: True also deletes each file from its folder on disk.
+            False leaves the files alone and records their paths so a later
+            folder scan does not re-import them.
+
+    Returns:
+        {"deleted_ids": ids whose database row was actually removed,
+         "failed_paths": paths that did not end up fully deleted -- either the
+         file itself could not be removed, or the database delete failed
+         after the file was already gone (delete_from_device=True), or the
+         exclude+delete transaction failed outright (delete_from_device=False)}
+    """
+    # db_get_images_by_ids keeps repeated ids, which would delete the same photo
+    # twice and report its id once per repeat. dict.fromkeys drops the repeats
+    # and keeps request order.
+    image_ids = list(dict.fromkeys(image_ids))
+    images = db_get_images_by_ids(image_ids)
+    if not images:
+        return {"deleted_ids": [], "failed_paths": []}
+
+    failed_paths: List[str] = []
+    deletable: List[dict] = []
+    deleted_ids: List[str] = []
+
+    if delete_from_device:
+        # Delete the file first: a row is only dropped once its file is actually
+        # gone, so a permission error never leaves the gallery claiming a photo
+        # was deleted while the file is still sitting in the folder.
+        for image in images:
+            failed = image_util_remove_files([image["path"]])
+            if failed:
+                failed_paths.extend(failed)
+            else:
+                deletable.append(image)
+
+        candidate_ids = [image["id"] for image in deletable]
+        if candidate_ids:
+            if db_delete_images_by_ids(candidate_ids):
+                deleted_ids = candidate_ids
+            else:
+                # The files above are already gone from disk, but the row
+                # delete failed and was rolled back, so none of these rows
+                # actually went away. Don't claim them as deleted, don't
+                # touch their thumbnails, and flag their paths so the caller
+                # knows these files were removed but need to be restored.
+                failed_paths.extend(image["path"] for image in deletable)
+                deletable = []
+    else:
+        deletable = list(images)
+        # db_get_images_by_ids hands folder_id back as "" when the image has none,
+        # and the foreign key needs a real folder id or NULL.
+        entries = [
+            (image["path"], image.get("folder_id") or None) for image in deletable
+        ]
+        # Exclusion insert and row delete share one transaction, so a failure
+        # partway through can't leave the file re-importable (row gone, no
+        # exclusion) or the exclusion orphaned (row still there).
+        exclude_and_delete_result = db_exclude_and_delete_images(
+            entries, [image["id"] for image in deletable]
+        )
+        if exclude_and_delete_result is None:
+            # Transaction failed and was rolled back -- nothing was excluded
+            # or deleted, so don't report any of these as removed.
+            failed_paths.extend(image["path"] for image in deletable)
+            deletable = []
+        else:
+            deleted_ids = exclude_and_delete_result
+            deleted = set(deleted_ids)
+            deletable = [image for image in deletable if image["id"] in deleted]
+
+    # Thumbnails are PictoPy's own cache, so they go in both modes -- only for
+    # images whose row delete actually committed.
+    image_util_remove_files([image.get("thumbnailPath") for image in deletable])
+
+    return {"deleted_ids": deleted_ids, "failed_paths": failed_paths}
+
+
 def image_util_create_folder_path_mapping(
-    folder_ids: List[Tuple[int, str]],
-) -> Dict[str, int]:
+    folder_ids: List[Tuple[FolderId, str]],
+) -> Dict[str, FolderId]:
     """
     Create a dictionary mapping folder paths to their IDs.
 
@@ -494,7 +614,7 @@ def image_util_create_folder_path_mapping(
     Returns:
         Dictionary mapping absolute folder paths to folder IDs
     """
-    folder_path_to_id: Dict[str, int] = {}
+    folder_path_to_id: Dict[str, FolderId] = {}
     for folder_id, folder_path in folder_ids:
         path = os.path.abspath(folder_path)
         folder_path_to_id[path] = folder_id
@@ -502,8 +622,8 @@ def image_util_create_folder_path_mapping(
 
 
 def image_util_find_folder_id_for_image(
-    image_path: str, folder_path_to_id: Dict[str, int]
-) -> int:
+    image_path: str, folder_path_to_id: Dict[str, FolderId]
+) -> Optional[FolderId]:
     """
     Find the most specific folder ID for a given image path.
 

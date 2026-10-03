@@ -7,7 +7,7 @@ import { deleteModel } from '@/api/api-functions';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { formatTierLabel, getErrorMessage } from '@/lib/utils';
 import { showGlobalAlert } from '@/features/globalAlertSlice';
-import { ConfirmDialog } from '@/components/ConfirmDialog/ConfirmDialog';
+import { ConfirmDialog } from '@/components/Dialog/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
