@@ -235,9 +235,7 @@ class TestDeleteFromDevice:
         image_id, path, thumbnail_path = _first(test_db)
 
         with pytest.MonkeyPatch.context() as patch:
-            patch.setattr(
-                "app.utils.images.db_delete_images_by_ids", lambda ids: False
-            )
+            patch.setattr("app.utils.images.db_delete_images_by_ids", lambda ids: False)
             result = image_util_delete_images([image_id], delete_from_device=True)
 
         assert result["deleted_ids"] == []

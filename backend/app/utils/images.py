@@ -3,9 +3,9 @@ from __future__ import annotations
 import os
 import uuid
 import datetime
+from typing import Iterable, List, Optional, Tuple, Dict, Any, Mapping
 import json
 import logging
-from typing import Iterable, List, Optional, Tuple, Dict, Any, Mapping
 import sqlite3
 
 from PIL import Image, ExifTags
@@ -614,7 +614,7 @@ def image_util_create_folder_path_mapping(
 
 def image_util_find_folder_id_for_image(
     image_path: str, folder_path_to_id: Dict[str, int]
-) -> int:
+) -> Optional[int]:
     """
     Find the most specific folder ID for a given image path.
 

@@ -393,6 +393,12 @@ def delete_images(request: DeleteImagesRequest):
             request.delete_from_device,
         )
 
+        # A gallery-only delete is a single all-or-nothing transaction, so a
+        # failed path means it rolled back and nothing was removed. Fail the
+        # request (via the 500 handler below) rather than report success.
+        if not request.delete_from_device and result["failed_paths"]:
+            raise RuntimeError("Gallery-only delete rolled back; no images removed")
+
         return DeleteImagesResponse(
             success=True,
             message=f"Successfully deleted {len(result['deleted_ids'])} image(s)",

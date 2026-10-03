@@ -86,8 +86,7 @@ def db_create_images_table() -> None:
     cursor = conn.cursor()
 
     # Create new images table with merged fields including Memories feature columns
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS images (
             id TEXT PRIMARY KEY,
             path VARCHAR UNIQUE,
@@ -103,8 +102,7 @@ def db_create_images_table() -> None:
             favouritedAt DATETIME,
             FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
         )
-    """
-    )
+    """)
 
     # Create indexes for Memories feature queries
     cursor.execute("CREATE INDEX IF NOT EXISTS ix_images_latitude ON images(latitude)")
@@ -126,8 +124,7 @@ def db_create_images_table() -> None:
         cursor.execute("ALTER TABLE images ADD COLUMN favouritedAt DATETIME")
 
     # Create new image_classes junction table
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS image_classes (
             image_id TEXT,
             class_id INTEGER,
@@ -136,8 +133,7 @@ def db_create_images_table() -> None:
             FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
             FOREIGN KEY (class_id) REFERENCES mappings(class_id) ON DELETE CASCADE
         )
-    """
-    )
+    """)
 
     # score: semantic-label match score (NULL for YOLO rows). Guarded ALTER
     # because shipped databases predate the column and CREATE IF NOT EXISTS
@@ -150,15 +146,13 @@ def db_create_images_table() -> None:
     # skips these, otherwise the watcher's next sync-folder would re-import the
     # file and the photo would reappear. Cascading off folders means removing and
     # re-adding a folder clears its exclusions, which is the only way back.
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS excluded_image_paths (
             path TEXT PRIMARY KEY,
             folder_id TEXT,
             FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
         )
-    """
-    )
+    """)
 
     conn.commit()
     conn.close()
@@ -348,19 +342,17 @@ def db_get_untagged_images() -> List[UntaggedImageRecord]:
     cursor = conn.cursor()
 
     try:
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT i.id, i.path, i.folder_id, i.thumbnailPath, i.metadata
             FROM images i
             JOIN folders f ON i.folder_id = f.folder_id
             WHERE f.AI_Tagging = TRUE
             AND i.isTagged = FALSE
-            """
-        )
+            """)
 
         results = cursor.fetchall()
 
-        untagged_images = []
+        untagged_images: List[UntaggedImageRecord] = []
         for image_id, path, folder_id, thumbnail_path, metadata in results:
             from app.utils.images import image_util_parse_metadata
 
@@ -369,7 +361,7 @@ def db_get_untagged_images() -> List[UntaggedImageRecord]:
                 {
                     "id": image_id,
                     "path": path,
-                    "folder_id": str(folder_id) if folder_id is not None else None,
+                    "folder_id": str(folder_id),
                     "thumbnailPath": thumbnail_path,
                     "metadata": md,
                 }
@@ -395,19 +387,17 @@ def db_get_unembedded_images() -> List[UntaggedImageRecord]:
     cursor = conn.cursor()
 
     try:
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT i.id, i.path, i.folder_id, i.thumbnailPath, i.metadata
             FROM images i
             JOIN folders f ON i.folder_id = f.folder_id
             WHERE f.AI_Tagging = TRUE
             AND i.isEmbedded = FALSE
-            """
-        )
+            """)
 
         results = cursor.fetchall()
 
-        unembedded_images = []
+        unembedded_images: List[UntaggedImageRecord] = []
         for image_id, path, folder_id, thumbnail_path, metadata in results:
             from app.utils.images import image_util_parse_metadata
 
@@ -416,7 +406,7 @@ def db_get_unembedded_images() -> List[UntaggedImageRecord]:
                 {
                     "id": image_id,
                     "path": path,
-                    "folder_id": str(folder_id) if folder_id is not None else None,
+                    "folder_id": str(folder_id),
                     "thumbnailPath": thumbnail_path,
                     "metadata": md,
                 }
