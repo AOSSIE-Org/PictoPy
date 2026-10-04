@@ -476,7 +476,11 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
             <div className="grid gap-4 py-4">
               {/* Full width, because this is the decision the rest of the form
                   hangs off rather than one setting among several. */}
-              <div className="bg-muted grid w-full grid-cols-2 gap-1 rounded-lg p-1">
+              <div
+                role="radiogroup"
+                aria-label="Share mode"
+                className="bg-muted grid w-full grid-cols-2 gap-1 rounded-lg p-1"
+              >
                 {MODE_OPTIONS.map((option) => (
                   <button
                     key={option.value}
