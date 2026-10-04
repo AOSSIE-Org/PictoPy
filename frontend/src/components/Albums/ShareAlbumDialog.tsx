@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import * as RadioGroupPrimitive from '@radix-ui/react-radio-group';
 import { Separator } from '@/components/ui/separator';
 import { usePictoMutation, type BackendRes } from '@/hooks/useQueryExtension';
 import { createShare, revokeShare } from '@/api/api-functions';
@@ -476,30 +477,33 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
             <div className="grid gap-4 py-4">
               {/* Full width, because this is the decision the rest of the form
                   hangs off rather than one setting among several. */}
-              <div
-                role="radiogroup"
+              <RadioGroupPrimitive.Root
+                value={mode}
+                onValueChange={(value) => handleModeChange(value as ShareMode)}
                 aria-label="Share mode"
                 className="bg-muted grid w-full grid-cols-2 gap-1 rounded-lg p-1"
               >
                 {MODE_OPTIONS.map((option) => (
-                  <button
+                  <RadioGroupPrimitive.Item
                     key={option.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={mode === option.value}
-                    onClick={() => handleModeChange(option.value)}
-                    className={cn(
-                      'flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                      mode === option.value
-                        ? 'bg-background text-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground',
-                    )}
+                    value={option.value}
+                    asChild
                   >
-                    <option.icon className="h-4 w-4" />
-                    {option.label}
-                  </button>
+                    <button
+                      type="button"
+                      className={cn(
+                        'flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                        mode === option.value
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground',
+                      )}
+                    >
+                      <option.icon className="h-4 w-4" />
+                      {option.label}
+                    </button>
+                  </RadioGroupPrimitive.Item>
                 ))}
-              </div>
+              </RadioGroupPrimitive.Root>
 
               {mode === 'internet' && (
                 <div className="border-destructive/40 bg-destructive/5 grid gap-1.5 rounded-md border p-3">
