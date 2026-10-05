@@ -1,7 +1,7 @@
 import sqlite3
 import json
 import numpy as np
-from typing import Optional, List, Dict, Union, TypedDict
+from typing import Optional, List, Dict, Union, TypedDict, cast
 from app.config.settings import DATABASE_PATH
 from app.logging.setup_logging import get_logger
 
@@ -28,6 +28,18 @@ class FaceData(TypedDict):
     embeddings: FaceEmbedding  # Numpy array in application, stored as JSON string in DB
     confidence: Optional[float]
     bbox: Optional[BoundingBox]
+
+
+class ImageFace(TypedDict):
+    image_id: ImageId
+    embeddings: List[float]
+    # None on rows stored without a box; the face still matches.
+    bbox: Optional[BoundingBox]
+
+
+class VideoFace(TypedDict):
+    video_id: str
+    embeddings: List[float]
 
 
 FaceClusterMapping = Dict[FaceId, Optional[ClusterId]]
@@ -183,6 +195,8 @@ def db_insert_face_embeddings(
 
         face_id = cursor.lastrowid
         conn.commit()
+        if face_id is None:
+            raise RuntimeError("faces insert returned no rowid")
         return face_id
     finally:
         conn.close()
@@ -212,18 +226,22 @@ def db_insert_face_embeddings_by_image_id(
         and len(embeddings) > 0
         and isinstance(embeddings[0], np.ndarray)
     ):
-        face_ids = []
+        face_ids: List[FaceId] = []
         for i, emb in enumerate(embeddings):
             conf = (
                 confidence[i]
                 if isinstance(confidence, list) and i < len(confidence)
-                else confidence
+                else cast(Optional[float], confidence)
             )
-            bb = bbox[i] if isinstance(bbox, list) and i < len(bbox) else bbox
+            bb = (
+                bbox[i]
+                if isinstance(bbox, list) and i < len(bbox)
+                else cast(Optional[BoundingBox], bbox)
+            )
             cid = (
                 cluster_id[i]
                 if isinstance(cluster_id, list) and i < len(cluster_id)
-                else cluster_id
+                else cast(Optional[ClusterId], cluster_id)
             )
             face_id = db_insert_face_embeddings(image_id, emb, conf, bb, cid)
             face_ids.append(face_id)
@@ -231,11 +249,15 @@ def db_insert_face_embeddings_by_image_id(
     else:
         # Single face
         return db_insert_face_embeddings(
-            image_id, embeddings, confidence, bbox, cluster_id
+            image_id,
+            cast(FaceEmbedding, embeddings),
+            cast(Optional[float], confidence),
+            cast(Optional[BoundingBox], bbox),
+            cast(Optional[ClusterId], cluster_id),
         )
 
 
-def db_get_all_video_face_embeddings() -> List[Dict[str, Union[str, list]]]:
+def db_get_all_video_face_embeddings() -> List[VideoFace]:
     """
     Every keyframe face with the video it came from, for face search.
 
@@ -252,13 +274,13 @@ def db_get_all_video_face_embeddings() -> List[Dict[str, Union[str, list]]]:
             """
         ).fetchall()
 
-        faces = []
+        faces: List[VideoFace] = []
         for video_id, embeddings in rows:
             try:
                 faces.append(
                     {"video_id": video_id, "embeddings": json.loads(embeddings)}
                 )
-            except json.JSONDecodeError:
+            except (json.JSONDecodeError, TypeError):
                 continue
         return faces
     finally:
@@ -283,77 +305,38 @@ def db_delete_keyframe_faces_for_video(video_id: str) -> int:
         conn.close()
 
 
-def get_all_face_embeddings():
+def db_get_all_image_face_embeddings() -> List[ImageFace]:
+    """
+    Every photo face with the image it came from, for face search.
+
+    One row per face, so a group photo keeps all its people. The caller keeps
+    the best match per image, as it does per video; the matched images are
+    loaded by id afterwards so tags are not multiplied by the face count.
+    """
     conn = _connect()
-    cursor = conn.cursor()
-
     try:
-        cursor.execute(
+        rows = conn.execute(
             """
-            SELECT
-                f.embeddings,
-                f.bbox,
-                i.id, 
-                i.path, 
-                i.folder_id, 
-                i.thumbnailPath, 
-                i.metadata, 
-                i.isTagged,
-                m.name as tag_name
-            FROM faces f
-            JOIN images i ON f.image_id=i.id
-            LEFT JOIN image_classes_display ic ON i.id = ic.image_id
-            LEFT JOIN mappings m ON ic.class_id = m.class_id
-        """
-        )
-        results = cursor.fetchall()
+            SELECT image_id, embeddings, bbox
+            FROM faces
+            WHERE image_id IS NOT NULL
+            """
+        ).fetchall()
 
-        from app.utils.images import image_util_parse_metadata
-
-        images_dict = {}
-        for (
-            embeddings,
-            bbox,
-            image_id,
-            path,
-            folder_id,
-            thumbnail_path,
-            metadata,
-            is_tagged,
-            tag_name,
-        ) in results:
-            if image_id not in images_dict:
-                try:
-                    embeddings_json = json.loads(embeddings)
-                    bbox_json = json.loads(bbox)
-                except json.JSONDecodeError:
-                    continue
-                images_dict[image_id] = {
-                    "embeddings": embeddings_json,
-                    "bbox": bbox_json,
-                    "id": image_id,
-                    "path": path,
-                    "folder_id": folder_id,
-                    "thumbnailPath": thumbnail_path,
-                    "metadata": image_util_parse_metadata(metadata),
-                    "isTagged": bool(is_tagged),
-                    "tags": [],
-                }
-
-            # Add tag if it exists
-            if tag_name:
-                images_dict[image_id]["tags"].append(tag_name)
-
-        # Convert to list and set tags to None if empty
-        images = []
-        for image_data in images_dict.values():
-            if not image_data["tags"]:
-                image_data["tags"] = None
-            images.append(image_data)
-
-        # Sort by path
-        images.sort(key=lambda x: x["path"])
-        return images
+        faces: List[ImageFace] = []
+        for image_id, embeddings, bbox in rows:
+            # One face with missing or corrupt data must not fail the search.
+            try:
+                faces.append(
+                    {
+                        "image_id": image_id,
+                        "embeddings": json.loads(embeddings),
+                        "bbox": json.loads(bbox) if bbox else None,
+                    }
+                )
+            except (json.JSONDecodeError, TypeError):
+                continue
+        return faces
     finally:
         conn.close()
 
@@ -470,6 +453,7 @@ def db_update_face_cluster_ids_batch(
     if own_connection:
         conn = _connect()
         cursor = conn.cursor()
+    assert cursor is not None
 
     # 1. Prepare update data outside the DB transaction.
     # mapping.get() calls could raise AttributeError if mappings are malformed;
@@ -553,7 +537,7 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]
             return []
 
         # Group embeddings by cluster_id
-        cluster_embeddings = {}
+        cluster_embeddings: Dict[ClusterId, List[FaceEmbedding]] = {}
         for row in rows:
             cluster_id, embeddings_json = row
             # Convert JSON string back to numpy array
