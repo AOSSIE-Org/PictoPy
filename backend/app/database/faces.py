@@ -1,7 +1,7 @@
 import sqlite3
 import json
 import numpy as np
-from typing import Optional, List, Dict, Union, TypedDict, cast
+from typing import Optional, List, Dict, Union, TypedDict, TypeAlias, cast
 from app.config.settings import DATABASE_PATH
 from app.logging.setup_logging import get_logger
 
@@ -13,7 +13,7 @@ ImageId = str
 FrameId = str
 ClusterId = int
 BoundingBox = Dict[str, Union[int, float]]
-FaceEmbedding = np.ndarray
+FaceEmbedding: TypeAlias = np.ndarray
 
 
 class FaceData(TypedDict):
