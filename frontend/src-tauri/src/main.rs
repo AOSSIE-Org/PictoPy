@@ -293,6 +293,22 @@ fn main() {
             let resource_path = app.path().resolve("resources", BaseDirectory::Resource)?;
             println!("Resource path: {:?}", resource_path);
 
+            #[cfg(target_os = "linux")]
+            {
+                use tauri::Manager;
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.with_webview(|webview| {
+                        use webkit2gtk::WebViewExt;
+                        use webkit2gtk::PermissionRequestExt;
+                        let wk_webview = webview.inner();
+                        wk_webview.connect_permission_request(|_, request| {
+                            request.allow();
+                            true
+                        });
+                    });
+                }
+            }
+
             prod(app.handle(), &resource_path)?;
 
             // When auto-started at boot (--minimized flag), keep the window hidden
