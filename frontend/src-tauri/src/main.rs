@@ -298,11 +298,22 @@ fn main() {
                 use tauri::Manager;
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = window.with_webview(|webview| {
-                        use webkit2gtk::WebViewExt;
+                        use webkit2gtk::glib::prelude::Cast;
                         use webkit2gtk::PermissionRequestExt;
+                        use webkit2gtk::UserMediaPermissionRequest;
+                        use webkit2gtk::UserMediaPermissionRequestExt;
+                        use webkit2gtk::WebViewExt;
                         let wk_webview = webview.inner();
                         wk_webview.connect_permission_request(|_, request| {
-                            request.allow();
+                            if let Some(media_request) =
+                                request.downcast_ref::<UserMediaPermissionRequest>()
+                            {
+                                if media_request.is_for_video_device() {
+                                    request.allow();
+                                    return true;
+                                }
+                            }
+                            request.deny();
                             true
                         });
                     });
