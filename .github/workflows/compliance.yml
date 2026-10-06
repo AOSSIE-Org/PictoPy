@@ -3,20 +3,28 @@ name: PR Compliance Check
 on:
   pull_request_target:
     types: [opened, edited, synchronize, reopened, ready_for_review]
+  # Recheck linked PRs when an issue's assignees or proof label change
+  issues:
+    types: [assigned, unassigned, labeled, unlabeled]
 
 permissions:
   contents: read
-  pull-requests: write
-  issues: write
-  
-concurrency:
-  group: compliance-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  pull-requests: write # labels and comments on PRs
+  issues: read # linked-issue lookups
 
 jobs:
   compliance:
     name: Check PR compliance
-    if: github.event.pull_request.user.type != 'Bot'
+    if: >-
+      (github.event_name == 'pull_request_target' && github.event.pull_request.user.type != 'Bot') ||
+      (github.event_name == 'issues' && (
+        github.event.action == 'assigned' ||
+        github.event.action == 'unassigned' ||
+        github.event.label.name == 'requires:image-video-proof'
+      ))
+    concurrency:
+      group: compliance-${{ github.event.pull_request.number || github.event.issue.number }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     steps:
       - name: Check out base branch
