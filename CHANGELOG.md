@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0-folder-fix-beta] - 2026-10-06
+
+### Fixed
+
+- Backfill indexing_status on pre-existing folders databases (#1555)
+- Surface real folder load errors instead of a generic message (#1555)
+- Stop error dialog spam on window focus and polling (#1555)
+
 ## [1.3.0-alpha] - 2026-09-16
 
 ### Added
