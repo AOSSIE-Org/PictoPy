@@ -50,6 +50,7 @@ from app.routes.memories import router as memories_router
 from app.routes.shutdown import router as shutdown_router
 from app.routes.share import router as share_router
 from app.routes.models import router as models_router, _cleanup_stale_tasks
+from app.routes.config import router as config_router
 from app.share.server import share_server_stop
 from fastapi.openapi.utils import get_openapi
 from app.logging.setup_logging import (
@@ -197,6 +198,7 @@ app.include_router(memories_router, prefix="/memories", tags=["Memories"])
 app.include_router(shutdown_router, tags=["Shutdown"])
 app.include_router(share_router, prefix="/share", tags=["Share"])
 app.include_router(models_router, prefix="/models", tags=["Models"])
+app.include_router(config_router, prefix="/config", tags=["Config"])
 
 
 # Entry point for running with: python3 main.py

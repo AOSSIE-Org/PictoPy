@@ -10,7 +10,7 @@ from typing import List, Optional, Tuple, Dict, Any, Mapping
 from PIL import Image, ExifTags
 from pathlib import Path
 
-from app.config.settings import THUMBNAIL_IMAGES_PATH
+from app.config.settings import THUMBNAIL_IMAGES_PATH, SUPPORTED_IMAGE_EXTENSIONS
 from app.database.images import (
     ImageSyncState,
     db_bulk_insert_images,
@@ -503,7 +503,7 @@ def image_util_create_folder_path_mapping(
 
 def image_util_find_folder_id_for_image(
     image_path: str, folder_path_to_id: Dict[str, int]
-) -> int:
+) -> Optional[int]:
     """
     Find the most specific folder ID for a given image path.
 
@@ -528,10 +528,9 @@ def image_util_find_folder_id_for_image(
 def image_util_is_valid_image(file_path: str) -> bool:
     """Check if the file is a valid image with allowed extensions."""
     # Check file extension first
-    allowed_extensions = {".jpg", ".jpeg", ".png"}
     file_extension = Path(file_path).suffix.lower()
 
-    if file_extension not in allowed_extensions:
+    if file_extension not in SUPPORTED_IMAGE_EXTENSIONS:
         return False
 
     # Then verify it's a valid image

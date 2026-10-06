@@ -2805,6 +2805,26 @@
           }
         }
       }
+    },
+    "/config/supported-extensions": {
+      "get": {
+        "tags": [
+          "Config"
+        ],
+        "summary": "Get Supported Extensions",
+        "description": "Return the file extensions the app can index and open, without the dot.",
+        "operationId": "get_supported_extensions_config_supported_extensions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

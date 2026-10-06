@@ -268,3 +268,22 @@ PICTO_CLUSTERING_MIN_FACE_SIZE = _get_env_int(
 
 # Separate pool for folder indexing so it never queues behind AI tagging.
 INDEXING_MAX_WORKERS = _get_env_int("INDEXING_MAX_WORKERS", 2, min_value=1, max_value=8)
+# Supported media formats. Single source of truth for backend validation
+# (image_util_is_valid_image) and the /config/supported-extensions endpoint
+# consumed by the Tauri frontend's "Open Original File" command.
+SUPPORTED_IMAGE_EXTENSIONS = {
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".webp",
+    ".bmp",
+    ".tiff",
+    ".tif",
+    ".gif",
+}
+SUPPORTED_VIDEO_EXTENSIONS = {
+    ".mp4",
+    ".mov",
+    ".webm",
+    ".m4v",
+}
