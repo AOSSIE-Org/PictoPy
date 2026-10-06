@@ -7,7 +7,7 @@ import json
 import logging
 import sqlite3
 from typing import List, Optional, Tuple, Dict, Any, Mapping
-from PIL import Image, ExifTags
+from PIL import Image, ExifTags, ImageOps
 from pathlib import Path
 
 from app.config.settings import THUMBNAIL_IMAGES_PATH
@@ -438,6 +438,13 @@ def image_util_generate_thumbnail(
     """Generate thumbnail for a single image."""
     try:
         with Image.open(image_path) as img:
+            # Camera-shot portrait photos are usually stored landscape-side-up
+            # with an EXIF Orientation tag (274) recording how to display them
+            # upright; Image.thumbnail() has no idea about that tag, so a
+            # portrait photo's thumbnail comes out rotated 90 degrees unless
+            # the pixels are physically rotated first.
+            img = ImageOps.exif_transpose(img)
+
             img.thumbnail(size)
 
             # Convert to RGB if the image has an alpha channel or is not RGB
