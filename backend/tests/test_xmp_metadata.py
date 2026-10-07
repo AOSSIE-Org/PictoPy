@@ -356,12 +356,6 @@ class TestCodecStrip:
         assert b"Someone" in stripped
         assert b"pictopy" not in stripped
 
-    def test_unparseable_packet_raises(self):
-        with pytest.raises(ValueError):
-            PictoPyXmpCodec().strip(b"<not xml")
-
-
-class TestStreamWithoutPictoPy:
     def test_pictopy_data_is_removed_and_pixels_kept(self, png):
         write_image_metadata(png, _sample())
         on_disk, mtime = _read(png), os.stat(png).st_mtime_ns
@@ -412,11 +406,6 @@ class TestStreamWithoutPictoPy:
         served = _served(png)
         assert b"XML:com.adobe.xmp" not in served
         assert _pixels(served) == _pixels(_read(png))
-
-    def test_unreadable_packet_is_dropped_not_sent(self, png):
-        # Could hold face data we cannot see; fail closed.
-        _insert_chunk(png, _itxt(b"<broken pictopy data"))
-        assert b"broken pictopy" not in _served(png)
 
     def test_non_png_is_left_to_the_caller(self, tmp_path):
         path = tmp_path / "a.jpg"

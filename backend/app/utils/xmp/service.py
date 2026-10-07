@@ -3,7 +3,7 @@ from typing import Optional
 
 from app.logging.setup_logging import get_logger
 
-from .codec import NewerSchemaError, PictoPyXmpCodec, XmpCodec
+from .codec import NewerSchemaError, PictoPyXmpCodec, UnreadableXmpError, XmpCodec
 from .containers import get_container
 from .containers.base import TransformedStream
 from .containers.png import PngFormatError
@@ -21,6 +21,8 @@ class WriteOutcome(str, Enum):
     UNSUPPORTED = "unsupported"
     # A newer PictoPy wrote this image; leave its data alone.
     NEWER_SCHEMA = "newer_schema"
+    # The image's existing XMP could not be read; writing would destroy it.
+    UNREADABLE_EXISTING = "unreadable_existing"
 
 
 def is_xmp_supported(path: str) -> bool:
@@ -32,14 +34,19 @@ def write_image_metadata(
 ) -> WriteOutcome:
     """Embed `metadata` in the image unless it already holds the same data.
 
-    Other tools' XMP is kept. Raises OSError/ValueError when the file cannot be
-    read or written; callers decide how a failure is reported.
+    Other tools' XMP is kept, and a file whose XMP cannot be read is left
+    alone. Raises OSError/PngFormatError when the file itself cannot be read
+    or written; callers decide how a failure is reported.
     """
     container = get_container(path)
     if container is None:
         return WriteOutcome.UNSUPPORTED
 
-    existing = container.read_xmp(path)
+    try:
+        existing = container.read_xmp(path)
+    except PngFormatError as e:
+        logger.warning(f"Not writing metadata to {path}: {e}")
+        return WriteOutcome.UNREADABLE_EXISTING
     if existing:
         header = codec.read_header(existing)
         if header is not None and header.digest == codec.digest(metadata):
@@ -50,6 +57,9 @@ def write_image_metadata(
     except NewerSchemaError as e:
         logger.info(f"Not overwriting newer PictoPy metadata in {path}: {e}")
         return WriteOutcome.NEWER_SCHEMA
+    except UnreadableXmpError as e:
+        logger.warning(f"Not writing metadata to {path}: {e}")
+        return WriteOutcome.UNREADABLE_EXISTING
     container.write_xmp(path, packet)
     return WriteOutcome.WRITTEN
 
@@ -74,7 +84,9 @@ def open_without_pictopy(
     container = get_container(path)
     if container is None:
         return None
-    return container.stream_with_xmp(path, lambda p: _strip_or_drop(p, codec))
+    return container.stream_with_xmp(
+        path, lambda p: _strip_or_drop(p, codec), codec.marker
+    )
 
 
 def read_image_metadata(

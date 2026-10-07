@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass
 from typing import Callable, Iterator, Optional, Protocol
 
@@ -20,6 +21,8 @@ class TransformedStream:
 
     length: int
     chunks: Iterator[bytes]
+    # Of the handle being streamed, so cache validators describe these bytes.
+    source_stat: os.stat_result
 
 
 class MetadataContainer(Protocol):
@@ -35,10 +38,13 @@ class MetadataContainer(Protocol):
 
     def write_xmp(self, path: str, packet: bytes) -> None: ...
 
-    def stream_with_xmp(self, path: str, transform: XmpTransform) -> TransformedStream:
+    def stream_with_xmp(
+        self, path: str, transform: XmpTransform, marker: bytes
+    ) -> TransformedStream:
         """Stream the file with every XMP packet passed through `transform`.
 
         Memory must stay bounded by the packet size, never the file size. A
-        packet that cannot be read must be dropped rather than sent unchanged.
+        packet that cannot be transformed is dropped if it may contain
+        `marker`, and passed through untouched otherwise.
         """
         ...

@@ -71,6 +71,9 @@ class XmpCodec(Protocol):
 
     def strip(self, packet: bytes) -> Optional[bytes]: ...
 
+    # Bytes every packet holding this codec's data must contain.
+    marker: bytes
+
 
 def _vec_to_text(vec: List[float]) -> str:
     return base64.b64encode(np.asarray(vec, dtype="<f4").tobytes()).decode("ascii")
@@ -305,28 +308,60 @@ def _header_of(desc: ET.Element) -> Optional[PacketHeader]:
     return PacketHeader(version, _text_of(desc, "Digest"))
 
 
-def _strip_ours(rdf: ET.Element) -> None:
-    """Remove pictopy properties only; other tools may share the description."""
+def _has_pictopy(root: ET.Element) -> bool:
+    """Whether any element or attribute anywhere in the tree is ours."""
+    return any(
+        _is_pictopy(el.tag) or any(_is_pictopy(a) for a in el.attrib)
+        for el in root.iter()
+    )
+
+
+def _rdf_of(root: ET.Element) -> Optional[ET.Element]:
+    # The spec allows a bare rdf:RDF root as well as the usual x:xmpmeta wrapper.
+    if root.tag == _q(NS_RDF, "RDF"):
+        return root
+    return root.find(_q(NS_RDF, "RDF"))
+
+
+def _strip_ours(root: ET.Element) -> None:
+    """Remove every pictopy element and attribute, at any depth.
+
+    Other tools may share a description with us or, after editing the file,
+    move our properties inside their own structures.
+    """
+    for parent in list(root.iter()):
+        for child in [c for c in parent if _is_pictopy(c.tag)]:
+            parent.remove(child)
+        for attr in [a for a in parent.attrib if _is_pictopy(a)]:
+            del parent.attrib[attr]
+    rdf = _rdf_of(root)
+    if rdf is None:
+        return
     for desc in rdf.findall(_q(NS_RDF, "Description")):
-        for child in [c for c in desc if _is_pictopy(c.tag)]:
-            desc.remove(child)
-        for attr in [a for a in desc.attrib if _is_pictopy(a)]:
-            del desc.attrib[attr]
         if len(desc) == 0 and set(desc.attrib) <= {_q(NS_RDF, "about")}:
             rdf.remove(desc)
 
 
+class UnreadableXmpError(ValueError):
+    """The image's existing XMP cannot be parsed; rewriting it would destroy it."""
+
+
 def _xmpmeta_and_rdf(existing: Optional[bytes]) -> Tuple[ET.Element, ET.Element]:
-    if existing:
-        try:
-            root = _parse(existing)
-            rdf = root.find(_q(NS_RDF, "RDF"))
-            if root.tag == _q(NS_X, "xmpmeta") and rdf is not None:
-                return root, rdf
-        except (ET.ParseError, ValueError):
-            logger.warning("Existing XMP unreadable; writing a fresh packet")
-    root = ET.Element(_q(NS_X, "xmpmeta"))
-    return root, ET.SubElement(root, _q(NS_RDF, "RDF"))
+    if not existing:
+        root = ET.Element(_q(NS_X, "xmpmeta"))
+        return root, ET.SubElement(root, _q(NS_RDF, "RDF"))
+    try:
+        root = _parse(existing)
+    except (ET.ParseError, ValueError) as e:
+        raise UnreadableXmpError(f"existing XMP unreadable: {e}") from e
+    rdf = _rdf_of(root)
+    if rdf is None:
+        raise UnreadableXmpError("existing packet has no rdf:RDF")
+    if root is rdf:
+        wrapper = ET.Element(_q(NS_X, "xmpmeta"))
+        wrapper.append(rdf)
+        return wrapper, rdf
+    return root, rdf
 
 
 def _serialize(root: ET.Element) -> bytes:
@@ -350,6 +385,8 @@ def _build(metadata: PictoPyMetadata) -> Tuple[ET.Element, str]:
 class PictoPyXmpCodec:
     """Stores PictoPy data as `pictopy:` properties in a standard XMP packet."""
 
+    marker = NS_PICTOPY.encode("utf-8")
+
     def encode(
         self, metadata: PictoPyMetadata, existing: Optional[bytes] = None
     ) -> bytes:
@@ -360,7 +397,7 @@ class PictoPyXmpCodec:
             raise NewerSchemaError(
                 f"packet has schema {header.schema_version}, we write {SCHEMA_VERSION}"
             )
-        _strip_ours(rdf)
+        _strip_ours(root)
 
         ours, digest = _build(metadata)
         _add(ours, "Digest", digest)
@@ -403,23 +440,25 @@ class PictoPyXmpCodec:
     def strip(self, packet: bytes) -> Optional[bytes]:
         """The packet without PictoPy's data, or None if nothing else is left.
 
-        Raises ValueError when the packet cannot be parsed, or when PictoPy
-        data survives stripping; callers must then drop the whole packet.
+        Raises ValueError only when PictoPy data may be present but cannot be
+        removed; callers must then drop the whole packet.
         """
         try:
             root = _parse(packet)
-        except ET.ParseError as e:
-            raise ValueError(f"unreadable XMP packet: {e}") from e
-        if _find_ours(root) is None:
+        except (ET.ParseError, ValueError) as e:
+            # Unparseable, but our data cannot be expressed without our
+            # namespace, and PNG XMP is always UTF-8: theirs, pass it on.
+            if self.marker not in packet:
+                return packet
+            raise ValueError(f"unreadable XMP holding PictoPy data: {e}") from e
+        if not _has_pictopy(root):
             # Nothing of ours: hand other tools' packet back byte-for-byte.
             return packet
 
-        is_rdf = root.tag == _q(NS_RDF, "RDF")
-        rdf = root if is_rdf else root.find(_q(NS_RDF, "RDF"))
-        if rdf is not None:
-            _strip_ours(rdf)
-        if _find_ours(root) is not None:
-            raise ValueError("PictoPy data outside the expected place")
-        if rdf is None or len(rdf) == 0:
+        _strip_ours(root)
+        if _has_pictopy(root):
+            raise ValueError("PictoPy data survived stripping")
+        rdf = _rdf_of(root)
+        if len(rdf if rdf is not None else root) == 0:
             return None
         return _serialize(root)

@@ -95,8 +95,29 @@ def _xmp_chunk(packet: bytes) -> bytes:
 Edit = Tuple[int, int, bytes]  # (offset, bytes replaced, replacement)
 
 
-def _plan_xmp_edits(f: BinaryIO, transform: XmpTransform) -> List[Edit]:
-    """Where the XMP chunks are and what replaces each; reads only their bodies."""
+def _contains(f: BinaryIO, count: int, marker: bytes) -> bool:
+    """Whether the next `count` bytes contain `marker`, read in bounded blocks."""
+    tail = b""
+    found = False
+    while count > 0:
+        block = f.read(min(STREAM_BLOCK_BYTES, count))
+        if not block:
+            raise PngFormatError("truncated chunk")
+        count -= len(block)
+        window = tail + block
+        found = found or marker in window
+        # Carry over from the window, not the block: with blocks shorter than
+        # the marker, a match can span more than two of them.
+        tail = window[-(len(marker) - 1) :] if len(marker) > 1 else b""
+    return found
+
+
+def _plan_xmp_edits(f: BinaryIO, transform: XmpTransform, marker: bytes) -> List[Edit]:
+    """Where the XMP chunks are and what replaces each; reads only their bodies.
+
+    A chunk that cannot be passed through `transform` is dropped only when it
+    may hold `marker`; anything provably free of it is kept untouched.
+    """
     if f.read(len(PNG_SIGNATURE)) != PNG_SIGNATURE:
         raise PngFormatError("not a PNG file")
     edits: List[Edit] = []
@@ -119,10 +140,15 @@ def _plan_xmp_edits(f: BinaryIO, transform: XmpTransform) -> List[Edit]:
             continue
 
         total = 12 + length
+        drop = (offset, total, b"")
         if length > MAX_PACKET_BYTES:
-            # Too large to inspect, so it cannot be cleaned; drop it.
-            f.seek(length - prefix_len + 4, os.SEEK_CUR)
-            edits.append((offset, total, b""))
+            # Too large to rewrite; scan it instead of holding it.
+            flag = _read_exact(f, 1)
+            compressed = flag != b"\x00"
+            holds = _contains(f, length - prefix_len - 1, marker)
+            f.seek(4, os.SEEK_CUR)
+            if compressed or holds:
+                edits.append(drop)
             continue
 
         body = prefix + _read_exact(f, length - prefix_len)
@@ -131,9 +157,17 @@ def _plan_xmp_edits(f: BinaryIO, transform: XmpTransform) -> List[Edit]:
             packet = _parse_itxt_text(body)
         except PngFormatError:
             packet = None
-        replacement = transform(packet) if packet is not None else None
+        if packet is None:
+            # Unreadable chunk: compressed bytes cannot be inspected, so keep
+            # it only if it is plain text without our marker.
+            compressed = len(body) > prefix_len and body[prefix_len] != 0
+            if compressed or marker in body:
+                edits.append(drop)
+            continue
+
+        replacement = transform(packet)
         if replacement is None:
-            edits.append((offset, total, b""))
+            edits.append(drop)
         elif replacement != packet:
             edits.append((offset, total, _xmp_chunk(replacement)))
 
@@ -156,25 +190,39 @@ class PngContainer:
             return False
 
     def read_xmp(self, path: str) -> Optional[bytes]:
-        # Walks chunk headers and seeks past bodies, so the pixel data of a
-        # large PNG is never read just to check its metadata.
+        """The file's XMP packet, or None if it has none.
+
+        Raises PngFormatError for XMP it cannot read, or more than one packet:
+        write_xmp replaces every XMP chunk, so a caller must not write over
+        packets it could not see. Walks chunk headers and seeks past bodies, so
+        a large PNG's pixel data is never read.
+        """
+        prefix_len = len(XMP_KEYWORD) + 1
+        found: Optional[bytes] = None
         with open(path, "rb") as f:
             if f.read(len(PNG_SIGNATURE)) != PNG_SIGNATURE:
                 raise PngFormatError("not a PNG file")
             while True:
                 header = f.read(8)
-                if len(header) < 8:
-                    return None
+                if len(header) < 8 or header[4:] == b"IEND":
+                    return found
                 length, chunk_type = struct.unpack(">I", header[:4])[0], header[4:]
-                if chunk_type == b"IEND":
-                    return None
-                if chunk_type == b"iTXt" and length <= MAX_PACKET_BYTES:
-                    body = _read_exact(f, length)
-                    f.seek(4, os.SEEK_CUR)
-                    if _is_xmp_chunk(chunk_type, body):
-                        return _parse_itxt_text(body)
-                else:
+                if chunk_type != b"iTXt" or length < prefix_len:
                     f.seek(length + 4, os.SEEK_CUR)
+                    continue
+                prefix = _read_exact(f, prefix_len)
+                if not _is_xmp_chunk(chunk_type, prefix):
+                    f.seek(length - prefix_len + 4, os.SEEK_CUR)
+                    continue
+                if found is not None:
+                    raise PngFormatError("more than one XMP packet")
+                if length > MAX_PACKET_BYTES:
+                    raise PngFormatError("XMP packet too large to read")
+                body = prefix + _read_exact(f, length - prefix_len)
+                f.seek(4, os.SEEK_CUR)
+                found = _parse_itxt_text(body)
+                if found is None:
+                    raise PngFormatError("malformed XMP chunk")
 
     def write_xmp(self, path: str, packet: bytes) -> None:
         with open(path, "rb") as f:
@@ -201,13 +249,16 @@ class PngContainer:
 
         _atomic_replace(path, bytes(out), before)
 
-    def stream_with_xmp(self, path: str, transform: XmpTransform) -> TransformedStream:
+    def stream_with_xmp(
+        self, path: str, transform: XmpTransform, marker: bytes
+    ) -> TransformedStream:
         # One handle for planning and streaming, so the length promised up
         # front describes exactly the bytes that are sent.
         f = open(path, "rb")
         try:
-            size = os.fstat(f.fileno()).st_size
-            edits = _plan_xmp_edits(f, transform)
+            stat = os.fstat(f.fileno())
+            size = stat.st_size
+            edits = _plan_xmp_edits(f, transform, marker)
         except BaseException:
             f.close()
             raise
@@ -229,7 +280,7 @@ class PngContainer:
             finally:
                 f.close()
 
-        return TransformedStream(length=length, chunks=chunks())
+        return TransformedStream(length=length, chunks=chunks(), source_stat=stat)
 
 
 def _atomic_replace(path: str, content: bytes, before: os.stat_result) -> None:
