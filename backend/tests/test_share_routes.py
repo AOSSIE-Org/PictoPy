@@ -1,3 +1,4 @@
+import io
 import os
 import sqlite3
 import tempfile
@@ -8,6 +9,7 @@ from typing import Iterator, List, TypedDict
 import bcrypt
 import pytest
 from fastapi.testclient import TestClient
+from PIL import Image
 
 from app.database.albums import (
     db_create_album_images_table,
@@ -16,6 +18,8 @@ from app.database.albums import (
 )
 from app.database.images import db_create_images_table
 from app.share.app import create_share_app
+from app.utils.xmp import FaceRecord, PictoPyMetadata, write_image_metadata
+from app.utils.xmp.containers.png import PngContainer
 from app.share.registry import (
     share_registry_clear,
     share_registry_create,
@@ -161,6 +165,46 @@ class TestMedia:
         response = share_env["client"].get(f"/s/{share_env['token']}/photo/img-1")
         assert response.status_code == 200
         assert response.content == JPEG_BYTES
+
+    def test_png_is_served_without_pictopy_metadata(self, share_env: ShareEnv) -> None:
+        """Exported face embeddings and names stay home; everything else goes."""
+        photo = share_env["tmp_path"] / "img-1.png"
+        Image.new("RGB", (32, 24), (200, 30, 90)).save(photo)
+        foreign = (
+            b'<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF '
+            b'xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">'
+            b'<rdf:Description rdf:about="" '
+            b'xmlns:dc="http://purl.org/dc/elements/1.1/">'
+            b"<dc:creator>Someone</dc:creator></rdf:Description>"
+            b"</rdf:RDF></x:xmpmeta>"
+        )
+        PngContainer().write_xmp(str(photo), foreign)
+        write_image_metadata(
+            str(photo),
+            PictoPyMetadata(
+                faces=[FaceRecord(embedding=[0.5] * 128, cluster_name="Ann")],
+                albums=["Trip to Goa"],
+            ),
+        )
+        on_disk = photo.read_bytes()
+        assert b"pictopy" in on_disk and b"Ann" in on_disk
+        conn = sqlite3.connect(share_env["db_path"])
+        conn.execute("UPDATE images SET path = ? WHERE id = 'img-1'", (str(photo),))
+        conn.commit()
+        conn.close()
+
+        response = share_env["client"].get(f"/s/{share_env['token']}/photo/img-1")
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "image/png"
+        assert int(response.headers["content-length"]) == len(response.content)
+        assert b"pictopy" not in response.content
+        assert b"Ann" not in response.content
+        assert b"<dc:creator>Someone</dc:creator>" in response.content
+        assert (
+            Image.open(io.BytesIO(response.content)).tobytes()
+            == Image.open(photo).tobytes()
+        )
+        assert photo.read_bytes() == on_disk
 
     def test_image_from_another_album_is_refused(self, share_env: ShareEnv) -> None:
         """

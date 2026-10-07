@@ -69,6 +69,8 @@ class XmpCodec(Protocol):
 
     def read_header(self, packet: bytes) -> Optional[PacketHeader]: ...
 
+    def strip(self, packet: bytes) -> Optional[bytes]: ...
+
 
 def _vec_to_text(vec: List[float]) -> str:
     return base64.b64encode(np.asarray(vec, dtype="<f4").tobytes()).decode("ascii")
@@ -327,6 +329,11 @@ def _xmpmeta_and_rdf(existing: Optional[bytes]) -> Tuple[ET.Element, ET.Element]
     return root, ET.SubElement(root, _q(NS_RDF, "RDF"))
 
 
+def _serialize(root: ET.Element) -> bytes:
+    body = ET.tostring(root, encoding="unicode")
+    return f"{_XPACKET_BEGIN}\n{body}\n{_XPACKET_END}".encode("utf-8")
+
+
 def _build(metadata: PictoPyMetadata) -> Tuple[ET.Element, str]:
     """Our description plus the digest of its content, before the digest is added."""
     desc = ET.Element(_q(NS_RDF, "Description"))
@@ -358,9 +365,7 @@ class PictoPyXmpCodec:
         ours, digest = _build(metadata)
         _add(ours, "Digest", digest)
         rdf.append(ours)
-
-        body = ET.tostring(root, encoding="unicode")
-        return f"{_XPACKET_BEGIN}\n{body}\n{_XPACKET_END}".encode("utf-8")
+        return _serialize(root)
 
     def decode(self, packet: bytes) -> Optional[PictoPyMetadata]:
         try:
@@ -394,3 +399,27 @@ class PictoPyXmpCodec:
         except (ET.ParseError, ValueError):
             return None
         return _header_of(ours) if ours is not None else None
+
+    def strip(self, packet: bytes) -> Optional[bytes]:
+        """The packet without PictoPy's data, or None if nothing else is left.
+
+        Raises ValueError when the packet cannot be parsed, or when PictoPy
+        data survives stripping; callers must then drop the whole packet.
+        """
+        try:
+            root = _parse(packet)
+        except ET.ParseError as e:
+            raise ValueError(f"unreadable XMP packet: {e}") from e
+        if _find_ours(root) is None:
+            # Nothing of ours: hand other tools' packet back byte-for-byte.
+            return packet
+
+        is_rdf = root.tag == _q(NS_RDF, "RDF")
+        rdf = root if is_rdf else root.find(_q(NS_RDF, "RDF"))
+        if rdf is not None:
+            _strip_ours(rdf)
+        if _find_ours(root) is not None:
+            raise ValueError("PictoPy data outside the expected place")
+        if rdf is None or len(rdf) == 0:
+            return None
+        return _serialize(root)

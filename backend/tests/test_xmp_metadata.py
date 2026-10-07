@@ -1,5 +1,8 @@
+import gc
+import io
 import os
 import struct
+import tracemalloc
 import zlib
 
 import numpy as np
@@ -13,12 +16,13 @@ from app.utils.xmp import (
     SemanticTag,
     WriteOutcome,
     is_xmp_supported,
+    open_without_pictopy,
     read_image_metadata,
     write_image_metadata,
 )
 from app.utils.xmp.codec import PictoPyXmpCodec
 from app.utils.xmp.containers import png as png_module
-from app.utils.xmp.containers.base import FileChangedError
+from app.utils.xmp.containers.base import STREAM_BLOCK_BYTES, FileChangedError
 from app.utils.xmp.containers.png import PngContainer, PngFormatError
 
 RDF_OPEN = (
@@ -306,3 +310,134 @@ class TestPngReads:
         with pytest.raises(PngFormatError, match="too large"):
             PngContainer().read_xmp(png)
         assert read_image_metadata(png) is None
+
+
+FOREIGN_DESCRIPTION = (
+    b'<rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/">'
+    b"<dc:creator>Someone</dc:creator></rdf:Description>"
+)
+
+
+def _chunk(chunk_type: bytes, body: bytes) -> bytes:
+    crc = struct.pack(">I", zlib.crc32(chunk_type + body))
+    return struct.pack(">I", len(body)) + chunk_type + body + crc
+
+
+def _served(path: str) -> bytes:
+    stream = open_without_pictopy(path)
+    assert stream is not None
+    data = b"".join(stream.chunks)
+    assert len(data) == stream.length
+    return data
+
+
+def _pixels(data: bytes) -> bytes:
+    return Image.open(io.BytesIO(data)).tobytes()
+
+
+class TestCodecStrip:
+    def test_foreign_only_packet_is_returned_untouched(self):
+        packet = RDF_OPEN + FOREIGN_DESCRIPTION + RDF_CLOSE
+        assert PictoPyXmpCodec().strip(packet) is packet
+
+    def test_pictopy_only_packet_strips_to_nothing(self):
+        codec = PictoPyXmpCodec()
+        assert codec.strip(codec.encode(_sample())) is None
+
+    def test_merged_description_keeps_foreign_properties(self):
+        codec = PictoPyXmpCodec()
+        merged = codec.encode(_sample()).replace(
+            b'<rdf:Description rdf:about="">',
+            b'<rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/">'
+            b"<dc:creator>Someone</dc:creator>",
+        )
+        stripped = codec.strip(merged)
+        assert stripped is not None
+        assert b"Someone" in stripped
+        assert b"pictopy" not in stripped
+
+    def test_unparseable_packet_raises(self):
+        with pytest.raises(ValueError):
+            PictoPyXmpCodec().strip(b"<not xml")
+
+
+class TestStreamWithoutPictoPy:
+    def test_pictopy_data_is_removed_and_pixels_kept(self, png):
+        write_image_metadata(png, _sample())
+        on_disk, mtime = _read(png), os.stat(png).st_mtime_ns
+
+        served = _served(png)
+        assert b"pictopy" not in served
+        assert b"XML:com.adobe.xmp" not in served
+        assert _pixels(served) == _pixels(on_disk)
+        Image.open(io.BytesIO(served)).verify()
+        # The original is never modified.
+        assert _read(png) == on_disk
+        assert os.stat(png).st_mtime_ns == mtime
+
+    def test_other_tools_xmp_survives(self, png):
+        _insert_chunk(png, _itxt(RDF_OPEN + FOREIGN_DESCRIPTION + RDF_CLOSE))
+        write_image_metadata(png, _sample())
+        assert b"pictopy" in _read(png)
+
+        served = _served(png)
+        assert b"pictopy" not in served
+        assert b"<dc:creator>Someone</dc:creator>" in served
+        assert _pixels(served) == _pixels(_read(png))
+
+    def test_other_metadata_chunks_survive(self, png):
+        _insert_chunk(png, _chunk(b"tEXt", b"Author\x00Someone"))
+        _insert_chunk(png, _chunk(b"eXIf", b"MM\x00*fake-exif"))
+        write_image_metadata(png, _sample())
+        with open(png, "ab") as f:
+            f.write(b"tail")
+
+        served = _served(png)
+        assert b"Author\x00Someone" in served
+        assert b"MM\x00*fake-exif" in served
+        assert served.endswith(b"tail")
+
+    def test_file_without_pictopy_data_is_served_byte_identical(self, png):
+        _insert_chunk(png, _itxt(RDF_OPEN + FOREIGN_DESCRIPTION + RDF_CLOSE))
+        assert _served(png) == _read(png)
+
+    def test_packet_after_idat_is_also_stripped(self, png):
+        packet = PictoPyXmpCodec().encode(_sample())
+        _insert_chunk(png, _itxt(packet), before=b"IEND")
+        assert b"pictopy" not in _served(png)
+
+    def test_compressed_packet_is_stripped(self, png):
+        packet = PictoPyXmpCodec().encode(_sample())
+        _insert_chunk(png, _itxt(packet, compressed=True))
+        served = _served(png)
+        assert b"XML:com.adobe.xmp" not in served
+        assert _pixels(served) == _pixels(_read(png))
+
+    def test_unreadable_packet_is_dropped_not_sent(self, png):
+        # Could hold face data we cannot see; fail closed.
+        _insert_chunk(png, _itxt(b"<broken pictopy data"))
+        assert b"broken pictopy" not in _served(png)
+
+    def test_non_png_is_left_to_the_caller(self, tmp_path):
+        path = tmp_path / "a.jpg"
+        Image.new("RGB", (8, 8)).save(path)
+        assert open_without_pictopy(str(path)) is None
+
+    def test_memory_does_not_grow_with_file_size(self, png):
+        write_image_metadata(png, _sample())
+        # A 32 MB ancillary chunk stands in for a large photo's pixel data.
+        _insert_chunk(png, _chunk(b"prVt", b"\x00" * (32 * 1024 * 1024)))
+        stream = open_without_pictopy(png)
+        assert stream is not None
+
+        gc.collect()
+        tracemalloc.start()
+        try:
+            largest = 0
+            for block in stream.chunks:
+                largest = max(largest, len(block))
+            _, peak = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+        assert largest <= STREAM_BLOCK_BYTES
+        assert peak < 2 * 1024 * 1024

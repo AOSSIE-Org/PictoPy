@@ -5,11 +5,17 @@ apart from the token in the path, so keep the surface exactly this small.
 
 from __future__ import annotations
 
+import mimetypes
 import os
 from typing import Optional
 
 from fastapi import APIRouter, Form, HTTPException, Path, Request, Response, status
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    RedirectResponse,
+    StreamingResponse,
+)
 from fastapi.templating import Jinja2Templates
 
 from app.logging.setup_logging import get_logger
@@ -25,6 +31,7 @@ from app.share.registry import (
     share_registry_is_unlocked,
     share_registry_unlock,
 )
+from app.utils.xmp import open_without_pictopy
 
 logger = get_logger(__name__)
 
@@ -156,11 +163,24 @@ def share_thumbnail(
 @router.get("/s/{token}/photo/{image_id}")
 def share_photo(
     request: Request, token: str = Path(...), image_id: str = Path(...)
-) -> FileResponse:
+) -> Response:
     entry = _require_share(token)
     if not _is_unlocked(request, entry):
         raise _not_found()
     path = share_media_resolve_path(entry.album_id, image_id, thumbnail=False)
     if path is None:
         raise _not_found()
-    return FileResponse(path)
+
+    # Exported PictoPy metadata carries face embeddings and names; guests get
+    # the photo without it. Streamed, so memory does not grow with file size.
+    try:
+        stream = open_without_pictopy(path)
+    except OSError:
+        raise _not_found()
+    if stream is None:
+        return FileResponse(path)
+    return StreamingResponse(
+        stream.chunks,
+        media_type=mimetypes.guess_type(path)[0] or "application/octet-stream",
+        headers={"Content-Length": str(stream.length)},
+    )

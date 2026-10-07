@@ -2,9 +2,15 @@ import os
 import struct
 import tempfile
 import zlib
-from typing import BinaryIO, List, Optional, Tuple
+from typing import BinaryIO, Iterator, List, Optional, Tuple
 
-from .base import MAX_PACKET_BYTES, FileChangedError
+from .base import (
+    MAX_PACKET_BYTES,
+    STREAM_BLOCK_BYTES,
+    FileChangedError,
+    TransformedStream,
+    XmpTransform,
+)
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 # The keyword the XMP spec reserves for the packet in a PNG iTXt chunk.
@@ -80,6 +86,67 @@ def _read_exact(f: BinaryIO, size: int) -> bytes:
     return data
 
 
+def _xmp_chunk(packet: bytes) -> bytes:
+    # Uncompressed so the packet stays readable with plain tools.
+    body = XMP_KEYWORD + b"\x00" + b"\x00\x00" + b"\x00" + b"\x00" + packet
+    return _make_chunk(b"iTXt", body)
+
+
+Edit = Tuple[int, int, bytes]  # (offset, bytes replaced, replacement)
+
+
+def _plan_xmp_edits(f: BinaryIO, transform: XmpTransform) -> List[Edit]:
+    """Where the XMP chunks are and what replaces each; reads only their bodies."""
+    if f.read(len(PNG_SIGNATURE)) != PNG_SIGNATURE:
+        raise PngFormatError("not a PNG file")
+    edits: List[Edit] = []
+    prefix_len = len(XMP_KEYWORD) + 1
+    while True:
+        offset = f.tell()
+        header = f.read(8)
+        if len(header) < 8:
+            return edits
+        length, chunk_type = struct.unpack(">I", header[:4])[0], header[4:]
+        if chunk_type == b"IEND":
+            return edits
+        if chunk_type != b"iTXt" or length < prefix_len:
+            f.seek(length + 4, os.SEEK_CUR)
+            continue
+
+        prefix = _read_exact(f, prefix_len)
+        if not _is_xmp_chunk(chunk_type, prefix):
+            f.seek(length - prefix_len + 4, os.SEEK_CUR)
+            continue
+
+        total = 12 + length
+        if length > MAX_PACKET_BYTES:
+            # Too large to inspect, so it cannot be cleaned; drop it.
+            f.seek(length - prefix_len + 4, os.SEEK_CUR)
+            edits.append((offset, total, b""))
+            continue
+
+        body = prefix + _read_exact(f, length - prefix_len)
+        f.seek(4, os.SEEK_CUR)
+        try:
+            packet = _parse_itxt_text(body)
+        except PngFormatError:
+            packet = None
+        replacement = transform(packet) if packet is not None else None
+        if replacement is None:
+            edits.append((offset, total, b""))
+        elif replacement != packet:
+            edits.append((offset, total, _xmp_chunk(replacement)))
+
+
+def _copy(f: BinaryIO, count: int) -> Iterator[bytes]:
+    while count > 0:
+        block = f.read(min(STREAM_BLOCK_BYTES, count))
+        if not block:
+            return
+        count -= len(block)
+        yield block
+
+
 class PngContainer:
     def supports(self, path: str) -> bool:
         try:
@@ -115,9 +182,7 @@ class PngContainer:
             data = f.read()
 
         chunks, trailing = _split_chunks(data)
-        # Uncompressed so the packet stays readable with plain tools.
-        body = XMP_KEYWORD + b"\x00" + b"\x00\x00" + b"\x00" + b"\x00" + packet
-        new_chunk = _make_chunk(b"iTXt", body)
+        new_chunk = _xmp_chunk(packet)
 
         out = bytearray(PNG_SIGNATURE)
         inserted = False
@@ -135,6 +200,36 @@ class PngContainer:
         out += trailing
 
         _atomic_replace(path, bytes(out), before)
+
+    def stream_with_xmp(self, path: str, transform: XmpTransform) -> TransformedStream:
+        # One handle for planning and streaming, so the length promised up
+        # front describes exactly the bytes that are sent.
+        f = open(path, "rb")
+        try:
+            size = os.fstat(f.fileno()).st_size
+            edits = _plan_xmp_edits(f, transform)
+        except BaseException:
+            f.close()
+            raise
+
+        length = size + sum(len(new) - old for _offset, old, new in edits)
+
+        def chunks() -> Iterator[bytes]:
+            try:
+                f.seek(0)
+                pos = 0
+                for offset, old, new in edits:
+                    yield from _copy(f, offset - pos)
+                    if new:
+                        yield new
+                    f.seek(offset + old)
+                    pos = offset + old
+                # Pixel data and anything after IEND pass through untouched.
+                yield from _copy(f, size - pos)
+            finally:
+                f.close()
+
+        return TransformedStream(length=length, chunks=chunks())
 
 
 def _atomic_replace(path: str, content: bytes, before: os.stat_result) -> None:

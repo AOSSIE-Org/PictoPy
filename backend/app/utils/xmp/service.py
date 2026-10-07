@@ -5,6 +5,7 @@ from app.logging.setup_logging import get_logger
 
 from .codec import NewerSchemaError, PictoPyXmpCodec, XmpCodec
 from .containers import get_container
+from .containers.base import TransformedStream
 from .containers.png import PngFormatError
 from .schema import PictoPyMetadata
 
@@ -51,6 +52,29 @@ def write_image_metadata(
         return WriteOutcome.NEWER_SCHEMA
     container.write_xmp(path, packet)
     return WriteOutcome.WRITTEN
+
+
+def _strip_or_drop(packet: bytes, codec: XmpCodec) -> Optional[bytes]:
+    try:
+        return codec.strip(packet)
+    except ValueError as e:
+        # Fail closed: a packet we cannot clean may still hold face data.
+        logger.debug(f"Dropping XMP packet that could not be stripped: {e}")
+        return None
+
+
+def open_without_pictopy(
+    path: str, codec: XmpCodec = _codec
+) -> Optional[TransformedStream]:
+    """Stream the image with PictoPy's data removed; the file is not modified.
+
+    Returns None for formats without a container, which carry no PictoPy data
+    and can be served as they are.
+    """
+    container = get_container(path)
+    if container is None:
+        return None
+    return container.stream_with_xmp(path, lambda p: _strip_or_drop(p, codec))
 
 
 def read_image_metadata(

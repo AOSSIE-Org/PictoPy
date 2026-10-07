@@ -2,6 +2,7 @@ from .schema import EmbeddingRecord, FaceRecord, PictoPyMetadata, SemanticTag
 from .service import (
     WriteOutcome,
     is_xmp_supported,
+    open_without_pictopy,
     read_image_metadata,
     write_image_metadata,
 )
@@ -13,6 +14,7 @@ __all__ = [
     "SemanticTag",
     "WriteOutcome",
     "is_xmp_supported",
+    "open_without_pictopy",
     "read_image_metadata",
     "write_image_metadata",
 ]
