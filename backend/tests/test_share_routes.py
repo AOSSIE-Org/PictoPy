@@ -3,8 +3,9 @@ import os
 import sqlite3
 import tempfile
 from datetime import datetime, timedelta, timezone
+from email.utils import formatdate
 from pathlib import Path
-from typing import Iterator, List, TypedDict
+from typing import Dict, Iterator, List, TypedDict
 
 import bcrypt
 import pytest
@@ -20,6 +21,7 @@ from app.database.images import db_create_images_table
 from app.share.app import create_share_app
 from app.utils.xmp import FaceRecord, PictoPyMetadata, write_image_metadata
 from app.utils.xmp.containers.png import PngContainer
+from tests.test_xmp_stripping import _photo
 from app.share.registry import (
     share_registry_clear,
     share_registry_create,
@@ -364,3 +366,232 @@ class TestSurface:
         client = share_env["client"]
         for path in ("/health", "/albums/", "/images/", "/shutdown"):
             assert client.get(path).status_code == 404
+
+
+def _serve_png_as_img1(share_env: ShareEnv, cluster_name: str = "Ann Example") -> Path:
+    """Point img-1 at a real photo carrying Lightroom XMP plus PictoPy's export."""
+    photo = Path(_photo(share_env["tmp_path"], "img-1.png"))
+    _export_faces(photo, cluster_name)
+    conn = sqlite3.connect(share_env["db_path"])
+    conn.execute("UPDATE images SET path = ? WHERE id = 'img-1'", (str(photo),))
+    conn.commit()
+    conn.close()
+    return photo
+
+
+def _export_faces(photo: Path, cluster_name: str) -> None:
+    faces = [FaceRecord(embedding=[0.5] * 128, cluster_name=cluster_name)]
+    write_image_metadata(str(photo), PictoPyMetadata(faces=faces))
+
+
+class TestCaching:
+    """Real request/response sequences, as a browser revalidating would send them."""
+
+    def _url(
+        self, share_env: ShareEnv, kind: str = "photo", image: str = "img-1"
+    ) -> str:
+        return f"/s/{share_env['token']}/{kind}/{image}"
+
+    def test_first_response_carries_validators(self, share_env: ShareEnv) -> None:
+        photo = _serve_png_as_img1(share_env)
+        response = share_env["client"].get(self._url(share_env))
+        assert response.status_code == 200
+        assert response.headers["cache-control"] == "private, no-cache"
+        assert response.headers["etag"].startswith('"')
+        assert response.headers["last-modified"] == formatdate(
+            photo.stat().st_mtime, usegmt=True
+        )
+        assert int(response.headers["content-length"]) == len(response.content)
+        assert b"Ann Example" not in response.content
+
+    def test_revalidation_is_a_bodiless_304_that_never_opens_the_file(
+        self, share_env: ShareEnv, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _serve_png_as_img1(share_env)
+        client = share_env["client"]
+        first = client.get(self._url(share_env))
+
+        def must_not_stream(path: str) -> None:
+            raise AssertionError("a 304 must not read the photo")
+
+        monkeypatch.setattr("app.share.routes.open_without_pictopy", must_not_stream)
+        again = client.get(
+            self._url(share_env), headers={"If-None-Match": first.headers["etag"]}
+        )
+        assert again.status_code == 304
+        assert again.content == b""
+        assert again.headers["etag"] == first.headers["etag"]
+        assert again.headers["cache-control"] == "private, no-cache"
+
+    @pytest.mark.parametrize(
+        "header", ["{etag}", "W/{etag}", '"other", {etag}', "*"], ids=str
+    )
+    def test_if_none_match_forms(self, share_env: ShareEnv, header: str) -> None:
+        _serve_png_as_img1(share_env)
+        client = share_env["client"]
+        etag = client.get(self._url(share_env)).headers["etag"]
+        response = client.get(
+            self._url(share_env), headers={"If-None-Match": header.format(etag=etag)}
+        )
+        assert response.status_code == 304
+
+    def test_stale_etag_gets_the_full_photo(self, share_env: ShareEnv) -> None:
+        _serve_png_as_img1(share_env)
+        client = share_env["client"]
+        full = client.get(self._url(share_env))
+        stale = client.get(self._url(share_env), headers={"If-None-Match": '"old"'})
+        assert stale.status_code == 200
+        assert stale.content == full.content
+
+    def test_if_modified_since(self, share_env: ShareEnv) -> None:
+        _serve_png_as_img1(share_env)
+        client = share_env["client"]
+        last_modified = client.get(self._url(share_env)).headers["last-modified"]
+
+        def status(headers: Dict[str, str]) -> int:
+            return client.get(self._url(share_env), headers=headers).status_code
+
+        assert status({"If-Modified-Since": last_modified}) == 304
+        assert status({"If-Modified-Since": formatdate(0, usegmt=True)}) == 200
+        assert status({"If-Modified-Since": "not a date"}) == 200
+        # If-None-Match takes precedence: a wrong ETag means "send it".
+        both = {"If-None-Match": '"old"', "If-Modified-Since": last_modified}
+        assert status(both) == 200
+
+    def test_edited_photo_is_downloaded_again(self, share_env: ShareEnv) -> None:
+        photo = _serve_png_as_img1(share_env)
+        client = share_env["client"]
+        first = client.get(self._url(share_env))
+
+        Image.new("RGB", (16, 16), (0, 255, 0)).save(photo)
+        again = client.get(
+            self._url(share_env), headers={"If-None-Match": first.headers["etag"]}
+        )
+        assert again.status_code == 200
+        assert again.headers["etag"] != first.headers["etag"]
+        assert Image.open(io.BytesIO(again.content)).size == (16, 16)
+
+    def test_reexport_keeps_mtime_but_size_change_invalidates(
+        self, share_env: ShareEnv
+    ) -> None:
+        photo = _serve_png_as_img1(share_env)
+        client = share_env["client"]
+        first = client.get(self._url(share_env))
+        mtime = photo.stat().st_mtime_ns
+
+        _export_faces(photo, "A much longer cluster name")
+        assert photo.stat().st_mtime_ns == mtime
+        again = client.get(
+            self._url(share_env), headers={"If-None-Match": first.headers["etag"]}
+        )
+        assert again.status_code == 200
+        # Only PictoPy's (stripped) data changed, so the guest's bytes did not.
+        assert again.content == first.content
+
+    def test_same_size_reexport_keeps_etag_because_served_bytes_are_identical(
+        self, share_env: ShareEnv
+    ) -> None:
+        """
+        Export keeps mtime, so a same-length edit leaves (mtime, size) alone.
+        That is safe only because the guest's bytes really are unchanged.
+        """
+        photo = _serve_png_as_img1(share_env, "Ann Example")
+        client = share_env["client"]
+        first = client.get(self._url(share_env))
+        on_disk = photo.read_bytes()
+
+        _export_faces(photo, "Bob Example")
+        assert photo.read_bytes() != on_disk
+        assert len(photo.read_bytes()) == len(on_disk)
+        again = client.get(self._url(share_env))
+        assert again.headers["etag"] == first.headers["etag"]
+        assert again.content == first.content
+
+    def test_revoked_share_gets_404_not_304(self, share_env: ShareEnv) -> None:
+        _serve_png_as_img1(share_env)
+        client = share_env["client"]
+        etags = {
+            kind: client.get(self._url(share_env, kind)).headers["etag"]
+            for kind in ("photo", "thumb")
+        }
+
+        share_registry_revoke(share_env["token"])
+        for kind, etag in etags.items():
+            response = client.get(
+                self._url(share_env, kind), headers={"If-None-Match": etag}
+            )
+            assert response.status_code == 404
+
+    def test_expired_share_gets_404_not_304(self, share_env: ShareEnv) -> None:
+        _serve_png_as_img1(share_env)
+        client = share_env["client"]
+        etag = client.get(self._url(share_env)).headers["etag"]
+        expire(share_env["token"])
+        response = client.get(self._url(share_env), headers={"If-None-Match": etag})
+        assert response.status_code == 404
+
+    def test_locked_share_gets_404_not_304(self, share_env: ShareEnv) -> None:
+        _serve_png_as_img1(share_env)
+        etag = share_env["client"].get(self._url(share_env)).headers["etag"]
+        entry = share_registry_create("album-1", password=PASSWORD)
+        response = share_env["client"].get(
+            f"/s/{entry.token}/photo/img-1", headers={"If-None-Match": etag}
+        )
+        assert response.status_code == 404
+
+    def test_thumbnails_revalidate_the_same_way(self, share_env: ShareEnv) -> None:
+        client = share_env["client"]
+        first = client.get(self._url(share_env, "thumb"))
+        assert first.content == THUMB_BYTES
+        assert first.headers["cache-control"] == "private, no-cache"
+        again = client.get(
+            self._url(share_env, "thumb"),
+            headers={"If-None-Match": first.headers["etag"]},
+        )
+        assert again.status_code == 304
+
+    def test_non_png_photo_is_unchanged_but_revalidates(
+        self, share_env: ShareEnv
+    ) -> None:
+        client = share_env["client"]
+        first = client.get(self._url(share_env, image="img-2"))
+        assert first.content == JPEG_BYTES
+        assert first.headers["cache-control"] == "private, no-cache"
+        again = client.get(
+            self._url(share_env, image="img-2"),
+            headers={"If-None-Match": first.headers["etag"]},
+        )
+        assert again.status_code == 304
+
+    def test_new_strip_rules_invalidate_cached_copies(
+        self, share_env: ShareEnv, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _serve_png_as_img1(share_env)
+        client = share_env["client"]
+        before = client.get(self._url(share_env)).headers["etag"]
+        monkeypatch.setattr("app.share.routes._PHOTO_VARIANT", "photo-v2")
+        assert client.get(self._url(share_env)).headers["etag"] != before
+
+    def test_validators_describe_the_bytes_actually_streamed(
+        self, share_env: ShareEnv, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The file changes between the 304 check and opening it for streaming."""
+        photo = _serve_png_as_img1(share_env)
+        client = share_env["client"]
+        before = client.get(self._url(share_env)).headers["etag"]
+
+        import app.share.routes as routes
+
+        real_open = routes.open_without_pictopy
+
+        def edited_just_before_open(path: str):  # type: ignore[no-untyped-def]
+            Image.new("RGB", (16, 16), (0, 0, 255)).save(photo)
+            return real_open(path)
+
+        monkeypatch.setattr(routes, "open_without_pictopy", edited_just_before_open)
+        raced = client.get(self._url(share_env))
+        monkeypatch.setattr(routes, "open_without_pictopy", real_open)
+
+        assert Image.open(io.BytesIO(raced.content)).size == (16, 16)
+        assert raced.headers["etag"] != before
+        assert raced.headers["etag"] == client.get(self._url(share_env)).headers["etag"]

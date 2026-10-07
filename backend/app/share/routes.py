@@ -5,9 +5,11 @@ apart from the token in the path, so keep the surface exactly this small.
 
 from __future__ import annotations
 
+import hashlib
 import mimetypes
 import os
-from typing import Optional
+from email.utils import formatdate, parsedate_to_datetime
+from typing import Dict, Optional
 
 from fastapi import APIRouter, Form, HTTPException, Path, Request, Response, status
 from fastapi.responses import (
@@ -147,17 +149,85 @@ def unlock_share(
     return response
 
 
+# Bump when the bytes served for an unchanged file change (a new strip rule),
+# so browsers stop reusing copies made under the old rule.
+_PHOTO_VARIANT = "photo-v1"
+# Browsers keep their copy but must ask before each use, so revoking or
+# expiring a share also stops cached photos from showing. The question costs
+# a bodiless 304, never a re-download.
+_CACHE_CONTROL = "private, no-cache"
+
+
+def _validators(stat: os.stat_result, variant: str) -> Dict[str, str]:
+    seed = f"{stat.st_mtime_ns}-{stat.st_size}-{variant}".encode()
+    return {
+        "ETag": f'"{hashlib.sha256(seed).hexdigest()[:32]}"',
+        "Last-Modified": formatdate(stat.st_mtime, usegmt=True),
+        "Cache-Control": _CACHE_CONTROL,
+    }
+
+
+def _is_not_modified(request: Request, validators: Dict[str, str]) -> bool:
+    # RFC 9110: If-None-Match wins; If-Modified-Since only applies without it.
+    if_none_match = request.headers.get("if-none-match")
+    if if_none_match is not None:
+        etag = validators["ETag"]
+        candidates = (c.strip() for c in if_none_match.split(","))
+        return any(c in ("*", etag, f"W/{etag}") for c in candidates)
+
+    if_modified_since = request.headers.get("if-modified-since")
+    if if_modified_since is None:
+        return False
+    try:
+        since = parsedate_to_datetime(if_modified_since)
+        modified = parsedate_to_datetime(validators["Last-Modified"])
+    except (TypeError, ValueError):
+        return False
+    return since.tzinfo is not None and modified <= since
+
+
+def _media_response(request: Request, path: str, *, variant: str) -> Response:
+    """Serve a shared file with revalidation; photos lose PictoPy's metadata."""
+    try:
+        validators = _validators(os.stat(path), variant)
+    except OSError:
+        raise _not_found()
+    # Answered only here, after the share has been re-authorized: a revoked
+    # share gets a 404, not a 304 that would keep a cached copy alive.
+    if _is_not_modified(request, validators):
+        return Response(status_code=304, headers=validators)
+
+    if variant == _PHOTO_VARIANT:
+        # Exported PictoPy metadata carries face embeddings and names; guests
+        # get the photo without it. Streamed, so memory does not grow with
+        # file size.
+        try:
+            stream = open_without_pictopy(path)
+        except OSError:
+            raise _not_found()
+        if stream is not None:
+            return StreamingResponse(
+                stream.chunks,
+                media_type=mimetypes.guess_type(path)[0] or "application/octet-stream",
+                headers={
+                    **_validators(stream.source_stat, variant),
+                    "Content-Length": str(stream.length),
+                },
+            )
+    return FileResponse(path, headers=validators)
+
+
 @router.get("/s/{token}/thumb/{image_id}")
 def share_thumbnail(
     request: Request, token: str = Path(...), image_id: str = Path(...)
-) -> FileResponse:
+) -> Response:
     entry = _require_share(token)
     if not _is_unlocked(request, entry):
         raise _not_found()
     path = share_media_resolve_path(entry.album_id, image_id, thumbnail=True)
     if path is None:
         raise _not_found()
-    return FileResponse(path)
+    return _media_response(request, path, variant="thumb")
 
 
 @router.get("/s/{token}/photo/{image_id}")
@@ -170,17 +240,4 @@ def share_photo(
     path = share_media_resolve_path(entry.album_id, image_id, thumbnail=False)
     if path is None:
         raise _not_found()
-
-    # Exported PictoPy metadata carries face embeddings and names; guests get
-    # the photo without it. Streamed, so memory does not grow with file size.
-    try:
-        stream = open_without_pictopy(path)
-    except OSError:
-        raise _not_found()
-    if stream is None:
-        return FileResponse(path)
-    return StreamingResponse(
-        stream.chunks,
-        media_type=mimetypes.guess_type(path)[0] or "application/octet-stream",
-        headers={"Content-Length": str(stream.length)},
-    )
+    return _media_response(request, path, variant=_PHOTO_VARIANT)
