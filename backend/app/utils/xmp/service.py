@@ -1,14 +1,25 @@
+from enum import Enum
 from typing import Optional
 
 from app.logging.setup_logging import get_logger
 
-from .codec import PictoPyXmpCodec, XmpCodec
+from .codec import NewerSchemaError, PictoPyXmpCodec, XmpCodec
 from .containers import get_container
+from .containers.png import PngFormatError
 from .schema import PictoPyMetadata
 
 logger = get_logger(__name__)
 
 _codec: XmpCodec = PictoPyXmpCodec()
+
+
+class WriteOutcome(str, Enum):
+    WRITTEN = "written"
+    # The image already holds exactly this data; the file was not touched.
+    UNCHANGED = "unchanged"
+    UNSUPPORTED = "unsupported"
+    # A newer PictoPy wrote this image; leave its data alone.
+    NEWER_SCHEMA = "newer_schema"
 
 
 def is_xmp_supported(path: str) -> bool:
@@ -17,18 +28,29 @@ def is_xmp_supported(path: str) -> bool:
 
 def write_image_metadata(
     path: str, metadata: PictoPyMetadata, codec: XmpCodec = _codec
-) -> bool:
-    """Embed `metadata` in the image, keeping any XMP other tools put there.
+) -> WriteOutcome:
+    """Embed `metadata` in the image unless it already holds the same data.
 
-    Returns False for formats without a container. The write changes the file's
-    size and mtime, which the folder rescan uses to detect edits.
+    Other tools' XMP is kept. Raises OSError/ValueError when the file cannot be
+    read or written; callers decide how a failure is reported.
     """
     container = get_container(path)
     if container is None:
-        return False
-    packet = codec.encode(metadata, existing=container.read_xmp(path))
+        return WriteOutcome.UNSUPPORTED
+
+    existing = container.read_xmp(path)
+    if existing:
+        header = codec.read_header(existing)
+        if header is not None and header.digest == codec.digest(metadata):
+            return WriteOutcome.UNCHANGED
+
+    try:
+        packet = codec.encode(metadata, existing=existing)
+    except NewerSchemaError as e:
+        logger.info(f"Not overwriting newer PictoPy metadata in {path}: {e}")
+        return WriteOutcome.NEWER_SCHEMA
     container.write_xmp(path, packet)
-    return True
+    return WriteOutcome.WRITTEN
 
 
 def read_image_metadata(
@@ -40,7 +62,7 @@ def read_image_metadata(
         return None
     try:
         packet = container.read_xmp(path)
-    except (OSError, ValueError) as e:
+    except (OSError, PngFormatError) as e:
         logger.warning(f"Could not read XMP from {path}: {e}")
         return None
     return codec.decode(packet) if packet else None

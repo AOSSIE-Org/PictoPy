@@ -1,21 +1,28 @@
 import base64
+import hashlib
 import json
 import xml.etree.ElementTree as ET
-from typing import Callable, List, Optional, Protocol, Tuple
+from dataclasses import dataclass
+from typing import Callable, Dict, List, Optional, Protocol, Tuple
 
 import numpy as np
 
 from app.logging.setup_logging import get_logger
 
-from .schema import SCHEMA_VERSION, EmbeddingRecord, FaceRecord, PictoPyMetadata
+from .containers.base import MAX_PACKET_BYTES
+from .schema import (
+    SCHEMA_VERSION,
+    EmbeddingRecord,
+    FaceRecord,
+    PictoPyMetadata,
+    SemanticTag,
+)
 
 logger = get_logger(__name__)
 
 NS_RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 NS_X = "adobe:ns:meta/"
 NS_PICTOPY = "https://pictopy.app/ns/1.0/"
-# A packet this large is not something we wrote; refuse before parsing.
-MAX_PACKET_BYTES = 64 * 1024 * 1024
 
 # Keeps other tools' prefixes stable when we re-serialize their packet.
 for _prefix, _uri in {
@@ -35,6 +42,16 @@ _XPACKET_BEGIN = '<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>'
 _XPACKET_END = '<?xpacket end="w"?>'
 
 
+class NewerSchemaError(ValueError):
+    """The image holds PictoPy data from a newer version; overwriting would lose it."""
+
+
+@dataclass
+class PacketHeader:
+    schema_version: int
+    digest: Optional[str]
+
+
 def _q(ns: str, name: str) -> str:
     return f"{{{ns}}}{name}"
 
@@ -48,34 +65,66 @@ class XmpCodec(Protocol):
 
     def decode(self, packet: bytes) -> Optional[PictoPyMetadata]: ...
 
+    def digest(self, metadata: PictoPyMetadata) -> str: ...
+
+    def read_header(self, packet: bytes) -> Optional[PacketHeader]: ...
+
 
 def _vec_to_text(vec: List[float]) -> str:
     return base64.b64encode(np.asarray(vec, dtype="<f4").tobytes()).decode("ascii")
 
 
 def _text_to_vec(text: str) -> List[float]:
-    return np.frombuffer(base64.b64decode(text), dtype="<f4").tolist()
+    return np.frombuffer(base64.b64decode(text, validate=True), dtype="<f4").tolist()
 
 
 def _text_of(parent: ET.Element, name: str) -> Optional[str]:
+    """A simple property, in element or attribute form (exiftool writes the latter)."""
     node = parent.find(_q(NS_PICTOPY, name))
-    return node.text if node is not None else None
+    if node is not None:
+        return node.text
+    return parent.get(_q(NS_PICTOPY, name))
+
+
+def _add(parent: ET.Element, name: str, text: str) -> None:
+    ET.SubElement(parent, _q(NS_PICTOPY, name)).text = text
+
+
+def _list_items(parent: ET.Element, name: str, container: str) -> List[ET.Element]:
+    """The rdf:li items of a pictopy Bag/Seq property."""
+    return parent.findall(
+        f"{_q(NS_PICTOPY, name)}/{_q(NS_RDF, container)}/{_q(NS_RDF, 'li')}"
+    )
+
+
+def _new_list(parent: ET.Element, name: str, container: str) -> ET.Element:
+    prop = ET.SubElement(parent, _q(NS_PICTOPY, name))
+    return ET.SubElement(prop, _q(NS_RDF, container))
+
+
+def _new_struct(lst: ET.Element) -> ET.Element:
+    li = ET.SubElement(lst, _q(NS_RDF, "li"))
+    return ET.SubElement(li, _q(NS_RDF, "Description"))
+
+
+def _structs(parent: ET.Element, name: str, container: str) -> List[ET.Element]:
+    return [
+        desc
+        for li in _list_items(parent, name, container)
+        if (desc := li.find(_q(NS_RDF, "Description"))) is not None
+    ]
 
 
 def _encode_bag(parent: ET.Element, name: str, items: List[str]) -> None:
     if not items:
         return
-    prop = ET.SubElement(parent, _q(NS_PICTOPY, name))
-    bag = ET.SubElement(prop, _q(NS_RDF, "Bag"))
+    bag = _new_list(parent, name, "Bag")
     for item in items:
         ET.SubElement(bag, _q(NS_RDF, "li")).text = item
 
 
 def _decode_bag(parent: ET.Element, name: str) -> List[str]:
-    node = parent.find(_q(NS_PICTOPY, name))
-    if node is None:
-        return []
-    return [li.text or "" for li in node.iter(_q(NS_RDF, "li"))]
+    return [li.text or "" for li in _list_items(parent, name, "Bag")]
 
 
 # Sections: one encode/decode pair per field, so each can change on its own.
@@ -92,11 +141,20 @@ def _dec_tags(p: ET.Element, m: PictoPyMetadata) -> None:
 
 
 def _enc_semantic(m: PictoPyMetadata, p: ET.Element) -> None:
-    _encode_bag(p, "SemanticTags", m.semantic_tags)
+    if not m.semantic_tags:
+        return
+    bag = _new_list(p, "SemanticTags", "Bag")
+    for tag in m.semantic_tags:
+        item = _new_struct(bag)
+        _add(item, "Name", tag.name)
+        _add(item, "Score", repr(float(tag.score)))
 
 
 def _dec_semantic(p: ET.Element, m: PictoPyMetadata) -> None:
-    m.semantic_tags = _decode_bag(p, "SemanticTags")
+    for item in _structs(p, "SemanticTags", "Bag"):
+        name, score = _text_of(item, "Name"), _text_of(item, "Score")
+        if name and score:
+            m.semantic_tags.append(SemanticTag(name, float(score)))
 
 
 def _enc_albums(m: PictoPyMetadata, p: ET.Element) -> None:
@@ -109,7 +167,7 @@ def _dec_albums(p: ET.Element, m: PictoPyMetadata) -> None:
 
 def _enc_favourite(m: PictoPyMetadata, p: ET.Element) -> None:
     if m.favourite is not None:
-        ET.SubElement(p, _q(NS_PICTOPY, "Favourite")).text = str(m.favourite).lower()
+        _add(p, "Favourite", str(m.favourite).lower())
 
 
 def _dec_favourite(p: ET.Element, m: PictoPyMetadata) -> None:
@@ -121,29 +179,20 @@ def _dec_favourite(p: ET.Element, m: PictoPyMetadata) -> None:
 def _enc_faces(m: PictoPyMetadata, p: ET.Element) -> None:
     if not m.faces:
         return
-    prop = ET.SubElement(p, _q(NS_PICTOPY, "Faces"))
-    seq = ET.SubElement(prop, _q(NS_RDF, "Seq"))
+    seq = _new_list(p, "Faces", "Seq")
     for face in m.faces:
-        li = ET.SubElement(seq, _q(NS_RDF, "li"))
-        item = ET.SubElement(li, _q(NS_RDF, "Description"))
-        ET.SubElement(item, _q(NS_PICTOPY, "Embedding")).text = _vec_to_text(
-            face.embedding
-        )
+        item = _new_struct(seq)
+        _add(item, "Embedding", _vec_to_text(face.embedding))
         if face.bbox is not None:
-            ET.SubElement(item, _q(NS_PICTOPY, "BBox")).text = json.dumps(face.bbox)
+            _add(item, "BBox", json.dumps(face.bbox, sort_keys=True))
         if face.confidence is not None:
-            conf = ET.SubElement(item, _q(NS_PICTOPY, "Confidence"))
-            conf.text = repr(float(face.confidence))
+            _add(item, "Confidence", repr(float(face.confidence)))
         if face.cluster_name:
-            name = ET.SubElement(item, _q(NS_PICTOPY, "ClusterName"))
-            name.text = face.cluster_name
+            _add(item, "ClusterName", face.cluster_name)
 
 
 def _dec_faces(p: ET.Element, m: PictoPyMetadata) -> None:
-    node = p.find(_q(NS_PICTOPY, "Faces"))
-    if node is None:
-        return
-    for item in node.iter(_q(NS_RDF, "Description")):
+    for item in _structs(p, "Faces", "Seq"):
         embedding = _text_of(item, "Embedding")
         if not embedding:
             continue
@@ -164,22 +213,48 @@ def _enc_embedding(m: PictoPyMetadata, p: ET.Element) -> None:
         return
     prop = ET.SubElement(p, _q(NS_PICTOPY, "ImageEmbedding"))
     desc = ET.SubElement(prop, _q(NS_RDF, "Description"))
-    version = ET.SubElement(desc, _q(NS_PICTOPY, "ModelVersion"))
-    version.text = m.image_embedding.model_version
-    vector = ET.SubElement(desc, _q(NS_PICTOPY, "Vector"))
-    vector.text = _vec_to_text(m.image_embedding.vector)
+    _add(desc, "ModelVersion", m.image_embedding.model_version)
+    _add(desc, "Vector", _vec_to_text(m.image_embedding.vector))
 
 
 def _dec_embedding(p: ET.Element, m: PictoPyMetadata) -> None:
-    node = p.find(_q(NS_PICTOPY, "ImageEmbedding"))
-    if node is None:
-        return
-    desc = node.find(_q(NS_RDF, "Description"))
+    desc = p.find(f"{_q(NS_PICTOPY, 'ImageEmbedding')}/{_q(NS_RDF, 'Description')}")
     if desc is None:
         return
     version, vector = _text_of(desc, "ModelVersion"), _text_of(desc, "Vector")
     if version and vector:
         m.image_embedding = EmbeddingRecord(version, _text_to_vec(vector))
+
+
+def _enc_models(m: PictoPyMetadata, p: ET.Element) -> None:
+    if not m.models:
+        return
+    bag = _new_list(p, "Models", "Bag")
+    for role in sorted(m.models):
+        item = _new_struct(bag)
+        _add(item, "Role", role)
+        _add(item, "Version", m.models[role])
+
+
+def _dec_models(p: ET.Element, m: PictoPyMetadata) -> None:
+    models: Dict[str, str] = {}
+    for item in _structs(p, "Models", "Bag"):
+        role, version = _text_of(item, "Role"), _text_of(item, "Version")
+        if role and version:
+            models[role] = version
+    m.models = models
+
+
+def _enc_dimensions(m: PictoPyMetadata, p: ET.Element) -> None:
+    if m.width is not None and m.height is not None:
+        _add(p, "Width", str(m.width))
+        _add(p, "Height", str(m.height))
+
+
+def _dec_dimensions(p: ET.Element, m: PictoPyMetadata) -> None:
+    width, height = _text_of(p, "Width"), _text_of(p, "Height")
+    if width and height:
+        m.width, m.height = int(width), int(height)
 
 
 # Add a section here to export a new kind of data; nothing else needs to change.
@@ -190,6 +265,8 @@ SECTIONS: List[Tuple[str, _Encode, _Decode]] = [
     ("image_embedding", _enc_embedding, _dec_embedding),
     ("favourite", _enc_favourite, _dec_favourite),
     ("albums", _enc_albums, _dec_albums),
+    ("models", _enc_models, _dec_models),
+    ("dimensions", _enc_dimensions, _dec_dimensions),
 ]
 
 
@@ -204,8 +281,37 @@ def _parse(packet: bytes) -> ET.Element:
     return ET.fromstring(packet)
 
 
-def _is_ours(desc: ET.Element) -> bool:
-    return any(child.tag.startswith(f"{{{NS_PICTOPY}}}") for child in desc)
+def _is_pictopy(qname: str) -> bool:
+    return qname.startswith(f"{{{NS_PICTOPY}}}")
+
+
+def _find_ours(root: ET.Element) -> Optional[ET.Element]:
+    """The top-level description carrying our properties, if any."""
+    for desc in root.iter(_q(NS_RDF, "Description")):
+        if any(_is_pictopy(c.tag) for c in desc) or any(
+            _is_pictopy(a) for a in desc.attrib
+        ):
+            return desc
+    return None
+
+
+def _header_of(desc: ET.Element) -> Optional[PacketHeader]:
+    try:
+        version = int(_text_of(desc, "SchemaVersion") or 0)
+    except ValueError:
+        return None
+    return PacketHeader(version, _text_of(desc, "Digest"))
+
+
+def _strip_ours(rdf: ET.Element) -> None:
+    """Remove pictopy properties only; other tools may share the description."""
+    for desc in rdf.findall(_q(NS_RDF, "Description")):
+        for child in [c for c in desc if _is_pictopy(c.tag)]:
+            desc.remove(child)
+        for attr in [a for a in desc.attrib if _is_pictopy(a)]:
+            del desc.attrib[attr]
+        if len(desc) == 0 and set(desc.attrib) <= {_q(NS_RDF, "about")}:
+            rdf.remove(desc)
 
 
 def _xmpmeta_and_rdf(existing: Optional[bytes]) -> Tuple[ET.Element, ET.Element]:
@@ -221,6 +327,19 @@ def _xmpmeta_and_rdf(existing: Optional[bytes]) -> Tuple[ET.Element, ET.Element]
     return root, ET.SubElement(root, _q(NS_RDF, "RDF"))
 
 
+def _build(metadata: PictoPyMetadata) -> Tuple[ET.Element, str]:
+    """Our description plus the digest of its content, before the digest is added."""
+    desc = ET.Element(_q(NS_RDF, "Description"))
+    desc.set(_q(NS_RDF, "about"), "")
+    _add(desc, "SchemaVersion", str(metadata.schema_version))
+    for _name, enc, _dec in SECTIONS:
+        enc(metadata, desc)
+    # Hashing the encoded form means float32 rounding is identical on both
+    # sides of a comparison, and vectors never need decoding to compare.
+    digest = hashlib.sha256(ET.tostring(desc, encoding="utf-8")).hexdigest()
+    return desc, digest
+
+
 class PictoPyXmpCodec:
     """Stores PictoPy data as `pictopy:` properties in a standard XMP packet."""
 
@@ -228,43 +347,36 @@ class PictoPyXmpCodec:
         self, metadata: PictoPyMetadata, existing: Optional[bytes] = None
     ) -> bytes:
         root, rdf = _xmpmeta_and_rdf(existing)
-        # Replace only our own description; other tools' properties survive.
-        for desc in rdf.findall(_q(NS_RDF, "Description")):
-            if _is_ours(desc):
-                rdf.remove(desc)
+        current = _find_ours(rdf)
+        header = _header_of(current) if current is not None else None
+        if header is not None and header.schema_version > SCHEMA_VERSION:
+            raise NewerSchemaError(
+                f"packet has schema {header.schema_version}, we write {SCHEMA_VERSION}"
+            )
+        _strip_ours(rdf)
 
-        ours = ET.SubElement(rdf, _q(NS_RDF, "Description"))
-        ours.set(_q(NS_RDF, "about"), "")
-        version = ET.SubElement(ours, _q(NS_PICTOPY, "SchemaVersion"))
-        version.text = str(metadata.schema_version)
-        for _name, enc, _dec in SECTIONS:
-            enc(metadata, ours)
+        ours, digest = _build(metadata)
+        _add(ours, "Digest", digest)
+        rdf.append(ours)
 
         body = ET.tostring(root, encoding="unicode")
         return f"{_XPACKET_BEGIN}\n{body}\n{_XPACKET_END}".encode("utf-8")
 
     def decode(self, packet: bytes) -> Optional[PictoPyMetadata]:
         try:
-            root = _parse(packet)
+            ours = _find_ours(_parse(packet))
         except (ET.ParseError, ValueError) as e:
             logger.warning(f"Unreadable XMP packet: {e}")
             return None
-
-        ours = next(
-            (d for d in root.iter(_q(NS_RDF, "Description")) if _is_ours(d)), None
-        )
         if ours is None:
             return None
 
-        try:
-            version = int(_text_of(ours, "SchemaVersion") or 0)
-        except ValueError:
-            return None
+        header = _header_of(ours)
         # Newer data may encode sections differently; do not guess.
-        if version < 1 or version > SCHEMA_VERSION:
+        if header is None or not 1 <= header.schema_version <= SCHEMA_VERSION:
             return None
 
-        metadata = PictoPyMetadata(schema_version=version)
+        metadata = PictoPyMetadata(schema_version=header.schema_version)
         for name, _enc, dec in SECTIONS:
             # One bad section must not discard the others.
             try:
@@ -272,3 +384,13 @@ class PictoPyXmpCodec:
             except Exception as e:
                 logger.warning(f"Skipping malformed XMP section '{name}': {e}")
         return metadata
+
+    def digest(self, metadata: PictoPyMetadata) -> str:
+        return _build(metadata)[1]
+
+    def read_header(self, packet: bytes) -> Optional[PacketHeader]:
+        try:
+            ours = _find_ours(_parse(packet))
+        except (ET.ParseError, ValueError):
+            return None
+        return _header_of(ours) if ours is not None else None
