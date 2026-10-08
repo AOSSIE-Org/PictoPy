@@ -38,15 +38,15 @@ shared code on the third occurrence.
 
 ## Layout
 
-| What | Where | Naming |
-| --- | --- | --- |
-| Redux state | `src/features/` | `<name>Slice.ts`, `<name>Selectors.ts`, `<name>Thunks.ts` |
-| API URLs | `src/api/apiEndpoints.ts` | grouped `<resource>Endpoints` objects |
-| API calls | `src/api/api-functions/<resource>.ts` | one function per endpoint |
-| Types | `src/types/` | `Media.ts`, `API.ts`, … |
-| Hooks | `src/hooks/` | `use<Thing>.ts` |
-| Components | `src/components/<Area>/` | `PascalCase.tsx` |
-| Tests | `__tests__/` beside the code | `<Name>.test.tsx` |
+| What        | Where                                 | Naming                                                    |
+| ----------- | ------------------------------------- | --------------------------------------------------------- |
+| Redux state | `src/features/`                       | `<name>Slice.ts`, `<name>Selectors.ts`, `<name>Thunks.ts` |
+| API URLs    | `src/api/apiEndpoints.ts`             | grouped `<resource>Endpoints` objects                     |
+| API calls   | `src/api/api-functions/<resource>.ts` | one function per endpoint                                 |
+| Types       | `src/types/`                          | `Media.ts`, `API.ts`, …                                   |
+| Hooks       | `src/hooks/`                          | `use<Thing>.ts`                                           |
+| Components  | `src/components/<Area>/`              | `PascalCase.tsx`                                          |
+| Tests       | `__tests__/` beside the code          | `<Name>.test.tsx`                                         |
 
 `@/` resolves to `frontend/src` (`tsconfig.json`). Use it instead of deep relative paths.
 

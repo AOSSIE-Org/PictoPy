@@ -4,6 +4,8 @@ Hi there! Thank you for considering contributing to **PictoPy** – we’re exci
 
 NOTE: Please do not open a PR for the issue which is not yet reviewed and labelled by the maintainer. Wait for the maintainer to give a green light.
 
+NOTE: Low-effort, unreviewed, or AI-generated issues and PRs that don't engage/add much value to the actual codebase/product will be closed without discussion.
+
 ## Setting Up the Project
 
 ## Setup

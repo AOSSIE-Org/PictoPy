@@ -152,6 +152,141 @@ def db_mark_videos_tagged(video_ids: List[str]) -> bool:
             conn.close()
 
 
+def db_get_videos_needing_face_scan() -> List[Dict[str, str]]:
+    """Tagged videos in AI-tagging folders that face detection has not run on.
+
+    These are videos tagged before finding people in videos was turned on;
+    metadata comes along so the caller can tell a stale keyframe from one
+    already at its source resolution.
+    """
+    conn = None
+    try:
+        conn = _connect()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT v.id, v.path, v.metadata
+            FROM videos v
+            JOIN folders f ON v.folder_id = f.folder_id
+            WHERE f.AI_Tagging = TRUE
+              AND v.isTagged = TRUE
+              AND IFNULL(v.facesScanned, 0) = 0
+            """
+        )
+        return [
+            {"id": video_id, "path": path, "metadata": metadata}
+            for video_id, path, metadata in cursor.fetchall()
+        ]
+    finally:
+        if conn:
+            conn.close()
+
+
+def db_mark_videos_faces_scanned(video_ids: List[str]) -> bool:
+    if not video_ids:
+        return True
+
+    conn = None
+    try:
+        conn = _connect()
+        cursor = conn.cursor()
+        placeholders = ",".join("?" for _ in video_ids)
+        cursor.execute(
+            f"UPDATE videos SET facesScanned = 1 WHERE id IN ({placeholders})",
+            video_ids,
+        )
+        conn.commit()
+        return True
+    except sqlite3.Error as e:
+        logger.error(f"Error marking video faces as scanned: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def db_count_video_face_scan_progress() -> Tuple[int, int]:
+    """(total, scanned) tagged videos in AI-tagging folders, for the scan's
+    progress. Same set the scan works through, so it can reach 100%."""
+    conn = None
+    try:
+        conn = _connect()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT COUNT(*), SUM(IFNULL(v.facesScanned, 0) != 0)
+            FROM videos v
+            JOIN folders f ON v.folder_id = f.folder_id
+            WHERE f.AI_Tagging = TRUE
+              AND v.isTagged = TRUE
+            """
+        )
+        total, scanned = cursor.fetchone()
+        return int(total or 0), int(scanned or 0)
+    finally:
+        if conn:
+            conn.close()
+
+
+def db_get_frames_for_video(video_id: str) -> List[dict]:
+    """A video's sampled keyframes, shaped like the records the sampler
+    produces so both feed the same detection helpers."""
+    conn = None
+    try:
+        conn = _connect()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT id, frame_path, timestamp_sec, frame_index
+            FROM video_frames
+            WHERE video_id = ?
+            ORDER BY frame_index
+            """,
+            (video_id,),
+        )
+        return [
+            {
+                "id": frame_id,
+                "video_id": video_id,
+                "frame_path": frame_path,
+                "timestamp_sec": timestamp_sec,
+                "frame_index": frame_index,
+            }
+            for frame_id, frame_path, timestamp_sec, frame_index in cursor.fetchall()
+        ]
+    finally:
+        if conn:
+            conn.close()
+
+
+def db_set_video_frame_paths(pairs: List[Tuple[str, str]]) -> bool:
+    """Point frame rows back at JPEGs on disk, for frames a cache purge
+    emptied that have since been written again."""
+    if not pairs:
+        return True
+
+    conn = None
+    try:
+        conn = _connect()
+        cursor = conn.cursor()
+        cursor.executemany(
+            "UPDATE video_frames SET frame_path = ? WHERE id = ?",
+            [(frame_path, frame_id) for frame_id, frame_path in pairs],
+        )
+        conn.commit()
+        return True
+    except sqlite3.Error as e:
+        logger.error(f"Error updating video frame paths: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
 def db_bulk_insert_video_frames(frame_records: List[dict]) -> bool:
     """Insert sampled frame rows: id, video_id, frame_path, timestamp_sec,
     frame_index."""
