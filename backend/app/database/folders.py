@@ -48,6 +48,15 @@ def db_create_folders_table() -> None:
             )
             """
         )
+
+        # indexing_status: guarded ALTER because shipped databases predate it
+        # and CREATE IF NOT EXISTS won't add it.
+        cursor.execute("PRAGMA table_info(folders)")
+        if "indexing_status" not in {row[1] for row in cursor.fetchall()}:
+            cursor.execute(
+                "ALTER TABLE folders ADD COLUMN indexing_status TEXT DEFAULT 'not_started'"
+            )
+
         conn.commit()
     finally:
         if conn is not None:
