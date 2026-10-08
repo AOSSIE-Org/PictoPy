@@ -29,6 +29,11 @@ def is_xmp_supported(path: str) -> bool:
     return get_container(path) is not None
 
 
+def metadata_digest(metadata: PictoPyMetadata, codec: XmpCodec = _codec) -> str:
+    """The digest write_image_metadata would store, without touching any file."""
+    return codec.digest(metadata)
+
+
 def write_image_metadata(
     path: str, metadata: PictoPyMetadata, codec: XmpCodec = _codec
 ) -> WriteOutcome:

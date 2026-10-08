@@ -9,9 +9,11 @@ class XmpExportCandidate(TypedDict):
     # Snapshot taken before collecting; recorded on success so a change made
     # during the export leaves the image pending.
     change_count: int
+    pending: bool
     digest: Optional[str]
     file_size: Optional[int]
     file_mtime_ns: Optional[int]
+    failure_count: int
 
 
 def _bump(where: str) -> str:
@@ -203,6 +205,10 @@ def db_create_image_xmp_state_table() -> None:
         conn.close()
 
 
+_PENDING = "(s.exported_count IS NULL OR s.change_count > s.exported_count)"
+_PNG = "lower(i.path) LIKE '%.png'"
+
+
 def db_get_xmp_export_candidates(
     include_clean: bool = False,
 ) -> List[XmpExportCandidate]:
@@ -211,20 +217,16 @@ def db_get_xmp_export_candidates(
     include_clean is for the manual export, which also re-checks files whose
     stat no longer matches what was recorded.
     """
-    pending = (
-        ""
-        if include_clean
-        else "AND (s.exported_count IS NULL " "OR s.change_count > s.exported_count)"
-    )
+    only_pending = "" if include_clean else f"AND {_PENDING}"
     conn = _connect()
     try:
         rows = conn.execute(
             f"""
-            SELECT s.image_id, i.path, s.change_count, s.digest,
-                   s.file_size, s.file_mtime_ns
+            SELECT s.image_id, i.path, s.change_count, {_PENDING}, s.digest,
+                   s.file_size, s.file_mtime_ns, s.failure_count
             FROM image_xmp_state s
             JOIN images i ON i.id = s.image_id
-            WHERE lower(i.path) LIKE '%.png' {pending}
+            WHERE {_PNG} {only_pending}
             ORDER BY s.image_id
             """
         ).fetchall()
@@ -233,12 +235,58 @@ def db_get_xmp_export_candidates(
                 "image_id": image_id,
                 "path": path,
                 "change_count": change_count,
+                "pending": bool(pending),
                 "digest": digest,
                 "file_size": file_size,
                 "file_mtime_ns": file_mtime_ns,
+                "failure_count": failure_count,
             }
-            for image_id, path, change_count, digest, file_size, file_mtime_ns in rows
+            for (
+                image_id,
+                path,
+                change_count,
+                pending,
+                digest,
+                file_size,
+                file_mtime_ns,
+                failure_count,
+            ) in rows
         ]
+    finally:
+        conn.close()
+
+
+class XmpExportCounts(TypedDict):
+    total: int
+    pending: int
+    # Pending images whose last attempt raised; they are retried.
+    failed: int
+    # Left alone on purpose: unreadable XMP, or a newer PictoPy's data.
+    skipped: int
+
+
+def db_get_xmp_export_counts() -> XmpExportCounts:
+    """Where export stands across the library's PNG images."""
+    conn = _connect()
+    try:
+        total, pending, failed, skipped = conn.execute(
+            f"""
+            SELECT COUNT(*),
+                   COALESCE(SUM({_PENDING}), 0),
+                   COALESCE(SUM({_PENDING} AND s.last_outcome = 'failed'), 0),
+                   COALESCE(SUM(NOT {_PENDING} AND s.last_outcome IN
+                       ('unreadable_existing', 'newer_schema')), 0)
+            FROM image_xmp_state s
+            JOIN images i ON i.id = s.image_id
+            WHERE {_PNG}
+            """
+        ).fetchone()
+        return {
+            "total": total,
+            "pending": pending,
+            "failed": failed,
+            "skipped": skipped,
+        }
     finally:
         conn.close()
 

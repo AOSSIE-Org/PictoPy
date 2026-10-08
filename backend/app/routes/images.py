@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from starlette.datastructures import State
+from app.routes.dependencies import get_state, request_metadata_export
 from typing import List, Optional
 from app.database.images import db_get_all_images
 from app.schemas.images import ErrorResponse
@@ -325,7 +327,9 @@ class ToggleFavouriteRequest(BaseModel):
 
 
 @router.post("/toggle-favourite")
-def toggle_favourite(req: ToggleFavouriteRequest):
+def toggle_favourite(
+    req: ToggleFavouriteRequest, app_state: State = Depends(get_state)
+):
     """
     Toggle the favorite status of an image.
     """
@@ -337,6 +341,7 @@ def toggle_favourite(req: ToggleFavouriteRequest):
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Image not found or failed to toggle",
             )
+        request_metadata_export(app_state)
         # Fetch updated status to return
         image = db_get_image_by_id(image_id)
         if not image:
