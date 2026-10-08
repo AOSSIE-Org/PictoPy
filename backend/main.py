@@ -99,6 +99,7 @@ async def lifespan(app: FastAPI):
     semantic_util_sync_vocabulary()
     # Its own pool, so folder indexing never queues behind AI tagging.
     app.state.indexing_executor = ProcessPoolExecutor(max_workers=INDEXING_MAX_WORKERS)
+    # Create ProcessPoolExecutor and attach it to app.state
     app.state.executor = ProcessPoolExecutor(max_workers=1)
     # Self-gating no-ops unless something is missing/stale (fresh install,
     # checkpoint swap, edited seed). Single-worker executor runs them in
