@@ -22,6 +22,7 @@ def db_create_metadata_table() -> None:
         """
         )
 
+        # Insert initial row if table is empty
         cursor.execute("SELECT COUNT(*) FROM metadata")
         if cursor.fetchone()[0] == 0:
             cursor.execute("INSERT INTO metadata (metadata) VALUES (?)", ("{}",))
@@ -88,6 +89,7 @@ def db_update_metadata(
             conn = sqlite3.connect(DATABASE_PATH)
             cursor = conn.cursor()
 
+        # Delete all existing rows and insert new one
         cursor.execute("DELETE FROM metadata")
         cursor.execute("INSERT INTO metadata (metadata) VALUES (?)", (metadata_json,))
 

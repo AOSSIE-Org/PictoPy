@@ -107,7 +107,7 @@ def _queue_post_index_tagging_sweep(index_future: Future, app_state: State) -> N
         logger.error(f"Failed to queue post-index tagging sweep: {e}")
 
 
-def post_folder_add_sequence(folder_path: str, folder_id: int):
+def post_folder_add_sequence(folder_path: str, folder_id: str):
     """
     Post-addition sequence for a folder.
     This function is called after a folder is successfully added.
@@ -186,7 +186,7 @@ def post_AI_tagging_enabled_sequence():
 
 
 def post_sync_folder_sequence(
-    folder_path: str, folder_id: int, added_folders: list[tuple[str, str]]
+    folder_path: str, folder_id: str, added_folders: list[tuple[str, str]]
 ):
     """
     Post-sync sequence for a folder.

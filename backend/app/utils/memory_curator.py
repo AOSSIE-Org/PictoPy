@@ -98,14 +98,18 @@ IMPORT_CANDIDATE_LIMIT = 5000
 EVENT_GAP_HOURS = 36.0
 EVENT_MIN_IMAGES = 6
 
-# Ranks, not scores: SigLIP2 puts "mehndi" at 0.78 and "holi" at 0.0003 on the
-# same library, so no absolute cut can serve both.
+# A label counts for an image when it is among the strongest few that image
+# matched, and the image ranks in the upper half of everything that label
+# matched. Ranks, not scores: SigLIP2 puts "mehndi" at 0.78 and "holi" at
+# 0.0003 on the same library, so no absolute cut can serve both.
 EVENT_LABEL_TOP_N = 2
 EVENT_LABEL_PERCENTILE = 0.50
 
-# A margin above this library's own baseline, not an absolute gate: SigLIP2
-# embeddings sit in a narrow cone where unrelated photos already score ~0.58.
-# Real occurrences measure +0.31 to +0.35 above baseline; random groups +0.00.
+# Visual cohesion is the real discriminator, but only as a margin above what
+# this library already scores. SigLIP2 embeddings occupy a narrow cone: a
+# random handful of unrelated photos scores ~0.58 mean pairwise cosine, so an
+# absolute gate anywhere near that rejects nothing at all. Real occurrences
+# measured +0.31 to +0.35 above baseline; random groups measure +0.00.
 EVENT_COHESION_MARGIN = 0.15
 
 # Enough to characterize the library without loading every embedding.
@@ -132,8 +136,10 @@ MAX_SEMANTIC_MEMORIES = 3
 PHOTOS_PER_VIDEO = 9
 MAX_VIDEOS_PER_MEMORY = 3
 
-# Per clip and per memory: three clips at the per-clip limit would outlast the
-# photos between them. Anything longer than 15s is a recording, not a moment.
+# Per clip, and across the whole memory. The budget matters as much as the
+# count: three clips at the per-clip limit would outlast the photos between
+# them. 15s covers most of a real library; the long ones are recordings, not
+# moments.
 MAX_VIDEO_SECONDS = 15.0
 MAX_VIDEO_SECONDS_PER_MEMORY = 30.0
 
@@ -144,8 +150,10 @@ MAX_VIDEO_SECONDS_PER_MEMORY = 30.0
 RECENT_USE_WINDOW_DAYS = 30
 RECENT_USE_PENALTY = 0.35
 
-# Stand-ins for a memory nothing recognised -- a bare date is a poor invitation
-# to look again, and there is no captioning model here. The date moves to the subtitle.
+# Stand-ins for a memory nothing recognised. A bare date is a poor title for
+# something whose whole job is to invite a second look, and there is no
+# captioning model here to write a real one. The date is not lost: it moves to
+# the subtitle, which the cards and the story viewer both render.
 GENERIC_TITLES_ONE_DAY = (
     "Remember this day?",
     "Revisit this day",
@@ -480,7 +488,9 @@ def _select_videos(
         return []
 
 
+# ##############################
 # Trigger 1: anniversary
+# ##############################
 
 
 def _curate_anniversaries(context: _CurationContext) -> int:
@@ -543,7 +553,9 @@ def _curate_anniversaries(context: _CurationContext) -> int:
     return generated
 
 
+# ##############################
 # Trigger 2: import event
+# ##############################
 
 
 def segment_by_time_and_place(
@@ -631,8 +643,10 @@ def _curate_import_events(context: _CurationContext) -> int:
 
             dedupe_key = f"import:{start.date()}..{end.date()}"
 
+            # Name it after what the AI recognised, when it recognised
+            # anything; otherwise a stand-in, with the dates as the subtitle.
             # Deferred until the set is final, so a photo trimmed for not
-            # belonging cannot end up naming the rest.
+            # belonging cannot name the rest.
             def name_from_labels(
                 selected_ids: List[str],
                 dedupe_key: str = dedupe_key,
@@ -670,7 +684,9 @@ def _curate_import_events(context: _CurationContext) -> int:
     return generated
 
 
+# ##############################
 # Trigger 3: semantic event
+# ##############################
 
 
 def group_event_occurrences(
@@ -891,7 +907,9 @@ def _semantic_surface_date(reference: date, event_start: datetime) -> str:
     return reference.isoformat()
 
 
+# ##############################
 # Entry point
+# ##############################
 
 
 def memory_curator_rescore(memory_ids: Sequence[str]) -> int:
@@ -990,8 +1008,10 @@ def memory_curator_run(
     logger.info(f"Curating memories for {run_date} (trigger={trigger}, force={force})")
 
     try:
-        # A re-sync correcting capture dates strands old memories, and frees their
-        # photos once dropped. Housekeeping, so a failure must not fail the run.
+        # Before anything is built: drop memories the library has outgrown.
+        # A re-sync that corrects capture dates leaves them stranded, and
+        # their photos are candidates again once they are gone. Housekeeping,
+        # so failing it must not cost the run the memories it came to make.
         try:
             stale = db_delete_stale_memories()
             if stale:

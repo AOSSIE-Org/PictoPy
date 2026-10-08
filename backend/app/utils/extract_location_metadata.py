@@ -14,6 +14,7 @@ from typing import Optional, Tuple, Dict, Any, Iterable
 
 from app.logging.setup_logging import get_logger
 
+# Initialize logger
 logger = get_logger(__name__)
 
 
@@ -244,6 +245,7 @@ class MetadataExtractor:
                 # Try ISO format first (handles timezone)
                 if "T" in date_str:
                     try:
+                        # Remove timezone suffix for simpler parsing
                         date_str_clean = (
                             date_str.replace("Z", "").split("+")[0].split("-")
                         )
@@ -287,6 +289,7 @@ class MetadataExtractor:
         longitude = None
         captured_at = None
 
+        # Handle null/empty metadata
         if not metadata_json or metadata_json == "null":
             return None, None, None
 
@@ -297,8 +300,10 @@ class MetadataExtractor:
 
             metadata = json.loads(metadata_json)
 
+            # Extract GPS coordinates
             latitude, longitude = self.extract_gps_coordinates(metadata)
 
+            # Extract datetime
             captured_at = self.extract_datetime(metadata)
 
         except json.JSONDecodeError as e:

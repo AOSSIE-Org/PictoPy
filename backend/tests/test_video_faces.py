@@ -65,7 +65,9 @@ def _frames(video_id: str, count: int, generation: str = "") -> List[dict]:
     ]
 
 
+# ##############################
 # Choosing which faces to keep
+# ##############################
 
 
 class TestFaceDetectionPreference:
@@ -127,7 +129,9 @@ class TestSelectVideoFaces:
         assert video_util_select_video_faces([], 0.92, 40) == []
 
 
+# ##############################
 # Scanning keyframes
+# ##############################
 
 
 class TestDetectVideoFaces:
@@ -156,7 +160,9 @@ class TestDetectVideoFaces:
         assert video_util_detect_video_faces(detector, _frames("v", 1), [[0]]) == []
 
 
+# ##############################
 # The tagging pass, against a real database
+# ##############################
 
 
 @pytest.fixture
@@ -420,7 +426,9 @@ class TestVideoFacePass:
         assert _rows(test_db, "SELECT isTagged, facesScanned FROM videos") == [(1, 0)]
 
 
+# ##############################
 # Deciding which keyframes are stale
+# ##############################
 
 
 class TestExpectedFrameDimension:
@@ -471,7 +479,9 @@ class TestFrameNeedsRefresh:
         assert video_util_frame_needs_refresh(path, 1280) is True
 
 
+# ##############################
 # Re-sampling keyframes in place
+# ##############################
 
 
 @pytest.fixture
@@ -571,7 +581,9 @@ class TestRefreshFrameImages:
         assert [frame["id"] for frame in usable] == ["f0"]
 
 
+# ##############################
 # Backfilling videos tagged before the setting existed
+# ##############################
 
 
 def _add_frames(video_id: str, count: int, purged: bool = False) -> List[dict]:

@@ -37,6 +37,7 @@ from app.utils.takeout_sidecar import takeout_sidecar_read
 logger = get_logger(__name__)
 
 
+# GPS EXIF tag constant
 GPS_INFO_TAG = 34853
 
 logger = logging.getLogger(__name__)
@@ -52,6 +53,7 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
         bool: True if all folders processed successfully, False otherwise
     """
     try:
+        # Ensure thumbnail directory exists
         os.makedirs(THUMBNAIL_IMAGES_PATH, exist_ok=True)
 
         all_image_records = []
@@ -64,17 +66,22 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
             [folder_id for _, folder_id, _ in folder_data]
         )
 
+        # Process each folder in the provided data
         for folder_path, folder_id, recursive in folder_data:
             try:
+                # Add folder ID to list for obsolete image cleanup
                 all_folder_ids.append(folder_id)
 
+                # Step 1: Get all image files from current folder
                 image_files = image_util_get_images_from_folder(folder_path, recursive)
 
                 if not image_files:
                     continue  # No images in this folder, continue to next
 
+                # Step 2: Create folder path mapping for this folder
                 folder_path_to_id = {os.path.abspath(folder_path): folder_id}
 
+                # Step 3: Prepare image records for this folder
                 folder_image_records = image_util_prepare_image_records(
                     image_files, folder_path_to_id, known_state
                 )
@@ -84,9 +91,11 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
                 logger.error(f"Error processing folder {folder_path}: {e}")
                 continue  # Continue with other folders even if one fails
 
+        # Step 4: Remove obsolete images that no longer exist in filesystem
         if all_folder_ids:
             image_util_remove_obsolete_images(all_folder_ids)
 
+        # Step 5: Bulk insert all new records if any exist
         if all_image_records:
             return db_bulk_insert_images(all_image_records)
 
@@ -99,10 +108,12 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
 def image_util_process_untagged_images() -> bool:
     """Process all untagged images in folders with AI tagging enabled."""
     try:
+        # Step 1: Get all untagged images and whose corresponding folder has AI tagging enabled
         untagged_images = db_get_untagged_images()
         if not untagged_images:
             return True  # No untagged images to process
 
+        # Step 2: Process each untagged image
         image_util_classify_and_face_detect_images(untagged_images)
 
         return True
@@ -178,8 +189,13 @@ def image_util_process_unembedded_images() -> None:
                     embedded_count += len(good_arrays)
 
                 if good_ids:
-                    # The rest stay isEmbedded=False and retry next pass -- cheap,
-                    # and a file readable later is not lost to search for good.
+                    # Only mark images that actually got an embedding row.
+                    # Corrupt images stay isEmbedded=False and get retried on
+                    # the next pass -- unlike YOLO/FaceNet inference, preprocessing
+                    # is a cheap check (PIL failing to open/decode), so the retry
+                    # cost is low, and a file that becomes readable later (a
+                    # transient lock, a restored backup) eventually gets embedded
+                    # instead of being permanently excluded from semantic search.
                     db_mark_images_embedded(good_ids)
 
             elapsed = time.time() - start_time
@@ -206,14 +222,19 @@ def image_util_classify_and_face_detect_images(
             image_path = image["path"]
             image_id = image["id"]
 
+            # Step 1: Get classes
             classes = object_classifier.get_classes(image_path)
 
+            # Step 2: Insert class-image pairs if classes were detected
             if len(classes) > 0:
+                # Create image-class pairs
                 image_class_pairs = [(image_id, class_id) for class_id in classes]
                 logger.debug(f"Image-class pairs: {image_class_pairs}")
 
+                # Insert the pairs into the database
                 db_insert_image_classes_batch(image_class_pairs)
 
+            # Step 3: Detect faces if "person" class is present
             if classes and 0 in classes:
                 result = face_detector.detect_faces(image_path)
                 if result and result["embeddings"]:
@@ -234,8 +255,10 @@ def image_util_classify_and_face_detect_images(
                 if result:
                     total_faces_skipped += result["faces_skipped"]
 
+            # Step 4: Update the image status in the database
             db_update_image_tagged_status(image_id, True)
     finally:
+        # Ensure resources are cleaned up
         object_classifier.close()
         face_detector.close()
 
@@ -318,6 +341,7 @@ def image_util_prepare_image_records(
             os.path.join(THUMBNAIL_IMAGES_PATH, thumbnail_name)
         )
 
+        # Generate thumbnail
         if image_util_generate_thumbnail(image_path, thumbnail_path):
             metadata = image_util_extract_metadata(image_path)
             logger.debug(f"Extracted metadata for {image_path}: {metadata}")
@@ -346,8 +370,9 @@ def image_util_prepare_image_records(
                 )
                 # Continue without GPS - don't fail the upload
 
-            # latitude, longitude and captured_at are always present, None
-            # included: the INSERT binds them by name and fails if one is absent.
+            # Build image record with GPS data
+            # ALWAYS include latitude, longitude, captured_at (even if None)
+            # to satisfy SQL INSERT statement named parameters
             image_record = {
                 "id": image_id,
                 "path": image_path,
@@ -415,6 +440,7 @@ def image_util_generate_thumbnail(
         with Image.open(image_path) as img:
             img.thumbnail(size)
 
+            # Convert to RGB if the image has an alpha channel or is not RGB
             if img.mode in ("RGBA", "P"):
                 img = img.convert("RGB")
 
@@ -501,6 +527,7 @@ def image_util_find_folder_id_for_image(
 
 def image_util_is_valid_image(file_path: str) -> bool:
     """Check if the file is a valid image with allowed extensions."""
+    # Check file extension first
     file_extension = Path(file_path).suffix.lower()
 
     if file_extension not in SUPPORTED_IMAGE_EXTENSIONS:

@@ -31,7 +31,9 @@ from app.utils.videos import (
 )
 from app.routes.videos import router as videos_router
 
+# ##############################
 # Pytest Fixtures
+# ##############################
 
 
 @pytest.fixture(scope="function")
@@ -114,7 +116,9 @@ def make_video_record(video_id, path, folder_id, **overrides):
     return record
 
 
+# ##############################
 # Validation and scanning
+# ##############################
 
 
 class TestVideoValidation:
@@ -170,7 +174,9 @@ class TestVideoScanning:
         assert len(flat) == 1
 
 
+# ##############################
 # Thumbnails and metadata
+# ##############################
 
 
 class TestVideoThumbnailAndMetadata:
@@ -386,7 +392,9 @@ class TestProcessFolderVideos:
         assert os.path.exists(refreshed["thumbnailPath"])
 
 
+# ##############################
 # Database
+# ##############################
 
 
 class TestVideosDatabase:
@@ -486,7 +494,9 @@ class TestVideosDatabase:
         assert db_get_video_by_id("missing") is None
 
 
+# ##############################
 # Schema migrations
+# ##############################
 
 
 def _columns(db_path, table):
@@ -548,7 +558,9 @@ class TestFacesScannedColumn:
         assert "facesScanned" in _columns(test_db, "videos")
 
 
+# ##############################
 # Routes
+# ##############################
 
 
 class TestVideosAPI:
@@ -668,7 +680,9 @@ class TestVideosAPI:
         assert detail["message"]
 
 
+# ##############################
 # Utility edge cases
+# ##############################
 
 
 class TestVideoUtilEdgeCases:

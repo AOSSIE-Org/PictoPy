@@ -52,7 +52,9 @@ from app.database.semantic_labels import (
 )
 from app.database.yolo_mapping import db_create_YOLO_classes_table
 
+# ##############################
 # Pytest Fixtures
+# ##############################
 
 
 @pytest.fixture(scope="function")
@@ -177,7 +179,9 @@ def add_geotagged(
     conn.close()
 
 
+# ##############################
 # Scoring signal collection
+# ##############################
 
 
 class TestScoringSignals:
@@ -288,7 +292,9 @@ class TestScoringSignals:
         assert len(db_get_scoring_signals(bulk_ids)) == 600
 
 
+# ##############################
 # GPS histogram
+# ##############################
 
 
 class TestGpsHistogram:
@@ -328,7 +334,9 @@ class TestGpsHistogram:
         assert db_get_gps_cell_centre(0.0, 0.0, precision=1) is None
 
 
+# ##############################
 # Event labels
+# ##############################
 
 
 class TestEventLabels:
@@ -507,7 +515,9 @@ class TestEventLabels:
         assert db_get_top_memory_label(ids, 5, 0.15, 0.15, 2) is None
 
 
+# ##############################
 # Tagging completion lifecycle
+# ##############################
 
 
 @pytest.fixture
@@ -681,7 +691,9 @@ class TestTaggingCompletedLifecycle:
         assert db_is_indexing_busy() is False
 
 
+# ##############################
 # Rescoring after a cluster rename
+# ##############################
 
 
 @pytest.fixture
@@ -848,7 +860,9 @@ class TestRescoreAfterRename:
         error.assert_not_called()
 
 
+# ##############################
 # Period lookup and embeddings
+# ##############################
 
 
 class TestPeriodAndEmbeddings:
@@ -906,7 +920,9 @@ class TestPeriodAndEmbeddings:
         assert db_get_embeddings_for_image_ids([], "v1") == {}
 
 
+# ##############################
 # Folder pipeline hook
+# ##############################
 
 
 AI_PIPELINE_STEPS = (

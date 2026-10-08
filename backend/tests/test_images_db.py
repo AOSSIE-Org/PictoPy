@@ -25,7 +25,9 @@ from app.database.folders import db_create_folders_table
 from app.database.yolo_mapping import db_create_YOLO_classes_table
 from app.database.semantic_labels import db_create_semantic_labels_table
 
+# ##############################
 # Pytest Fixtures
+# ##############################
 
 
 @pytest.fixture(scope="function")
@@ -108,7 +110,9 @@ def drop_object(db_path: str, kind: str, name: str) -> None:
     conn.close()
 
 
+# ##############################
 # Table creation
+# ##############################
 
 
 class TestCreateImagesTable:
@@ -147,7 +151,9 @@ class TestCreateImagesTable:
         assert "score" in columns
 
 
+# ##############################
 # Bulk insert
+# ##############################
 
 
 class TestBulkInsertImages:
@@ -179,7 +185,9 @@ class TestBulkInsertImages:
         assert db_get_all_images() == []
 
 
+# ##############################
 # Reading images
+# ##############################
 
 
 class TestGetAllImages:
@@ -249,7 +257,9 @@ class TestUntaggedAndUnembedded:
         assert [img["id"] for img in db_get_unembedded_images()] == ["img-1"]
 
 
+# ##############################
 # Tagging, classes and status
+# ##############################
 
 
 class TestTaggedStatusAndClasses:
@@ -306,7 +316,9 @@ class TestFavouriteStatus:
         assert by_id["img-1"]["favouritedAt"] == stamped_at
 
 
+# ##############################
 # Folder queries and deletion
+# ##############################
 
 
 class TestFolderQueriesAndDeletion:
@@ -355,7 +367,9 @@ class TestFolderQueriesAndDeletion:
         assert remaining == 0
 
 
+# ##############################
 # Search and lookup by ids
+# ##############################
 
 
 class TestSearchAndGetByIds:
@@ -398,7 +412,9 @@ class TestSearchAndGetByIds:
         assert db_get_images_by_ids(["img-1"])[0]["favouritedAt"] is not None
 
 
+# ##############################
 # Marking embedded
+# ##############################
 
 
 class TestMarkImagesEmbedded:
@@ -416,7 +432,9 @@ class TestMarkImagesEmbedded:
         assert db_get_unembedded_images() == []
 
 
+# ##############################
 # Error handling
+# ##############################
 
 
 class TestErrorHandling:

@@ -61,7 +61,9 @@ def candidate(
     return {"id": image_id, "score": score, "captured_at": captured_at}
 
 
+# ##############################
 # Haversine
+# ##############################
 
 
 class TestHaversine:
@@ -83,7 +85,9 @@ class TestHaversine:
         assert forward == pytest.approx(backward)
 
 
+# ##############################
 # Weights
+# ##############################
 
 
 class TestResolveWeights:
@@ -136,7 +140,9 @@ class TestScoringSignature:
         assert scoring_signature(MemoryScoringWeights(favourite=0.9), 1) != baseline
 
 
+# ##############################
 # Signal normalization
+# ##############################
 
 
 class TestComputeSignals:
@@ -190,7 +196,9 @@ class TestComputeSignals:
         assert signal in available
 
 
+# ##############################
 # Composite score
+# ##############################
 
 
 class TestCompositeScore:
@@ -271,7 +279,9 @@ class TestScoreCandidates:
         assert "favourite" in ranked[0]["signals"]
 
 
+# ##############################
 # Near-duplicate suppression
+# ##############################
 
 
 class TestSuppressNearDuplicates:
@@ -338,7 +348,9 @@ class TestSuppressNearDuplicates:
         assert suppress_near_duplicates([], {}) == []
 
 
+# ##############################
 # Time spreading
+# ##############################
 
 
 class TestSpreadOverTime:
@@ -416,7 +428,9 @@ class TestSpreadOverTime:
         assert spread_over_time([candidate("a")], target) == []
 
 
+# ##############################
 # Memory-level score
+# ##############################
 
 
 class TestAggregateMemoryScore:
@@ -447,7 +461,9 @@ class TestAggregateMemoryScore:
         assert aggregate_memory_score(with_tail) >= aggregate_memory_score(without_tail)
 
 
+# ##############################
 # Home detection
+# ##############################
 
 
 class TestDetectHomeLocation:
@@ -480,7 +496,9 @@ class TestDetectHomeLocation:
         )
 
 
+# ##############################
 # Timestamp parsing
+# ##############################
 
 
 class TestParseCapturedAt:
@@ -500,7 +518,9 @@ class TestParseCapturedAt:
         assert parse_captured_at(value) == expected
 
 
+# ##############################
 # Cohesion
+# ##############################
 
 
 CONE_HALF_ANGLE = 1.1  # radians; wide enough to separate, narrow enough to
@@ -647,7 +667,9 @@ class TestTrimIncoherent:
         assert len(trim_incoherent(candidates, sparse, min_keep=5)) == len(candidates)
 
 
+# ##############################
 # Videos in a memory
+# ##############################
 
 
 class TestVideoSignalAvailability:

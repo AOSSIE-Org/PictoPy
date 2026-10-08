@@ -25,7 +25,9 @@ from app.database.images import db_create_images_table
 from app.database.videos import db_create_videos_table
 from app.database.video_frames import db_create_video_frames_tables
 
+# ##############################
 # Pytest Fixtures
+# ##############################
 
 
 @pytest.fixture(scope="function")
@@ -110,7 +112,9 @@ def add_orphan_face(
     return face_id
 
 
+# ##############################
 # Table creation
+# ##############################
 
 
 class TestFacesTable:
@@ -144,7 +148,9 @@ class TestFacesTable:
             conn.close.assert_called_once()
 
 
+# ##############################
 # Startup repair
+# ##############################
 
 
 class TestRepairOrphanedFaces:
@@ -195,7 +201,9 @@ class TestRepairOrphanedFaces:
         assert db_repair_orphaned_faces() == 0
 
 
+# ##############################
 # Inserting embeddings
+# ##############################
 
 
 class TestInsertFaceEmbeddings:
@@ -236,7 +244,9 @@ class TestInsertFaceEmbeddings:
             add_face("img-1", cluster_id="cluster-missing")
 
 
+# ##############################
 # Reading faces
+# ##############################
 
 
 class TestUnassignedFaces:
@@ -273,7 +283,9 @@ class TestFacesWithClusterNames:
         assert db_get_all_faces_with_cluster_names() == []
 
 
+# ##############################
 # Cluster assignment
+# ##############################
 
 
 class TestUpdateClusterIdsBatch:
@@ -327,7 +339,9 @@ class TestUpdateClusterIdsBatch:
         assert [f["face_id"] for f in db_get_faces_unassigned_clusters()] == [face_id]
 
 
+# ##############################
 # Cluster mean embeddings
+# ##############################
 
 
 class TestClusterMeanEmbeddings:
@@ -374,7 +388,9 @@ class TestClusterMeanEmbeddings:
         assert db_get_cluster_mean_embeddings() == []
 
 
+# ##############################
 # Cannot-link units
+# ##############################
 
 
 class TestClusterMediaPairs:
@@ -391,7 +407,9 @@ class TestClusterMediaPairs:
         }
 
 
+# ##############################
 # Video keyframe faces
+# ##############################
 
 
 def _legacy_faces_schema(db_path: str) -> None:

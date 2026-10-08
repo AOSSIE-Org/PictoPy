@@ -61,12 +61,14 @@ def _internal_error(message: str) -> HTTPException:
     )
 
 
+# GET /albums/ - Get all albums (including locked ones)
 @router.get("/", response_model=GetAlbumsResponse)
 def get_albums():
     """Get all albums. Always returns both locked and unlocked albums."""
     albums = db_get_all_albums()
     album_list = []
     for album in albums:
+        # Get image count for each album
         image_ids = db_get_album_images(album["album_id"])
         image_count = len(image_ids)
         is_locked = album["is_locked"]
@@ -90,6 +92,7 @@ def get_albums():
     return GetAlbumsResponse(success=True, albums=album_list)
 
 
+# POST /albums/ - Create a new album
 @router.post("/", response_model=CreateAlbumResponse)
 def create_album(body: CreateAlbumRequest):
     existing_album = db_get_album_by_name(body.name)
@@ -106,6 +109,7 @@ def create_album(body: CreateAlbumRequest):
         raise _internal_error(f"Failed to create album: {e}") from e
 
 
+# POST /albums/from-memory - Create an album from a curated memory
 @router.post(
     "/from-memory",
     response_model=CreateAlbumFromMemoryResponse,
@@ -153,6 +157,7 @@ def create_album_from_memory(
     )
 
 
+# GET /albums/{album_id} - Get specific album details
 @router.get("/{album_id}", response_model=GetAlbumResponse)
 def get_album(album_id: str = Path(...)):
     album = db_get_album(album_id)
@@ -165,6 +170,7 @@ def get_album(album_id: str = Path(...)):
         )
 
     try:
+        # Get image count for the album
         image_ids = db_get_album_images(album_id)
         image_count = len(image_ids)
 
@@ -192,6 +198,7 @@ def get_album(album_id: str = Path(...)):
         )
 
 
+# PUT /albums/{album_id} - Update Album
 @router.put("/{album_id}", response_model=SuccessResponse)
 def update_album(album_id: str = Path(...), body: UpdateAlbumRequest = Body(...)):
     album = db_get_album(album_id)
@@ -240,6 +247,7 @@ def update_album(album_id: str = Path(...), body: UpdateAlbumRequest = Body(...)
         )
 
 
+# DELETE /albums/{album_id} - Delete an album
 @router.delete("/{album_id}", response_model=SuccessResponse)
 def delete_album(album_id: str = Path(...)):
     album = db_get_album(album_id)
@@ -265,9 +273,11 @@ def delete_album(album_id: str = Path(...)):
         )
 
 
-# POST, not GET: a locked album's password travels in the body, and GET has no
-# body to put it in.
+# GET /albums/{album_id}/images - Get all images in an album
 @router.post("/{album_id}/images/get", response_model=GetAlbumImagesResponse)
+# GET requests do not accept a body by default.
+# Since we need to send a password securely, switching this to POST -- necessary.
+# Open to suggestions if better approach possible.
 def get_album_images(
     album_id: str = Path(...), body: GetAlbumImagesRequest = Body(...)
 ):
@@ -314,6 +324,7 @@ def get_album_images(
         )
 
 
+# POST /albums/{album_id}/images - Add images to an album
 @router.post("/{album_id}/images", response_model=SuccessResponse)
 def add_images_to_album(album_id: str = Path(...), body: ImageIdsRequest = Body(...)):
     album = db_get_album(album_id)
@@ -351,6 +362,7 @@ def add_images_to_album(album_id: str = Path(...), body: ImageIdsRequest = Body(
         )
 
 
+# DELETE /albums/{album_id}/images/{image_id} - Remove image from album
 @router.delete("/{album_id}/images/{image_id}", response_model=SuccessResponse)
 def remove_image_from_album(album_id: str = Path(...), image_id: str = Path(...)):
     album = db_get_album(album_id)
@@ -385,6 +397,7 @@ def remove_image_from_album(album_id: str = Path(...), image_id: str = Path(...)
         )
 
 
+# DELETE /albums/{album_id}/images - Remove multiple images from album
 @router.delete("/{album_id}/images", response_model=SuccessResponse)
 def remove_images_from_album(
     album_id: str = Path(...), body: ImageIdsRequest = Body(...)
