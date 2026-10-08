@@ -10,3 +10,19 @@ repos:
     hooks:
       - id: black
         language_version: python3
+
+  - repo: local
+    hooks:
+      - id: mypy-backend
+        name: mypy (backend)
+        entry: mypy --config-file backend/pyproject.toml
+        language: system
+        files: ^backend/.*\.py$
+        require_serial: true
+
+      - id: mypy-sync-microservice
+        name: mypy (sync microservice)
+        entry: mypy --config-file sync-microservice/pyproject.toml
+        language: system
+        files: ^sync-microservice/.*\.py$
+        require_serial: true

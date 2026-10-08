@@ -495,6 +495,70 @@ class TestVideosDatabase:
 
 
 # ##############################
+# Schema migrations
+# ##############################
+
+
+def _columns(db_path, table):
+    conn = sqlite3.connect(db_path)
+    try:
+        return {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+    finally:
+        conn.close()
+
+
+def _legacy_videos_schema(db_path):
+    """Recreate the videos table as a database shipped before face scanning
+    and favourite timestamps has it."""
+    conn = sqlite3.connect(db_path)
+    conn.execute("DROP TABLE IF EXISTS videos")
+    conn.execute(
+        """
+        CREATE TABLE videos (
+            id TEXT PRIMARY KEY,
+            path VARCHAR UNIQUE,
+            folder_id INTEGER,
+            thumbnailPath TEXT UNIQUE,
+            metadata TEXT,
+            isTagged BOOLEAN DEFAULT 0,
+            isFavourite BOOLEAN DEFAULT 0,
+            captured_at DATETIME,
+            FOREIGN KEY (folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
+        )
+        """
+    )
+    conn.execute("INSERT INTO videos (id, path, isTagged) VALUES ('old', '/a.mp4', 1)")
+    conn.commit()
+    conn.close()
+
+
+class TestFacesScannedColumn:
+    def test_fresh_table_has_the_column(self, test_db):
+        assert "facesScanned" in _columns(test_db, "videos")
+
+    def test_migrates_a_legacy_table(self, test_db):
+        """Every already-tagged video predates this column, so the guarded
+        ALTER is the only thing that lets them be found for a face scan."""
+        _legacy_videos_schema(test_db)
+        assert "facesScanned" not in _columns(test_db, "videos")
+
+        db_create_videos_table()
+
+        assert "facesScanned" in _columns(test_db, "videos")
+        conn = sqlite3.connect(test_db)
+        rows = conn.execute("SELECT id, isTagged, facesScanned FROM videos").fetchall()
+        conn.close()
+        # Tagged but unscanned: exactly the state the backfill looks for.
+        assert rows == [("old", 1, 0)]
+
+    def test_migration_is_idempotent(self, test_db):
+        _legacy_videos_schema(test_db)
+        db_create_videos_table()
+        db_create_videos_table()  # must not raise on the second pass
+        assert "facesScanned" in _columns(test_db, "videos")
+
+
+# ##############################
 # Routes
 # ##############################
 

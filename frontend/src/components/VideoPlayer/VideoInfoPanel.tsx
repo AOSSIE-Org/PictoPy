@@ -20,6 +20,7 @@ interface VideoInfoPanelProps {
   video: Video | null;
   currentIndex: number;
   totalVideos: number;
+  onOpenOriginal?: () => void;
 }
 
 export const VideoInfoPanel: React.FC<VideoInfoPanelProps> = ({
@@ -28,6 +29,7 @@ export const VideoInfoPanel: React.FC<VideoInfoPanelProps> = ({
   video,
   currentIndex,
   totalVideos,
+  onOpenOriginal,
 }) => {
   const getFormattedDate = () => {
     if (video?.metadata?.date_created) {
@@ -198,6 +200,18 @@ export const VideoInfoPanel: React.FC<VideoInfoPanelProps> = ({
                 </p>
               </div>
             </div>
+
+            {onOpenOriginal && (
+              <div className="border-t border-black/10 pt-3 dark:border-white/10">
+                <button
+                  type="button"
+                  onClick={onOpenOriginal}
+                  className="w-full rounded-lg bg-black/5 py-2 text-gray-900 hover:bg-black/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+                >
+                  Open Original File
+                </button>
+              </div>
+            )}
           </div>
         </motion.div>
       )}

@@ -29,6 +29,7 @@ class VideoRecord(TypedDict, total=False):
     thumbnailPath: Optional[str]
     metadata: Union[Mapping[str, Any], str]
     isTagged: bool
+    facesScanned: bool
     isFavourite: bool
     captured_at: Optional[datetime]
     favouritedAt: Optional[datetime]
@@ -58,6 +59,7 @@ def db_create_videos_table() -> None:
             thumbnailPath TEXT UNIQUE,
             metadata TEXT,
             isTagged BOOLEAN DEFAULT 0,
+            facesScanned BOOLEAN DEFAULT 0,
             isFavourite BOOLEAN DEFAULT 0,
             captured_at DATETIME,
             favouritedAt DATETIME,
@@ -70,12 +72,21 @@ def db_create_videos_table() -> None:
         "CREATE INDEX IF NOT EXISTS ix_videos_captured_at ON videos(captured_at)"
     )
 
-    # favouritedAt: when the video was last favourited (NULL if never, or
-    # pre-dates this column). Guarded ALTER because shipped databases predate
-    # it and CREATE IF NOT EXISTS won't add it.
+    # Guarded ALTERs because shipped databases predate these columns and
+    # CREATE IF NOT EXISTS won't add them.
     cursor.execute("PRAGMA table_info(videos)")
-    if "favouritedAt" not in {row[1] for row in cursor.fetchall()}:
+    columns = {row[1] for row in cursor.fetchall()}
+
+    # favouritedAt: when the video was last favourited (NULL if never, or
+    # pre-dates this column).
+    if "favouritedAt" not in columns:
         cursor.execute("ALTER TABLE videos ADD COLUMN favouritedAt DATETIME")
+
+    # facesScanned: whether face detection has run over this video's keyframes.
+    # Separate from isTagged because finding people is opt-in and arrived
+    # later, so a tagged video can still be waiting for a face scan.
+    if "facesScanned" not in columns:
+        cursor.execute("ALTER TABLE videos ADD COLUMN facesScanned BOOLEAN DEFAULT 0")
 
     conn.commit()
     conn.close()
