@@ -33,6 +33,7 @@ from app.database.semantic_labels import db_create_semantic_labels_table
 from app.database.image_embeddings import db_create_image_embeddings_table
 from app.database.video_frames import db_create_video_frames_tables
 from app.database.memories import db_create_memories_table
+from app.database.xmp_export_state import db_create_image_xmp_state_table
 from app.utils.semantic_labels import (
     semantic_util_sync_vocabulary,
     semantic_util_build_label_embeddings,
@@ -88,6 +89,8 @@ async def lifespan(app: FastAPI):
     db_create_album_images_table()
     db_create_metadata_table()
     db_create_memories_table()  # References images(id) and videos(id)
+    # Last: its triggers watch most of the tables above.
+    db_create_image_xmp_state_table()
     # Nothing is indexing or tagging yet, so anything still flagged busy is
     # left over from a previous session and would block memory generation.
     db_clear_stale_processing_flags()
