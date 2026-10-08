@@ -401,6 +401,7 @@ fn main() {
             set_close_to_tray,
             get_start_minimized,
             set_start_minimized,
+            commands::open_image_file,
         ])
         .on_window_event(on_window_event)
         .build(tauri::generate_context!())
