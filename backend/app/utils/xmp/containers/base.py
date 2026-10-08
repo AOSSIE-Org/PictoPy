@@ -1,6 +1,6 @@
 import os
 from dataclasses import dataclass
-from typing import Callable, Iterator, Optional, Protocol
+from typing import Callable, Iterator, Optional, Protocol, Sequence
 
 # Far above anything PictoPy writes; refuses hostile or corrupt packets early.
 MAX_PACKET_BYTES = 64 * 1024 * 1024
@@ -39,12 +39,12 @@ class MetadataContainer(Protocol):
     def write_xmp(self, path: str, packet: bytes) -> None: ...
 
     def stream_with_xmp(
-        self, path: str, transform: XmpTransform, marker: bytes
+        self, path: str, transform: XmpTransform, markers: Sequence[bytes]
     ) -> TransformedStream:
         """Stream the file with every XMP packet passed through `transform`.
 
         Memory must stay bounded by the packet size, never the file size. A
-        packet that cannot be transformed is dropped if it may contain
-        `marker`, and passed through untouched otherwise.
+        packet that cannot be transformed is dropped if it contains any of
+        `markers`, and passed through untouched otherwise.
         """
         ...

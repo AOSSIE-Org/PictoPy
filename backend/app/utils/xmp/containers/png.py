@@ -2,7 +2,7 @@ import os
 import struct
 import tempfile
 import zlib
-from typing import BinaryIO, Iterator, List, Optional, Tuple
+from typing import BinaryIO, Iterator, List, Optional, Sequence, Tuple
 
 from .base import (
     MAX_PACKET_BYTES,
@@ -95,8 +95,9 @@ def _xmp_chunk(packet: bytes) -> bytes:
 Edit = Tuple[int, int, bytes]  # (offset, bytes replaced, replacement)
 
 
-def _contains(f: BinaryIO, count: int, marker: bytes) -> bool:
-    """Whether the next `count` bytes contain `marker`, read in bounded blocks."""
+def _contains(f: BinaryIO, count: int, markers: Sequence[bytes]) -> bool:
+    """Whether the next `count` bytes contain any marker, read in bounded blocks."""
+    keep = max(len(m) for m in markers) - 1
     tail = b""
     found = False
     while count > 0:
@@ -105,18 +106,20 @@ def _contains(f: BinaryIO, count: int, marker: bytes) -> bool:
             raise PngFormatError("truncated chunk")
         count -= len(block)
         window = tail + block
-        found = found or marker in window
+        found = found or any(m in window for m in markers)
         # Carry over from the window, not the block: with blocks shorter than
-        # the marker, a match can span more than two of them.
-        tail = window[-(len(marker) - 1) :] if len(marker) > 1 else b""
+        # a marker, a match can span more than two of them.
+        tail = window[-keep:] if keep else b""
     return found
 
 
-def _plan_xmp_edits(f: BinaryIO, transform: XmpTransform, marker: bytes) -> List[Edit]:
+def _plan_xmp_edits(
+    f: BinaryIO, transform: XmpTransform, markers: Sequence[bytes]
+) -> List[Edit]:
     """Where the XMP chunks are and what replaces each; reads only their bodies.
 
     A chunk that cannot be passed through `transform` is dropped only when it
-    may hold `marker`; anything provably free of it is kept untouched.
+    may hold any of `markers`; anything provably free of them is kept untouched.
     """
     if f.read(len(PNG_SIGNATURE)) != PNG_SIGNATURE:
         raise PngFormatError("not a PNG file")
@@ -145,7 +148,7 @@ def _plan_xmp_edits(f: BinaryIO, transform: XmpTransform, marker: bytes) -> List
             # Too large to rewrite; scan it instead of holding it.
             flag = _read_exact(f, 1)
             compressed = flag != b"\x00"
-            holds = _contains(f, length - prefix_len - 1, marker)
+            holds = _contains(f, length - prefix_len - 1, markers)
             f.seek(4, os.SEEK_CUR)
             if compressed or holds:
                 edits.append(drop)
@@ -159,9 +162,9 @@ def _plan_xmp_edits(f: BinaryIO, transform: XmpTransform, marker: bytes) -> List
             packet = None
         if packet is None:
             # Unreadable chunk: compressed bytes cannot be inspected, so keep
-            # it only if it is plain text without our marker.
+            # it only if it is plain text without any marker.
             compressed = len(body) > prefix_len and body[prefix_len] != 0
-            if compressed or marker in body:
+            if compressed or any(m in body for m in markers):
                 edits.append(drop)
             continue
 
@@ -250,7 +253,7 @@ class PngContainer:
         _atomic_replace(path, bytes(out), before)
 
     def stream_with_xmp(
-        self, path: str, transform: XmpTransform, marker: bytes
+        self, path: str, transform: XmpTransform, markers: Sequence[bytes]
     ) -> TransformedStream:
         # One handle for planning and streaming, so the length promised up
         # front describes exactly the bytes that are sent.
@@ -258,7 +261,7 @@ class PngContainer:
         try:
             stat = os.fstat(f.fileno())
             size = stat.st_size
-            edits = _plan_xmp_edits(f, transform, marker)
+            edits = _plan_xmp_edits(f, transform, markers)
         except BaseException:
             f.close()
             raise

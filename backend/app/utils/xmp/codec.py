@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import json
+import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Protocol, Tuple
@@ -71,8 +72,9 @@ class XmpCodec(Protocol):
 
     def strip(self, packet: bytes) -> Optional[bytes]: ...
 
-    # Bytes every packet holding this codec's data must contain.
-    marker: bytes
+    # Byte strings at least one of which any packet holding this codec's
+    # data must contain, however it is spelled or encoded.
+    markers: Tuple[bytes, ...]
 
 
 def _vec_to_text(vec: List[float]) -> str:
@@ -286,6 +288,33 @@ def _parse(packet: bytes) -> ET.Element:
     return ET.fromstring(packet)
 
 
+_CHAR_REF = re.compile(rb"&#(x[0-9a-fA-F]+|[0-9]+);")
+_NS_BYTES = NS_PICTOPY.encode("utf-8")
+
+
+def _resolve_char_ref(match: "re.Match[bytes]") -> bytes:
+    ref = match.group(1)
+    try:
+        code = int(ref[1:], 16) if ref.startswith(b"x") else int(ref)
+        return chr(code).encode("utf-8")
+    except (ValueError, OverflowError):
+        # Not a real character, so it cannot spell one of ours.
+        return match.group(0)
+
+
+def _may_hold_pictopy(packet: bytes) -> bool:
+    """For a packet that cannot be parsed: could it spell our namespace?
+
+    Besides literally, XML can spell a namespace only with numeric character
+    references, declared entities, or in UTF-16/32. References are resolved;
+    the other two never occur in real PNG XMP, so they count as "maybe".
+    """
+    # NUL is illegal in UTF-8 XML, so its presence means another encoding.
+    if b"\x00" in packet or b"<!ENTITY" in packet:
+        return True
+    return _NS_BYTES in _CHAR_REF.sub(_resolve_char_ref, packet)
+
+
 def _is_pictopy(qname: str) -> bool:
     return qname.startswith(f"{{{NS_PICTOPY}}}")
 
@@ -385,7 +414,13 @@ def _build(metadata: PictoPyMetadata) -> Tuple[ET.Element, str]:
 class PictoPyXmpCodec:
     """Stores PictoPy data as `pictopy:` properties in a standard XMP packet."""
 
-    marker = NS_PICTOPY.encode("utf-8")
+    # For packets nobody can read, so nothing can be resolved: the namespace
+    # or either way of spelling it differently, in every XMP encoding.
+    markers = tuple(
+        token.encode(encoding)
+        for token in (NS_PICTOPY, "&#", "<!ENTITY")
+        for encoding in ("utf-8", "utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be")
+    )
 
     def encode(
         self, metadata: PictoPyMetadata, existing: Optional[bytes] = None
@@ -447,8 +482,8 @@ class PictoPyXmpCodec:
             root = _parse(packet)
         except (ET.ParseError, ValueError) as e:
             # Unparseable, but our data cannot be expressed without our
-            # namespace, and PNG XMP is always UTF-8: theirs, pass it on.
-            if self.marker not in packet:
+            # namespace: if no spelling of it is present, it is theirs.
+            if not _may_hold_pictopy(packet):
                 return packet
             raise ValueError(f"unreadable XMP holding PictoPy data: {e}") from e
         if not _has_pictopy(root):

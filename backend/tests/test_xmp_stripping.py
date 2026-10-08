@@ -479,11 +479,108 @@ class TestMalformedPackets:
             f = io.BytesIO(data)
             with pytest.MonkeyPatch.context() as mp:
                 mp.setattr(png_module, "STREAM_BLOCK_BYTES", block)
-                assert png_module._contains(f, len(data), marker)
+                assert png_module._contains(f, len(data), [marker])
             clean = io.BytesIO(data.replace(marker, b"z" * len(marker)))
             with pytest.MonkeyPatch.context() as mp:
                 mp.setattr(png_module, "STREAM_BLOCK_BYTES", block)
-                assert not png_module._contains(clean, len(data), marker)
+                assert not png_module._contains(clean, len(data), [marker])
+
+
+# --- the namespace spelled some other way, in packets that cannot be parsed --
+#
+# A parsed packet is judged by its tree, which resolves every spelling. These
+# cover the packets we cannot parse: besides literally, XML can spell our
+# namespace only with numeric character references, declared entities, or in
+# UTF-16/32. PictoPy always writes it literally in UTF-8, so these exist only
+# if another tool both re-encodes our data and breaks the XML.
+
+UNCLOSED = b"<dc:creator>" + K + b"</dc:creator>"  # description never closed
+
+
+def _broken(ns_decl: bytes, body: bytes = b"") -> bytes:
+    return (
+        b'<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF '
+        + RDF
+        + b'><rdf:Description rdf:about="" '
+        + DC
+        + b" "
+        + ns_decl
+        + b">"
+        + UNCLOSED
+        + body
+        + b"</rdf:RDF></x:xmpmeta>"
+    )
+
+
+SPELLINGS = {
+    "decimal character reference": b'xmlns:p="&#104;ttps://pictopy.app/ns/1.0/"',
+    "hex character reference": b'xmlns:p="&#x68;ttps://pictopy.app/ns/1.0/"',
+    "every character referenced": b'xmlns:p="'
+    + b"".join(b"&#%d;" % ord(c) for c in NS_PICTOPY)
+    + b'"',
+}
+
+
+class TestNamespaceSpelledOtherwise:
+    @pytest.mark.parametrize("case", sorted(SPELLINGS))
+    def test_unparseable_packet_with_escaped_namespace_is_dropped(self, tmp_path, case):
+        packet = _broken(SPELLINGS[case], b"<p:ClusterName>" + S + b"</p:ClusterName>")
+        assert NS not in packet  # the literal check alone would miss it
+        path = _photo(tmp_path, third_party=False)
+        _insert_before_idat(path, _xmp_chunk(packet))
+        served = _serve(path)
+        assert S not in served
+        assert _xmp_chunks(served) == []
+
+    def test_entity_declaration_is_treated_as_possibly_ours(self, tmp_path):
+        packet = (
+            b'<!DOCTYPE x [<!ENTITY h "https">]>'
+            + _broken(b'xmlns:p="&h;://pictopy.app/ns/1.0/"')
+            + b"<p:ClusterName>"
+            + S
+            + b"</p:ClusterName>"
+        )
+        path = _photo(tmp_path, third_party=False)
+        _insert_before_idat(path, _xmp_chunk(packet))
+        assert S not in _serve(path)
+
+    def test_utf16_packet_is_treated_as_possibly_ours(self, tmp_path):
+        packet = _broken(PP, b"<pictopy:ClusterName>" + S + b"</pictopy:ClusterName>")
+        utf16 = packet.decode().encode("utf-16-le")
+        assert NS not in utf16 and S not in utf16
+        path = _photo(tmp_path, third_party=False)
+        _insert_before_idat(path, _xmp_chunk(utf16))
+        served = _serve(path)
+        assert SECRET.encode("utf-16-le") not in served
+
+    def test_ordinary_escapes_in_foreign_packets_are_not_a_reason_to_drop(
+        self, tmp_path
+    ):
+        # Lightroom and exiftool write captions with &#xA; for newlines.
+        packet = _broken(b"", b"<dc:description>line&#xA;break&#233;</dc:description>")
+        path = _photo(tmp_path, third_party=False)
+        _insert_before_idat(path, _xmp_chunk(packet))
+        with open(path, "rb") as f:
+            assert _serve(path) == f.read()
+
+    def test_unreadable_chunk_with_escaped_namespace_is_dropped(self, tmp_path):
+        # Broken block header: nothing can parse it, so any spelling counts.
+        body = b"XML:com.adobe.xmp\x00\x00\x00p:x &#104;ttps://pictopy.app/ns/1.0/ " + S
+        path = _photo(tmp_path, third_party=False)
+        _insert_before_idat(path, _chunk(b"iTXt", body))
+        assert S not in _serve(path)
+
+    @pytest.mark.parametrize("encoding", ["utf-8", "utf-16-le", "utf-32-be"])
+    def test_oversized_packet_with_escaped_namespace_is_dropped(
+        self, tmp_path, monkeypatch, encoding
+    ):
+        packet = _broken(SPELLINGS["hex character reference"])
+        packet = packet.decode().encode(encoding) + SECRET.encode(encoding)
+        path = _photo(tmp_path, third_party=False)
+        _insert_before_idat(path, _xmp_chunk(packet))
+        monkeypatch.setattr(png_module, "MAX_PACKET_BYTES", 64)
+        monkeypatch.setattr(png_module, "STREAM_BLOCK_BYTES", 16)
+        assert SECRET.encode(encoding) not in _serve(path)
 
 
 # --- export must never destroy metadata it cannot read ----------------------

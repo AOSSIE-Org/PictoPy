@@ -85,7 +85,7 @@ def open_without_pictopy(
     if container is None:
         return None
     return container.stream_with_xmp(
-        path, lambda p: _strip_or_drop(p, codec), codec.marker
+        path, lambda p: _strip_or_drop(p, codec), codec.markers
     )
 
 
