@@ -422,8 +422,12 @@ def image_util_generate_thumbnail(
         with Image.open(image_path) as img:
             img.thumbnail(size)
 
-            # Convert to RGB if the image has an alpha channel or is not RGB
-            if img.mode != "RGB":
+            if img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info):
+                img = img.convert("RGBA")
+                bg = Image.new("RGB", img.size, (255, 255, 255))
+                bg.paste(img, mask=img.split()[3])
+                img = bg
+            elif img.mode != "RGB":
                 img = img.convert("RGB")
 
             img.save(thumbnail_path, "JPEG")  # Always save thumbnails as JPEG
