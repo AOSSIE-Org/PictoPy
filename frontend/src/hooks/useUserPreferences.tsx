@@ -32,6 +32,7 @@ export const useUserPreferences = () => {
     YOLO_model_size: 'nano',
     GPU_Acceleration: false,
     Video_Frame_Interval: 5,
+    Video_Face_Detection: false,
     memories: DEFAULT_MEMORIES_PREFERENCES,
   });
 
@@ -156,6 +157,15 @@ export const useUserPreferences = () => {
       request: { Video_Frame_Interval: interval },
     }));
 
+  const toggleVideoFaceDetection = async () =>
+    writePreferences((current) => {
+      const Video_Face_Detection = !current.Video_Face_Detection;
+      return {
+        next: { ...current, Video_Face_Detection },
+        request: { Video_Face_Detection },
+      };
+    });
+
   const updateMemoriesPreferences = async (
     patch: UpdateUserPreferencesRequest['memories'],
   ) =>
@@ -181,6 +191,7 @@ export const useUserPreferences = () => {
     updateYoloModelSize,
     toggleGpuAcceleration,
     updateVideoFrameInterval,
+    toggleVideoFaceDetection,
     updateMemoriesPreferences,
 
     // For refetching preferences after external events (e.g., Model Manager window closing)

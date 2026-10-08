@@ -17,7 +17,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from concurrent.futures import ProcessPoolExecutor
-from app.database.faces import db_create_faces_table
+from app.database.faces import db_create_faces_table, db_repair_orphaned_faces
 from app.database.images import db_create_images_table
 from app.database.videos import db_create_videos_table
 from app.database.face_clusters import db_create_clusters_table
@@ -50,6 +50,7 @@ from app.routes.memories import router as memories_router
 from app.routes.shutdown import router as shutdown_router
 from app.routes.share import router as share_router
 from app.routes.models import router as models_router, _cleanup_stale_tasks
+from app.routes.config import router as config_router
 from app.share.server import share_server_stop
 from fastapi.openapi.utils import get_openapi
 from app.logging.setup_logging import (
@@ -90,6 +91,9 @@ async def lifespan(app: FastAPI):
     # Nothing is indexing or tagging yet, so anything still flagged busy is
     # left over from a previous session and would block memory generation.
     db_clear_stale_processing_flags()
+    # Faces written before FKs were enforced can point at deleted images,
+    # keyframes or clusters; they would otherwise keep feeding clustering.
+    db_repair_orphaned_faces()
     # Needs the mappings table (created above): semantic labels register
     # there as class_ids >= SEMANTIC_CLASS_ID_OFFSET
     semantic_util_sync_vocabulary()
@@ -193,6 +197,7 @@ app.include_router(memories_router, prefix="/memories", tags=["Memories"])
 app.include_router(shutdown_router, tags=["Shutdown"])
 app.include_router(share_router, prefix="/share", tags=["Share"])
 app.include_router(models_router, prefix="/models", tags=["Models"])
+app.include_router(config_router, prefix="/config", tags=["Config"])
 
 
 # Entry point for running with: python3 main.py

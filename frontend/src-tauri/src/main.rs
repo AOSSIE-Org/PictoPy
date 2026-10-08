@@ -1,6 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod commands;
 mod services;
 
 use sysinfo::System;
@@ -361,6 +362,7 @@ fn main() {
             is_autostart_enabled,
             get_close_to_tray,
             set_close_to_tray,
+            commands::open_image_file,
         ])
         .on_window_event(on_window_event)
         .build(tauri::generate_context!())

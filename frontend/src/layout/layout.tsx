@@ -23,7 +23,10 @@ const Layout: React.FC = () => {
           {/* Scrolling is contained here so the Navbar's parent never exceeds
               100vh and the navbar stays put. hide-scrollbar stops WebView2 from
               painting a second scrollbar beside the one overflow-y-auto adds. */}
-          <div className="hide-scrollbar m-4 w-full overflow-y-auto">
+          <div
+            id="main-scroll-container"
+            className="hide-scrollbar m-4 w-full overflow-y-auto"
+          >
             <Outlet />
           </div>
         </div>

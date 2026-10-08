@@ -13,6 +13,7 @@ import { setFolders, setTaggingStatus } from '@/features/folderSlice';
 import { FolderDetails, isIndexingPending } from '@/types/Folder';
 import { useMutationFeedback } from './useMutationFeedback';
 import { getFoldersTaggingStatus } from '@/api/api-functions/folders';
+import { MEMORIES_QUERY_KEY } from '@/hooks/useMemories';
 
 export const useFolderOperations = () => {
   const dispatch = useDispatch();
@@ -123,10 +124,11 @@ export const useFolderOperations = () => {
     mutationFn: async (folder_id: string) =>
       deleteFolders({ folder_ids: [folder_id] }),
     autoInvalidateTags: ['folders'],
-    // Deleting a folder cascades to its images and faces, so clusters go stale.
-    // Separate call: autoInvalidateTags is one prefix-matched key, not a list.
+    // Deleting a folder cascades to its images and faces, so clusters and memories
+    // go stale. Separate calls: autoInvalidateTags is one prefix-matched key.
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clusters'] });
+      queryClient.invalidateQueries({ queryKey: MEMORIES_QUERY_KEY });
     },
   });
 
