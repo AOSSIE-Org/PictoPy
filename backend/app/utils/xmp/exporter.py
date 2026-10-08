@@ -29,13 +29,26 @@ class ExportSummary(TypedDict):
     checked: int
     written: int
     unchanged: int
-    # Nothing to store, unsupported, unreadable XMP, or a newer PictoPy's data.
+    # Nothing to write: no PictoPy data to store, or an unsupported format.
     skipped: int
+    # Not written on purpose: unreadable existing XMP, or a newer PictoPy's data.
+    left_alone: int
     failed: int
 
 
 def _empty_summary() -> ExportSummary:
-    return {"checked": 0, "written": 0, "unchanged": 0, "skipped": 0, "failed": 0}
+    return {
+        "checked": 0,
+        "written": 0,
+        "unchanged": 0,
+        "skipped": 0,
+        "left_alone": 0,
+        "failed": 0,
+    }
+
+
+# Files the export deliberately leaves untouched rather than overwrite.
+_LEFT_ALONE = (WriteOutcome.UNREADABLE_EXISTING, WriteOutcome.NEWER_SCHEMA)
 
 
 def xmp_export_enabled() -> bool:
@@ -116,30 +129,22 @@ def _export_one(
     else:
         # Not retried until the image changes again; a manual run rechecks.
         db_record_xmp_export_success(image_id, seen, outcome.value, None, None, None)
-        summary["skipped"] += 1
+        summary["left_alone" if outcome in _LEFT_ALONE else "skipped"] += 1
 
 
 def xmp_export_run(include_clean: bool = False) -> ExportSummary:
     """Write PictoPy's data into every PNG whose export is pending.
 
-    include_clean also rechecks images already exported, when their file's
-    stat no longer matches; the manual export uses it. A failure is recorded
-    per image and never stops the pass.
+    include_clean, used by the manual export, recomputes every PNG instead,
+    so a codec or schema change reaches files exported before it. Each image
+    still goes through the same digest and stat check, so a file already
+    holding the current data is not opened. A failure is recorded per image
+    and never stops the pass.
     """
     summary = _empty_summary()
     candidates = db_get_xmp_export_candidates(include_clean)
     for start in range(0, len(candidates), EXPORT_BATCH_SIZE):
-        batch: List[XmpExportCandidate] = [
-            c
-            for c in candidates[start : start + EXPORT_BATCH_SIZE]
-            # Clean, and the file is as we left it: nothing can have changed.
-            if c["pending"] or not _file_unchanged(c)
-        ]
-        summary["unchanged"] += min(EXPORT_BATCH_SIZE, len(candidates) - start) - len(
-            batch
-        )
-        if not batch:
-            continue
+        batch: List[XmpExportCandidate] = candidates[start : start + EXPORT_BATCH_SIZE]
 
         metadata: Dict[str, PictoPyMetadata] = collect_image_metadata(
             [c["image_id"] for c in batch]

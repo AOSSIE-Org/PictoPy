@@ -18,7 +18,7 @@ export const describeExportStatus = (
   status: MetadataExportStatus | undefined,
 ): string => {
   if (!status) return 'Checking your library…';
-  const { total, pending, failed, skipped } = status;
+  const { total, pending, failed, left_alone } = status;
   if (total === 0) {
     return 'No PNG images in your library yet. Only PNG files are supported for now.';
   }
@@ -34,8 +34,8 @@ export const describeExportStatus = (
   if (failed > 0) {
     line += ` ${failed} couldn't be written last time and will be retried.`;
   }
-  if (skipped > 0) {
-    line += ` ${skipped} were left alone because their existing metadata couldn't be read.`;
+  if (left_alone > 0) {
+    line += ` ${left_alone} were left alone because their existing metadata couldn't be read or came from a newer version of PictoPy.`;
   }
   return line;
 };

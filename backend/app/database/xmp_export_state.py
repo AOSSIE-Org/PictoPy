@@ -9,7 +9,6 @@ class XmpExportCandidate(TypedDict):
     # Snapshot taken before collecting; recorded on success so a change made
     # during the export leaves the image pending.
     change_count: int
-    pending: bool
     digest: Optional[str]
     file_size: Optional[int]
     file_mtime_ns: Optional[int]
@@ -214,15 +213,14 @@ def db_get_xmp_export_candidates(
 ) -> List[XmpExportCandidate]:
     """PNG images whose export is pending; every PNG with include_clean.
 
-    include_clean is for the manual export, which also re-checks files whose
-    stat no longer matches what was recorded.
+    include_clean is for the manual export, which recomputes every image.
     """
     only_pending = "" if include_clean else f"AND {_PENDING}"
     conn = _connect()
     try:
         rows = conn.execute(
             f"""
-            SELECT s.image_id, i.path, s.change_count, {_PENDING}, s.digest,
+            SELECT s.image_id, i.path, s.change_count, s.digest,
                    s.file_size, s.file_mtime_ns, s.failure_count
             FROM image_xmp_state s
             JOIN images i ON i.id = s.image_id
@@ -235,7 +233,6 @@ def db_get_xmp_export_candidates(
                 "image_id": image_id,
                 "path": path,
                 "change_count": change_count,
-                "pending": bool(pending),
                 "digest": digest,
                 "file_size": file_size,
                 "file_mtime_ns": file_mtime_ns,
@@ -245,7 +242,6 @@ def db_get_xmp_export_candidates(
                 image_id,
                 path,
                 change_count,
-                pending,
                 digest,
                 file_size,
                 file_mtime_ns,
@@ -261,15 +257,15 @@ class XmpExportCounts(TypedDict):
     pending: int
     # Pending images whose last attempt raised; they are retried.
     failed: int
-    # Left alone on purpose: unreadable XMP, or a newer PictoPy's data.
-    skipped: int
+    # Not written on purpose: unreadable existing XMP, or a newer PictoPy's data.
+    left_alone: int
 
 
 def db_get_xmp_export_counts() -> XmpExportCounts:
     """Where export stands across the library's PNG images."""
     conn = _connect()
     try:
-        total, pending, failed, skipped = conn.execute(
+        total, pending, failed, left_alone = conn.execute(
             f"""
             SELECT COUNT(*),
                    COALESCE(SUM({_PENDING}), 0),
@@ -285,7 +281,7 @@ def db_get_xmp_export_counts() -> XmpExportCounts:
             "total": total,
             "pending": pending,
             "failed": failed,
-            "skipped": skipped,
+            "left_alone": left_alone,
         }
     finally:
         conn.close()

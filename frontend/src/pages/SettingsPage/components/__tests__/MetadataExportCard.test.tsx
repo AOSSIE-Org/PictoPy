@@ -29,7 +29,7 @@ const status = (
   total: 12,
   pending: 12,
   failed: 0,
-  skipped: 0,
+  left_alone: 0,
   running: false,
   run_failed: false,
   last_run: null,
@@ -74,11 +74,13 @@ describe('describeExportStatus', () => {
 
   it('mentions retries and files left alone', () => {
     const line = describeExportStatus(
-      status({ pending: 3, failed: 2, skipped: 1 }),
+      status({ pending: 3, failed: 2, left_alone: 1 }),
     );
     expect(line).toMatch(/3 of 12 PNG images need/);
     expect(line).toMatch(/2 couldn't be written last time and will be retried/);
-    expect(line).toMatch(/1 were left alone/);
+    expect(line).toMatch(
+      /1 were left alone because their existing metadata couldn't be read or came from a newer version of PictoPy/,
+    );
   });
 
   it('reports a crashed run', () => {

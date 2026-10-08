@@ -87,6 +87,9 @@ class TestExportEndpoints:
         _photo(library, "j", ext="jpg")
         data = client.get("/metadata-export/status").json()["data"]
         assert (data["total"], data["pending"], data["running"]) == (2, 2, False)
+        assert (data["failed"], data["left_alone"]) == (0, 0)
+        # "skipped" is a last-run category only; the status has no such field.
+        assert "skipped" not in data
         assert data["last_run"] is None
 
     def test_run_exports_the_library_and_reports_the_result(self, client, library):
@@ -134,6 +137,7 @@ class TestExportEndpoints:
                 "written": 0,
                 "unchanged": 0,
                 "skipped": 0,
+                "left_alone": 0,
                 "failed": 0,
             }
 

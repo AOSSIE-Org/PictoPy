@@ -5,6 +5,7 @@ them, real database writes, and the file system checked afterwards.
 
 import json
 import os
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Dict, Iterator, List
 
@@ -27,6 +28,8 @@ from app.database.metadata import db_update_metadata
 from app.database.xmp_export_state import db_get_xmp_export_counts
 from app.utils.images import image_util_extract_metadata, image_util_is_unchanged
 from app.utils.xmp import PictoPyMetadata, read_image_metadata
+import app.utils.xmp.codec as codec_module
+from app.utils.xmp.codec import NS_PICTOPY, PictoPyXmpCodec
 from app.utils.xmp.containers.png import PngContainer
 from app.utils.xmp.exporter import (
     xmp_export_if_enabled,
@@ -176,6 +179,7 @@ class TestExportPass:
         before = _files([path])
         summary = xmp_export_run()
         assert summary["skipped"] == 1 and summary["written"] == 0
+        assert summary["left_alone"] == 0
         assert _files([path]) == before
         assert _pending() == 0
 
@@ -306,11 +310,23 @@ class TestChangesAndFailures:
         PngContainer().write_xmp(path, b"<broken xmp")
         before = _files([path])
         summary = xmp_export_run()
-        assert summary["skipped"] == 1
+        assert (summary["left_alone"], summary["skipped"]) == (1, 0)
         assert _files([path]) == before
-        assert db_get_xmp_export_counts()["skipped"] == 1
+        assert db_get_xmp_export_counts()["left_alone"] == 1
         # Automatic passes don't keep retrying a file they must not touch.
         assert xmp_export_run()["checked"] == 0
+
+    def test_newer_pictopy_data_is_left_alone(self, library):
+        path = _photo(library, "a")
+        _tag("a")
+        PngContainer().write_xmp(
+            path, PictoPyXmpCodec().encode(PictoPyMetadata(schema_version=99))
+        )
+        before = _files([path])
+        summary = xmp_export_run()
+        assert (summary["left_alone"], summary["skipped"]) == (1, 0)
+        assert _files([path]) == before
+        assert db_get_xmp_export_counts()["left_alone"] == 1
 
 
 class TestManualRun:
@@ -327,16 +343,57 @@ class TestManualRun:
         stored = read_image_metadata(path)
         assert stored is not None and stored.tags == ["person"]
 
-    def test_unchanged_library_is_not_reread(self, library, monkeypatch):
-        _photo(library, "a")
+    def test_up_to_date_files_are_rechecked_but_not_touched(self, library, monkeypatch):
+        path = _photo(library, "a")
         _tag("a")
         xmp_export_run()
-        monkeypatch.setattr(
-            exporter,
-            "collect_image_metadata",
-            lambda ids: pytest.fail("clean images with untouched files need no data"),
-        )
-        assert xmp_export_run(include_clean=True)["unchanged"] == 1
+        before = _files([path])
+
+        def must_not_write(*args, **kwargs):  # type: ignore[no-untyped-def]
+            raise AssertionError("the recorded digest and stat already match")
+
+        monkeypatch.setattr(exporter, "write_image_metadata", must_not_write)
+        summary = xmp_export_run(include_clean=True)
+        assert (summary["checked"], summary["unchanged"]) == (1, 1)
+        assert _files([path]) == before
+
+    def test_a_codec_change_reaches_files_exported_before_it(
+        self, library, monkeypatch
+    ):
+        """New releases can change what the codec writes; the button applies it
+        to the whole library, automatic export leaves clean files alone."""
+        paths = [_photo(library, i) for i in ("a", "b")]
+        _tag("a")
+        _tag("b")
+        xmp_export_run()
+        before = _files(paths)
+
+        _ship_new_codec_section(monkeypatch)
+
+        assert xmp_export_run()["checked"] == 0  # automatic: nothing is dirty
+        assert _files(paths) == before
+
+        assert xmp_export_run(include_clean=True)["written"] == 2
+        for path in paths:
+            assert (
+                b"<pictopy:Extra>new section</pictopy:Extra>" in Path(path).read_bytes()
+            )
+        # And the button stays idempotent under the new codec.
+        after = _files(paths)
+        assert xmp_export_run(include_clean=True)["written"] == 0
+        assert _files(paths) == after
+
+
+def _ship_new_codec_section(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Stand-in for a release that changes what the codec writes."""
+
+    def encode_extra(metadata: PictoPyMetadata, parent: ET.Element) -> None:
+        ET.SubElement(parent, f"{{{NS_PICTOPY}}}Extra").text = "new section"
+
+    sections = codec_module.SECTIONS + [
+        ("extra", encode_extra, lambda parent, metadata: None)
+    ]
+    monkeypatch.setattr(codec_module, "SECTIONS", sections)
 
 
 class TestToggle:
@@ -345,6 +402,20 @@ class TestToggle:
         _tag("a")
         before = _files([path])
         assert xmp_export_if_enabled() is None
+        assert _files([path]) == before
+
+    def test_automatic_export_leaves_clean_files_after_a_codec_change(
+        self, library, monkeypatch
+    ):
+        path = _photo(library, "a")
+        _tag("a")
+        _enable()
+        xmp_export_if_enabled()
+        before = _files([path])
+
+        _ship_new_codec_section(monkeypatch)
+        summary = xmp_export_if_enabled()
+        assert summary is not None and summary["checked"] == 0
         assert _files([path]) == before
 
     def test_on_writes(self, library):

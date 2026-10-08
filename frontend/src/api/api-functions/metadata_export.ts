@@ -7,8 +7,10 @@ export interface ExportRunSummary {
   checked: number;
   written: number;
   unchanged: number;
-  /** Nothing to store, unreadable existing metadata, or a newer PictoPy's data. */
+  /** Nothing to write: no PictoPy data to store, or an unsupported format. */
   skipped: number;
+  /** Not written on purpose: unreadable existing metadata, or a newer PictoPy's. */
+  left_alone: number;
   failed: number;
 }
 
@@ -18,8 +20,8 @@ export interface MetadataExportStatus {
   pending: number;
   /** Pending images whose last write failed; the next pass retries them. */
   failed: number;
-  /** Left alone on purpose: unreadable existing metadata or a newer PictoPy's. */
-  skipped: number;
+  /** Not written on purpose: unreadable existing metadata, or a newer PictoPy's. */
+  left_alone: number;
   /** The export started from Settings, not one a sync runs itself. */
   running: boolean;
   run_failed: boolean;

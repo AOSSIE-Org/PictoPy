@@ -21,7 +21,10 @@ class ExportRunSummary(BaseModel):
     checked: int
     written: int
     unchanged: int
+    # Nothing to write: no PictoPy data to store, or an unsupported format.
     skipped: int
+    # Not written on purpose; same category as the status field below.
+    left_alone: int
     failed: int
 
 
@@ -31,8 +34,8 @@ class MetadataExportStatusData(BaseModel):
     pending: int
     # Pending images whose last write failed; the next pass retries them.
     failed: int
-    # Left alone on purpose: unreadable XMP, or a newer PictoPy's data.
-    skipped: int
+    # Not written on purpose: unreadable existing XMP, or a newer PictoPy's data.
+    left_alone: int
     # State of the export started from Settings; automatic passes aren't tracked.
     running: bool = False
     run_failed: bool = False
