@@ -520,7 +520,9 @@ def _frame_row(frame_id: str, path: Optional[str], index: int = 0) -> dict:
 
 
 class TestRefreshFrameImages:
-    def test_rewrites_a_small_frame_at_full_size(self, tmp_path, real_video_file):
+    def test_rewrites_a_small_frame_at_full_size(
+        self, tmp_path, frames_dir, real_video_file
+    ):
         from PIL import Image
 
         path = _jpeg(str(tmp_path / "frame_0000.jpg"), (64, 48))
@@ -565,7 +567,9 @@ class TestRefreshFrameImages:
         stored = db_get_frames_for_video("vid-1")[0]["frame_path"]
         assert stored == usable[0]["frame_path"]
 
-    def test_an_undecodable_video_keeps_the_frames_already_on_disk(self, tmp_path):
+    def test_an_undecodable_video_keeps_the_frames_already_on_disk(
+        self, tmp_path, frames_dir
+    ):
         good = _jpeg(str(tmp_path / "good.jpg"), (320, 240))
         broken = str(tmp_path / "not-a-video.mp4")
         with open(broken, "wb") as handle:
