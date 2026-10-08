@@ -362,7 +362,7 @@ class TestFoldersAPI:
 
     def test_enable_ai_tagging_empty_list(self, client):
         """Test enabling AI tagging with empty folder_ids list."""
-        request_data = {"folder_ids": []}
+        request_data: dict[str, list[str]] = {"folder_ids": []}
 
         response = client.post("/folders/enable-ai-tagging", json=request_data)
 
@@ -374,7 +374,7 @@ class TestFoldersAPI:
 
     def test_enable_ai_tagging_missing_field(self, client):
         """Test enabling AI tagging without folder_ids field."""
-        request_data = {}
+        request_data: dict[str, list[str]] = {}
 
         response = client.post("/folders/enable-ai-tagging", json=request_data)
 
@@ -459,7 +459,7 @@ class TestFoldersAPI:
 
     def test_disable_ai_tagging_empty_list(self, client):
         """Test disabling AI tagging with empty folder_ids list."""
-        request_data = {"folder_ids": []}
+        request_data: dict[str, list[str]] = {"folder_ids": []}
 
         response = client.post("/folders/disable-ai-tagging", json=request_data)
 
@@ -471,7 +471,7 @@ class TestFoldersAPI:
 
     def test_disable_ai_tagging_missing_field(self, client):
         """Test disabling AI tagging without folder_ids field."""
-        request_data = {}
+        request_data: dict[str, list[str]] = {}
 
         response = client.post("/folders/disable-ai-tagging", json=request_data)
 
