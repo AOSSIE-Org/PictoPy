@@ -86,7 +86,9 @@ export interface PaginationControlsProps {
 
 export interface Cluster {
   cluster_id: string;
-  cluster_name: string;
+  /** Photos only; videos are counted separately. */
   face_count: number;
+  cluster_name: string | null;
+  video_count: number;
   face_image_base64?: string;
 }

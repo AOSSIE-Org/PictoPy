@@ -137,7 +137,7 @@ allowed only among siblings.
 
 - **Do not open a PR for an issue that maintainers have not reviewed and labelled.** Wait
   for the green light. This is the project's most-enforced process rule.
-- PRs target `main`.
+- PRs target `dev`. `main` only moves via a release PR from `dev`.
 - The PR body must reference its issue as `#<number>` — `.github/workflows/linked-issue.yml`
   copies labels from the linked issue onto the PR.
 - CodeRabbit reviews every PR automatically (`.coderabbit.yaml`).
