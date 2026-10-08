@@ -11,10 +11,10 @@ from platformdirs import user_data_dir  # noqa: E402
 
 
 def _assert_not_user_library() -> None:
-    # The suite drops and truncates tables, so a silent redirect failure would
-    # destroy a real library. Fail the session instead.
-    library_dir = os.path.abspath(user_data_dir("PictoPy"))
-    resolved = os.path.abspath(DATABASE_PATH)
+    # The suite drops and truncates tables, so a redirect that lands in the real
+    # library, directly or through a symlink SQLite would follow, fails the run.
+    library_dir = os.path.realpath(user_data_dir("PictoPy"))
+    resolved = os.path.realpath(DATABASE_PATH)
     if os.path.commonpath([resolved, library_dir]) == library_dir:
         raise RuntimeError(
             f"Refusing to run tests against the PictoPy library database: {resolved}"
