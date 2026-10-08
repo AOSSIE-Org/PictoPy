@@ -728,7 +728,7 @@ class TestFaceClusteringAlgo:
         ), f"The folder-size bug is present: expected 2 clusters, got {len(isolated_clusters)} in isolated run"
 
         # Verify points were assigned correctly (10 points per cluster)
-        cluster_counts = {}
+        cluster_counts: dict[str, int] = {}
         for r in results_isolated:
             cluster_counts[r.cluster_uuid] = cluster_counts.get(r.cluster_uuid, 0) + 1
 
@@ -815,7 +815,7 @@ class TestFaceClusteringAlgo:
         pt_b2 /= np.linalg.norm(pt_b2)
 
         # 5 Singletons (mutually orthogonal to each other and A/B)
-        singletons = []
+        singletons: list[np.ndarray] = []
         for _ in range(5):
             vec = np.random.randn(dim)
             vec -= np.dot(vec, center_a) * center_a
@@ -839,7 +839,7 @@ class TestFaceClusteringAlgo:
         )
 
         # Group face_ids by their cluster UUIDs
-        clusters = {}
+        clusters: dict[str, list[int]] = {}
         for r in results:
             if r.cluster_uuid not in clusters:
                 clusters[r.cluster_uuid] = []
