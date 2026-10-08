@@ -1,11 +1,13 @@
 # app/detectors/FaceDetector.py
 
+from typing import Dict, List, Optional, TypedDict
+
 import cv2
+import numpy as np
 from app.models.FaceNet import FaceNet
 from app.utils.FaceNet import FaceNet_util_preprocess_image, FaceNet_util_get_model_path
 from app.utils.YOLO import YOLO_util_get_model_path
 from app.models.YOLO import YOLO
-from app.database.faces import db_insert_face_embeddings_by_image_id
 from app.logging.setup_logging import get_logger
 from app.config.settings import (
     PICTO_CLUSTERING_CONF_THRESHOLD,
@@ -16,6 +18,15 @@ from app.utils.face_quality import face_passes_quality_gate
 
 # Initialize logger
 logger = get_logger(__name__)
+
+
+class FaceDetectionResult(TypedDict):
+    """Faces that passed the quality gate; the three lists are index-aligned."""
+
+    embeddings: List[np.ndarray]  # L2-normalised FaceNet vectors
+    bboxes: List[Dict[str, int]]  # x, y, width, height in source-image pixels
+    confidences: List[float]
+    faces_skipped: int  # detections rejected by the quality gate
 
 
 class FaceDetector:
@@ -29,17 +40,20 @@ class FaceDetector:
         self._initialized = True
         logger.info("FaceDetector initialized with YOLO and FaceNet models.")
 
-    def detect_faces(self, image_id: str, image_path: str, forSearch: bool = False):
+    def detect_faces(self, image_path: str) -> Optional[FaceDetectionResult]:
+        """Detect and embed the faces in an image file. Pure inference: the caller
+        persists them, so photos, face search and video keyframes share this path.
+        """
         img = cv2.imread(image_path)
         if img is None:
             logger.error(f"Failed to load image: {image_path}")
             return None
 
-        boxes, scores, class_ids = self.yolo_detector(img)
+        boxes, scores, _ = self.yolo_detector(img)
         logger.debug(f"Face detection boxes: {boxes}")
-        logger.info(f"Detected {len(boxes)} faces in image {image_id}.")
+        logger.info(f"Detected {len(boxes)} faces in {image_path}.")
 
-        processed_faces, embeddings, bboxes, confidences = [], [], [], []
+        embeddings, bboxes, confidences = [], [], []
         faces_skipped = 0
 
         for box, score in zip(boxes, scores):
@@ -68,22 +82,15 @@ class FaceDetector:
             confidences.append(float(score))
 
             processed_face = FaceNet_util_preprocess_image(face_img)
-            processed_faces.append(processed_face)
-
             embedding = self.facenet.get_embedding(processed_face)
             embeddings.append(embedding)
 
-        if not forSearch and embeddings:
-            db_insert_face_embeddings_by_image_id(
-                image_id, embeddings, confidence=confidences, bbox=bboxes
-            )
-
-        return {
-            "ids": f"{class_ids}",
-            "processed_faces": processed_faces,
-            "num_faces": len(embeddings),
-            "faces_skipped": faces_skipped,
-        }
+        return FaceDetectionResult(
+            embeddings=embeddings,
+            bboxes=bboxes,
+            confidences=confidences,
+            faces_skipped=faces_skipped,
+        )
 
     def close(self):
         """

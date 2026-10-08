@@ -32,7 +32,7 @@ The automated setup script supports **Windows**, **Debian-based Linux (e.g., Ubu
    cd PictoPy
    ```
 
-5. Add the main repository as "upstream":
+5. Add the dev repository as "upstream":
 
    ```bash
    git remote add upstream https://github.com/AOSSIE-Org/PictoPy

@@ -18,6 +18,7 @@ export interface Image {
   isTagged: boolean;
   metadata?: ImageMetadata;
   isFavourite?: boolean;
+  favouritedAt?: string | null;
   tags?: string[];
   bboxes?: { x: number; y: number; width: number; height: number }[];
 }
@@ -45,6 +46,7 @@ export interface Video {
   folder_id: string;
   metadata?: VideoMetadata;
   isFavourite?: boolean;
+  favouritedAt?: string | null;
   tags?: string[];
 }
 
@@ -84,7 +86,9 @@ export interface PaginationControlsProps {
 
 export interface Cluster {
   cluster_id: string;
-  cluster_name: string;
+  /** Photos only; videos are counted separately. */
   face_count: number;
+  cluster_name: string | null;
+  video_count: number;
   face_image_base64?: string;
 }
