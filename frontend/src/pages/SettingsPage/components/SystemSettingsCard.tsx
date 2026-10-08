@@ -92,8 +92,7 @@ const SystemSettingsCard: React.FC = () => {
             Launch at startup
           </div>
           <div id="autostart-desc" className="text-muted-foreground text-sm">
-            Automatically start PictoPy when you log in. The window starts
-            minimized to the system tray.
+            Automatically start PictoPy when you log in.
           </div>
         </div>
 

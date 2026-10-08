@@ -188,6 +188,7 @@ export const useFolderOperations = () => {
     // Data
     folders,
     isLoading: foldersQuery.isLoading,
+    isError: foldersQuery.isError,
 
     // Operations
     toggleAITagging,
