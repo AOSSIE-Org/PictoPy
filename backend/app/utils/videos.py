@@ -88,7 +88,7 @@ VIDEO_EXTENSIONS = {".mp4", ".mov", ".webm", ".m4v"}
 IndexedVideos = Dict[str, Tuple[Optional[str], Mapping[str, Any]]]
 
 
-def video_util_process_folder_videos(folder_data: List[Tuple[str, int, bool]]) -> bool:
+def video_util_process_folder_videos(folder_data: List[Tuple[str, str, bool]]) -> bool:
     """Main function to process videos in multiple folders based on provided folder data.
 
     Args:
@@ -221,7 +221,7 @@ def video_util_source_is_unchanged(
 
 def video_util_prepare_video_records(
     video_files: List[str],
-    folder_path_to_id: Dict[str, int],
+    folder_path_to_id: Dict[str, str],
     already_indexed: Optional[IndexedVideos] = None,
 ) -> List[VideoRecord]:
     """
@@ -257,13 +257,16 @@ def video_util_prepare_video_records(
             os.path.join(THUMBNAIL_IMAGES_PATH, thumbnail_name)
         )
 
+        # None when no poster frame could be grabbed.
+        poster: Optional[str] = thumbnail_path
+
         # One capture serves both the poster frame and the metadata read
         capture = cv2.VideoCapture(video_path)
         try:
             if not video_util_generate_thumbnail(
                 video_path, thumbnail_path, capture=capture
             ):
-                thumbnail_path = None
+                poster = None
 
             metadata = video_util_extract_metadata(video_path, capture=capture)
         finally:
@@ -274,7 +277,7 @@ def video_util_prepare_video_records(
                 "id": video_id,
                 "path": video_path,
                 "folder_id": folder_id,
-                "thumbnailPath": thumbnail_path,
+                "thumbnailPath": poster,
                 "metadata": json.dumps(metadata),
                 "isTagged": False,
                 # Only a real capture time, never the mtime standing in for
@@ -467,7 +470,7 @@ def video_util_extract_metadata(
     return metadata
 
 
-def video_util_remove_obsolete_videos(folder_id_list: List[int]) -> int:
+def video_util_remove_obsolete_videos(folder_id_list: List[str]) -> int:
     """
     Remove obsolete videos that no longer exist in the filesystem.
 
@@ -568,7 +571,7 @@ def video_util_sample_frame_timestamps(
     if duration <= effective_interval:
         return [duration / 2]
 
-    timestamps = []
+    timestamps: List[float] = []
     position = effective_interval / 2
     while position < duration and len(timestamps) < max_frames:
         timestamps.append(round(position, 3))
