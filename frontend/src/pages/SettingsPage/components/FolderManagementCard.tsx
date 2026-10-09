@@ -154,6 +154,8 @@ const FolderManagementCard: React.FC = () => {
     new Set(),
   );
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [singleFolderToDelete, setSingleFolderToDelete] =
+    useState<FolderDetails | null>(null);
   const selectAllCheckboxRef = useRef<HTMLInputElement>(null);
 
   // Prune any selected folder IDs that are no longer in the folder list
@@ -246,18 +248,40 @@ const FolderManagementCard: React.FC = () => {
 
   const handleOpenBatchDeleteDialog = () => {
     if (selectedFolderIds.size === 0) return;
+    setSingleFolderToDelete(null);
+    setIsConfirmDialogOpen(true);
+  };
+
+  const handleOpenSingleDeleteDialog = (folder: FolderDetails) => {
+    setSingleFolderToDelete(folder);
     setIsConfirmDialogOpen(true);
   };
 
   const handleConfirmDelete = () => {
+    if (singleFolderToDelete) {
+      deleteMultipleFolders([singleFolderToDelete.folder_id]);
+      setSelectedFolderIds((prev) => {
+        if (!prev.has(singleFolderToDelete.folder_id)) return prev;
+        const next = new Set(prev);
+        next.delete(singleFolderToDelete.folder_id);
+        return next;
+      });
+      setSingleFolderToDelete(null);
+      return;
+    }
+
     if (selectedFolderIds.size === 0) return;
 
     deleteMultipleFolders(Array.from(selectedFolderIds));
   };
 
   const deleteCount = selectedFolderIds.size;
-  const dialogTitle = `Remove ${deleteCount} folder${deleteCount === 1 ? '' : 's'}?`;
-  const dialogDescription = `Are you sure you want to remove the selected ${deleteCount} folder${deleteCount === 1 ? '' : 's'} from your library? Photos and videos inside them will no longer appear in PictoPy. Your files on disk will not be deleted.`;
+  const dialogTitle = singleFolderToDelete
+    ? 'Remove folder?'
+    : `Remove ${deleteCount} folder${deleteCount === 1 ? '' : 's'}?`;
+  const dialogDescription = singleFolderToDelete
+    ? `Are you sure you want to remove "${singleFolderToDelete.folder_path}" from your library? Photos and videos inside it will no longer appear in PictoPy. Your files on disk will not be deleted.`
+    : `Are you sure you want to remove the selected ${deleteCount} folder${deleteCount === 1 ? '' : 's'} from your library? Photos and videos inside them will no longer appear in PictoPy. Your files on disk will not be deleted.`;
 
   return (
     <SettingsCard
@@ -334,7 +358,12 @@ const FolderManagementCard: React.FC = () => {
                     <div className="flex min-w-0 flex-1 items-center gap-3">
                       <label
                         htmlFor={`select-folder-${folder.folder_id}`}
-                        className="group/checkbox hover:bg-accent/50 relative flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors"
+                        className={cn(
+                          'group/checkbox hover:bg-accent/50 relative flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full transition-opacity duration-150',
+                          isSelected
+                            ? 'opacity-100'
+                            : 'opacity-0 group-hover:opacity-100 focus-within:opacity-100',
+                        )}
                         title={isSelected ? 'Deselect folder' : 'Select folder'}
                       >
                         <input
@@ -388,6 +417,19 @@ const FolderManagementCard: React.FC = () => {
                           deleteFolderPending
                         }
                       />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        data-testid={`delete-folder-${folder.folder_id}`}
+                        onClick={() => handleOpenSingleDeleteDialog(folder)}
+                        disabled={deleteFolderPending}
+                        aria-label={`Remove folder ${folder.folder_path}`}
+                        title="Remove folder"
+                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 size-8 cursor-pointer opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
 
@@ -458,7 +500,12 @@ const FolderManagementCard: React.FC = () => {
 
       <ConfirmDialog
         open={isConfirmDialogOpen}
-        onOpenChange={setIsConfirmDialogOpen}
+        onOpenChange={(open) => {
+          setIsConfirmDialogOpen(open);
+          if (!open) {
+            setSingleFolderToDelete(null);
+          }
+        }}
         title={dialogTitle}
         description={dialogDescription}
         confirmLabel={deleteFolderPending ? 'Removing...' : 'Remove'}
