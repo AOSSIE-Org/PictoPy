@@ -54,6 +54,45 @@ The main backend is never bound beyond localhost, because it exposes shutdown, d
 
 Active shares live **in memory only**. There is no table and no file: quitting PictoPy ends every share, and no token is ever written to disk.
 
+## What a shared photo contains
+
+Thumbnails are PictoPy's own generated JPEGs and are served as they are. Originals go through `open_without_pictopy()` (`app/utils/xmp/service.py`), because a PNG may carry the faces, names and album names that [metadata export](metadata-export.md) writes into it. Formats PictoPy never writes metadata into are served unchanged.
+
+For a PNG, every XMP chunk is passed through the codec's `strip()`, and nothing else in the file is touched:
+
+| The XMP chunk… | What the guest receives |
+| --- | --- |
+| holds no PictoPy data | the chunk, byte for byte |
+| holds PictoPy data and other tools' data | the chunk rewritten without any `pictopy:` element or attribute, at any depth |
+| holds only PictoPy data | no XMP chunk |
+| cannot be parsed, and cannot hold PictoPy data | the chunk, byte for byte |
+| cannot be parsed, and may hold PictoPy data | no XMP chunk |
+| is compressed and corrupt | no XMP chunk |
+
+It **fails closed**: an XMP chunk is dropped only when it might hold PictoPy's data and cannot be cleaned. Such a chunk "may hold" PictoPy data when any of these appear in its bytes:
+
+- the namespace `https://pictopy.app/ns/1.0/`, after resolving numeric character references (`&#104;`);
+- an entity declaration;
+- NUL bytes, which mean a non-UTF-8 encoding.
+
+Two kinds of chunk get a more conservative test, because their text cannot be extracted: those over 64 MB, which are never held in memory, and those with a broken `iTXt` header. They are scanned for the namespace, `&#` or `<!ENTITY`, in UTF-8, UTF-16 and UTF-32, and dropped if any appears, or if the chunk is compressed.
+
+EXIF, ICC profiles, PNG text chunks, any bytes after `IEND`, and the pixel data reach the guest unchanged. The file on disk is never modified.
+
+The response is streamed. `stream_with_xmp()` first walks the chunk headers, reading only XMP chunk bodies, to work out the edits and the exact `Content-Length`. It then copies the file in 64 KB blocks through the same open handle. Memory per request stays at roughly one block plus the XMP packet, whatever the photo's size.
+
+## Caching
+
+Photos and thumbnails are served with:
+
+- `ETag`: a hash of the file's mtime (in nanoseconds), its size, and a variant tag;
+- `Last-Modified`: the file's mtime;
+- `Cache-Control: private, no-cache`: the browser keeps its copy, but must ask before each reuse.
+
+A request whose `If-None-Match` matches the current `ETag` (also as `W/`, in a list, or `*`) gets an empty `304`. So does one whose `If-Modified-Since` is not older than the file, but only when there is no `If-None-Match`. The 304 is answered **after** the token, password and album-membership checks, so a revoked, expired or locked share returns `404` even to a browser holding a valid `ETag`. That is what makes revoking a share also stop cached copies from being shown. A 304 never opens the file.
+
+For a streamed PNG, the validators come from `fstat` on the handle being streamed, so they always describe the bytes actually sent. Bump `_PHOTO_VARIANT` in `app/share/routes.py` whenever the bytes served for an unchanged file change, such as a new stripping rule, so browsers stop reusing copies made under the old rule.
+
 ## Sharing an album by hand
 
 ### Find an album id
@@ -144,7 +183,7 @@ The backend needs no changes for this — the share server is already bound to `
 ## Running the tests
 
 ```bash
-cd backend && pytest tests/test_share_routes.py tests/test_share_registry.py tests/test_network_utils.py
+cd backend && pytest tests/test_share_routes.py tests/test_share_registry.py tests/test_network_utils.py tests/test_xmp_stripping.py
 ```
 
-These cover token issue, expiry and revocation, the interface ranking, and the security invariants — most importantly that an image belonging to a different album cannot be fetched through a share token, and that the share server exposes nothing beyond `/s/{token}`.
+These cover token issue, expiry and revocation, the interface ranking, and the security invariants — most importantly that an image belonging to a different album cannot be fetched through a share token, and that the share server exposes nothing beyond `/s/{token}`. They also cover revalidation and caching, and — in `test_xmp_stripping.py` — that no PictoPy metadata survives in a served photo while other tools' metadata and the pixels do.

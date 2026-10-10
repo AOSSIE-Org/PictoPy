@@ -22,7 +22,7 @@ from app.database.videos import db_get_videos_by_ids
 from app.utils.videos import video_util_to_video_data
 from starlette.datastructures import State
 
-from app.routes.dependencies import get_state
+from app.routes.dependencies import get_state, request_metadata_export
 from app.utils.face_clusters import cluster_util_face_clusters_sync
 from app.schemas.face_clusters import (
     RenameClusterRequest,
@@ -108,13 +108,14 @@ _active_recluster_task_id: Optional[str] = None
 RECLUSTER_TASK_TTL_MINUTES = 15
 
 
-async def _run_global_recluster(task_id: str) -> None:
+async def _run_global_recluster(task_id: str, app_state: State) -> None:
     global _active_recluster_task_id
     entry = recluster_tasks[task_id]
     try:
         result, total_faces_skipped = await asyncio.to_thread(
             cluster_util_face_clusters_sync, force_full_reclustering=True
         )
+        request_metadata_export(app_state)
 
         entry.status = "complete"
         entry.clusters_created = result or 0
@@ -209,6 +210,8 @@ def rename_cluster(
         # appear in, so memories already holding those photos are now ranked
         # on stale inputs.
         _rescore_memories_for_cluster(app_state, cluster_id)
+        # The name is written into every photo of this person.
+        request_metadata_export(app_state)
 
         return RenameClusterResponse(
             success=True,
@@ -453,7 +456,9 @@ def face_tagging(
     response_model=GlobalReclusterStartResponse,
     responses={code: {"model": ErrorResponse} for code in [500]},
 )
-async def trigger_global_reclustering() -> GlobalReclusterStartResponse:
+async def trigger_global_reclustering(
+    app_state: State = Depends(get_state),
+) -> GlobalReclusterStartResponse:
     """
     Start a global face reclustering job in the background.
     This forces full reclustering regardless of the 24-hour rule.
@@ -483,7 +488,7 @@ async def trigger_global_reclustering() -> GlobalReclusterStartResponse:
     entry = ReclusterTask()
     recluster_tasks[task_id] = entry
     _active_recluster_task_id = task_id
-    entry.task = asyncio.create_task(_run_global_recluster(task_id))
+    entry.task = asyncio.create_task(_run_global_recluster(task_id, app_state))
 
     logger.info("Started manual global face reclustering (task_id=%s)", task_id)
 
