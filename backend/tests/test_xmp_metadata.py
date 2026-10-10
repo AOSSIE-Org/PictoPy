@@ -4,6 +4,7 @@ import os
 import struct
 import tracemalloc
 import zlib
+from stat import S_IREAD, S_IWRITE
 
 import numpy as np
 import pytest
@@ -268,6 +269,50 @@ class TestPngWrites:
 
     def test_no_temp_files_left_behind(self, png, tmp_path):
         write_image_metadata(png, _sample())
+        assert [p.name for p in tmp_path.iterdir()] == ["a.png"]
+
+    def test_symlink_is_kept_and_its_target_written(self, png, tmp_path):
+        link = tmp_path / "link.png"
+        try:
+            os.symlink(png, link)
+        except OSError:
+            pytest.skip("creating symlinks needs extra privileges here")
+        before = os.stat(png).st_mtime_ns
+        assert write_image_metadata(str(link), _sample()) is WriteOutcome.WRITTEN
+        assert link.is_symlink()
+        assert read_image_metadata(png) is not None
+        assert os.stat(png).st_mtime_ns == before
+        assert sorted(p.name for p in tmp_path.iterdir()) == ["a.png", "link.png"]
+
+    def test_read_only_file_is_refused_and_untouched(self, png, tmp_path):
+        if hasattr(os, "geteuid") and os.geteuid() == 0:
+            pytest.skip("root can write read-only files")
+        before = _read(png)
+        os.chmod(png, S_IREAD)
+        try:
+            with pytest.raises(PermissionError):
+                write_image_metadata(png, _sample())
+        finally:
+            os.chmod(png, S_IREAD | S_IWRITE)
+        assert _read(png) == before
+        assert [p.name for p in tmp_path.iterdir()] == ["a.png"]
+
+    def test_failed_replace_cleans_up_a_read_only_copy(
+        self, png, tmp_path, monkeypatch
+    ):
+        # The file turned read-only after the check; the copy inherits that mode.
+        os.chmod(png, S_IREAD)
+        monkeypatch.setattr(png_module.os, "access", lambda *a: True)
+
+        def busy(*args):
+            raise OSError("file is busy")
+
+        monkeypatch.setattr(png_module.os, "replace", busy)
+        try:
+            with pytest.raises(OSError, match="busy"):
+                write_image_metadata(png, _sample())
+        finally:
+            os.chmod(png, S_IREAD | S_IWRITE)
         assert [p.name for p in tmp_path.iterdir()] == ["a.png"]
 
 

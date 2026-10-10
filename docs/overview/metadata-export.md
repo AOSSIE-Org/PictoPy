@@ -60,7 +60,7 @@ PictoPy also records the new file size, so the next folder scan recognises the f
 
 ## If a photo cannot be written
 
-A photo that cannot be written — on a drive that is not plugged in, in a read-only folder, or open in another program — does not stop the rest. PictoPy tries again on the next export, and the **Export Now** line shows how many photos are waiting to be retried.
+A photo that cannot be written — on a drive that is not plugged in, marked read-only or in a read-only folder, or open in another program — does not stop the rest. PictoPy tries again on the next export, and the **Export Now** line shows how many photos are waiting to be retried.
 
 PictoPy also deliberately leaves two kinds of file alone:
 
@@ -73,7 +73,7 @@ Automatic export leaves them alone until the photo changes again. **Export metad
 
 Metadata export only writes to files on your machine; nothing is uploaded. Three things are worth knowing:
 
-- **Locked albums are never written into a photo.** Their names stay in PictoPy only.
+- **Locked albums are not written into a photo.** If a photo was exported before you locked its album, the album name stays in the file until the next export removes it. With **Save Metadata Automatically** on, that happens on its own; with it off, use **Export metadata**. Copies of the file made before then keep the name.
 - **Shared albums never include this metadata.** When someone opens an album you [share](sharing-albums.md), PictoPy removes its metadata from each photo as it sends it — the face data and names never reach them. Metadata from other programs, such as camera EXIF, is sent as usual.
 - **Copying a file yourself copies its metadata.** A PNG you email, upload or copy to a USB stick carries the faces, names and album names saved in it. That is what lets the metadata survive a reinstall, but it means the file says more than the picture does.
 

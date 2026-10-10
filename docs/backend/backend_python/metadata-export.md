@@ -122,9 +122,10 @@ Decoding is tolerant. A section that fails to decode is logged and skipped witho
 
 1. Read the file and its stat.
 2. Drop every existing XMP chunk, insert the new one before `IDAT`, and copy every other chunk byte-for-byte. Bytes after `IEND` are kept.
-3. Write a temporary file in the same directory, `fsync` it and copy the permissions.
-4. Refuse with `FileChangedError` if the file's size or nanosecond mtime changed since step 1.
-5. `os.replace` it over the original, then restore the original access and modification times with `os.utime`.
+3. Resolve a symlink to the file it points to, and refuse with `PermissionError` if that file is read-only. A rename needs only folder permission, so without this a read-only file would be replaced on Linux and macOS, and a symlink would be replaced by a copy of the photo.
+4. Write a temporary file in the target's directory, `fsync` it and copy the permissions.
+5. Refuse with `FileChangedError` if the file's size or nanosecond mtime changed since step 1.
+6. `os.replace` it over the original, then restore the original access and modification times with `os.utime`.
 
 Pixel data is never decoded or re-encoded, and a crash can never leave a half-written file. Because the file is replaced, its creation time on Windows is new; nothing in PictoPy reads creation time.
 

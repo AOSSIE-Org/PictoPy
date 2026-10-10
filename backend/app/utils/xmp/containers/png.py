@@ -1,7 +1,9 @@
+import contextlib
 import os
 import struct
 import tempfile
 import zlib
+from stat import S_IREAD, S_IWRITE
 from typing import BinaryIO, Iterator, List, Optional, Sequence, Tuple
 
 from .base import (
@@ -288,7 +290,14 @@ class PngContainer:
 
 def _atomic_replace(path: str, content: bytes, before: os.stat_result) -> None:
     """Write beside the target then rename, so a crash never leaves half a PNG."""
-    directory = os.path.dirname(os.path.abspath(path))
+    # Replace the file a symlink points to; replacing the link would leave
+    # the photo untouched and turn the link into a copy.
+    path = os.path.realpath(path)
+    # A rename needs only folder permission, so it would overwrite a file the
+    # user marked read-only on POSIX; refuse like a read-only folder does.
+    if not os.access(path, os.W_OK):
+        raise PermissionError(f"{path} is read-only")
+    directory = os.path.dirname(path)
     fd, tmp_path = tempfile.mkstemp(dir=directory, suffix=".tmp")
     try:
         with os.fdopen(fd, "wb") as tmp:
@@ -308,7 +317,9 @@ def _atomic_replace(path: str, content: bytes, before: os.stat_result) -> None:
 
         os.replace(tmp_path, path)
     except BaseException:
-        if os.path.exists(tmp_path):
+        # The copy took the original's mode; Windows cannot delete it read-only.
+        with contextlib.suppress(OSError):
+            os.chmod(tmp_path, S_IREAD | S_IWRITE)
             os.unlink(tmp_path)
         raise
 
