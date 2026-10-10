@@ -101,9 +101,14 @@ def test_non_semantic_model_install_queues_nothing():
     assert submitted == []
 
 
-def test_startup_creates_and_shutdown_closes_the_debouncer():
+def test_startup_creates_and_shutdown_closes_the_debouncer(tmp_path, monkeypatch):
     from fastapi.testclient import TestClient
 
+    # main creates the thumbnail directory as it is imported, so point it away
+    # from the real user data directory first.
+    monkeypatch.setattr(
+        "app.config.settings.THUMBNAIL_IMAGES_PATH", str(tmp_path / "thumbnails")
+    )
     import main
     from app.utils.xmp.debounce import ExportDebouncer
 
