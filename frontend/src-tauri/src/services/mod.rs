@@ -1,3 +1,4 @@
+pub mod sidecars;
 pub mod tunnel;
 
 use tauri::path::BaseDirectory;
