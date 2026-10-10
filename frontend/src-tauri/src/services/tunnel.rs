@@ -1,13 +1,6 @@
-//! Exposing the share server beyond the LAN through an SSH reverse tunnel.
-//!
-//! Nothing is bundled to make this work: every desktop platform ships an ssh
-//! client, and both providers below accept a plain port forward. That avoids a
-//! ~40MB third-party binary in the installer, and the supply-chain question of
-//! pinning one that upstream publishes from unversioned URLs.
-//!
-//! The child process is owned here so it dies with the app. An orphaned tunnel
-//! is an album left reachable from the internet, which is a good deal worse
-//! than the orphaned LAN listener the backend already guards against.
+//! Exposes the share server beyond the LAN through an SSH reverse tunnel, using
+//! the platform's own ssh rather than a bundled ~40MB binary. The child is owned
+//! here so it dies with the app: an orphan leaves an album reachable publicly.
 
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -36,11 +29,8 @@ struct Provider {
     url_suffix: &'static str,
 }
 
-/// Tried in order until one answers. srv.us is the intended second entry, and
-/// needs a dedicated key generated first, so it lands separately rather than
-/// half-built here. A fallback matters because a provider can fail while
-/// looking healthy: one accepted connections and issued URLs for a tunnel it
-/// then never routed anything to.
+/// Tried in order until one answers; srv.us is the intended second, pending a
+/// key of its own. A provider can look healthy while routing nothing it issues.
 const PROVIDERS: [Provider; 1] = [Provider {
     name: "localhost.run",
     destination: "nokey@localhost.run",
@@ -48,10 +38,8 @@ const PROVIDERS: [Provider; 1] = [Provider {
     url_suffix: ".lhr.life",
 }];
 
-/// The part of a spawned process this module actually needs.
-///
-/// Named so the lifecycle can be exercised without spawning ssh; the real
-/// implementation is the shell plugin's child.
+/// Named so the lifecycle can be tested without spawning ssh; in production this
+/// is the shell plugin's child.
 pub trait TunnelChild: Send + 'static {
     fn pid(&self) -> u32;
     fn kill(self) -> Result<(), String>;
@@ -74,21 +62,16 @@ struct ActiveTunnel<C: TunnelChild> {
     child: C,
 }
 
-/// The tracked child, and whether the app has begun shutting down.
-///
-/// Both live under one lock on purpose. Kept apart, a shutdown could land
-/// between a child being spawned and being tracked, find nothing to kill, and
-/// let the start install an ssh process that then outlives the application.
+/// Child and shutdown flag share one lock on purpose: kept apart, a shutdown
+/// landing mid-spawn finds nothing to kill and the ssh process outlives the app.
 struct Tracked<C: TunnelChild> {
     tunnel: Option<ActiveTunnel<C>>,
     closed: bool,
 }
 
 pub struct TunnelStateOf<C: TunnelChild> {
-    /// Held across an entire start or stop, spawn included. Without it two
-    /// concurrent starts could both find no tunnel, both spawn a child, and
-    /// leave whichever installed first running with nothing holding its
-    /// handle — an ssh process nobody can stop.
+    /// Held across a whole start or stop, spawn included: without it two starts
+    /// both spawn, and the loser's ssh process is left with no handle to kill it.
     lifecycle: AsyncMutex<()>,
     tracked: Mutex<Tracked<C>>,
 }
@@ -113,10 +96,8 @@ impl<C: TunnelChild> TunnelStateOf<C> {
             .and_then(|tracked| tracked.tunnel.as_ref().and_then(|t| t.url.clone()))
     }
 
-    /// Start tracking a child, before it has announced anything.
-    ///
-    /// Refuses once shutdown has been requested, killing the child rather than
-    /// storing it: by then nothing will come back to stop it.
+    /// Refuses once shutdown is requested, killing the child rather than storing
+    /// it: by then nothing will come back to stop it.
     fn track(&self, child: C) -> Result<(), String> {
         let mut tracked = self.tracked.lock().map_err(|_| "tunnel state lost")?;
         if tracked.closed {
@@ -136,10 +117,8 @@ impl<C: TunnelChild> TunnelStateOf<C> {
         Ok(())
     }
 
-    /// Kill whatever is tracked and stop tracking it.
-    ///
-    /// The pid is read first because killing consumes the handle: it cannot be
-    /// put back for a retry, so a failure has to name the process instead.
+    /// Reads the pid first because killing consumes the handle -- a failure has
+    /// to name the process, since it cannot be put back for a retry.
     fn stop(&self) -> Result<(), String> {
         self.take_and_kill(false)
     }
@@ -166,10 +145,8 @@ impl<C: TunnelChild> TunnelStateOf<C> {
         })
     }
 
-    /// Drop a tunnel from state, but only if it is still the current one.
-    ///
-    /// A tunnel that died after a newer one replaced it must not clear the
-    /// newer one's URL, which is why this checks identity rather than taking.
+    /// Checks identity rather than taking: a tunnel that died after a newer one
+    /// replaced it must not clear the newer one's URL.
     fn forget(&self, url: &str) {
         if let Ok(mut tracked) = self.tracked.lock() {
             let matches = tracked
@@ -190,12 +167,8 @@ impl<C: TunnelChild> Default for TunnelStateOf<C> {
     }
 }
 
-/// The public URL in a line of provider output, if there is one.
-///
-/// Split on whitespace rather than pattern-matching the sentence around it: the
-/// wording is the provider's to change, and one has already been observed
-/// printing something different from its own documentation. Each event is a
-/// whole line, because the shell plugin frames process output with read_line.
+/// Splits on whitespace rather than matching the sentence around it -- the
+/// wording is the provider's to change, and one already differs from its docs.
 fn find_url(line: &str, suffix: &str) -> Option<String> {
     line.split_whitespace()
         .filter(|token| token.starts_with("https://"))
@@ -349,13 +322,9 @@ pub fn tunnel_status(state: State<'_, TunnelState>) -> Result<Option<String>, St
     Ok(state.current_url())
 }
 
-/// Kill the tunnel on the way out, from outside a command context.
-///
-/// Deliberately does not take the lifecycle lock: this runs on the exit path,
-/// where blocking on an in-flight start would be worse than racing it. Racing
-/// it is safe because the refusal is recorded under the same lock the start
-/// uses to track its child, so a child spawned but not yet tracked is killed
-/// by whichever of the two arrives second.
+/// Takes no lifecycle lock: on the exit path, blocking on an in-flight start is
+/// worse than racing it, and the refusal is recorded under the tracking lock, so
+/// a child spawned but not yet tracked dies to whichever arrives second.
 pub fn shutdown(app: &AppHandle) {
     if let Some(state) = app.try_state::<TunnelState>() {
         let _ = state.close_permanently();
@@ -465,9 +434,8 @@ mod tests {
         assert!(error.contains("may still be running"), "{error}");
     }
 
-    // Exit can land between ssh being spawned and the handle being tracked.
-    // Whichever arrives second has to kill it, or the process outlives the app
-    // with an album still forwarding.
+    // Exit can land between ssh spawning and its handle being tracked; whichever
+    // arrives second must kill it or the process outlives the app.
     #[test]
     fn a_child_spawned_during_shutdown_is_killed_not_stored() {
         let killed = Arc::new(AtomicBool::new(false));

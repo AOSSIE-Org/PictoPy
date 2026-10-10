@@ -14,9 +14,7 @@ function fakeAxiosError(
   };
 }
 
-/* ------------------------------------------------------------------ */
-/*  cn (classname merge)                                              */
-/* ------------------------------------------------------------------ */
+// cn (classname merge)
 
 describe('cn', () => {
   test('merges multiple class names', () => {
@@ -37,9 +35,7 @@ describe('cn', () => {
   });
 });
 
-/* ------------------------------------------------------------------ */
-/*  getErrorMessage                                                   */
-/* ------------------------------------------------------------------ */
+// getErrorMessage
 
 describe('getErrorMessage', () => {
   test('returns default message for null / undefined', () => {

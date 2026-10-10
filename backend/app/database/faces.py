@@ -181,7 +181,6 @@ def db_insert_face_embeddings(
     try:
         embeddings_json = json.dumps([emb.tolist() for emb in embeddings])
 
-        # Convert bbox to JSON string if provided
         bbox_json = json.dumps(bbox) if bbox is not None else None
 
         cursor.execute(
@@ -220,7 +219,6 @@ def db_insert_face_embeddings_by_image_id(
         cluster_id: Cluster ID(s) for the face(s) (optional)
     """
 
-    # Handle multiple faces in one image
     if (
         isinstance(embeddings, list)
         and len(embeddings) > 0
@@ -365,7 +363,6 @@ def db_get_faces_unassigned_clusters() -> (
         faces = []
         for row in rows:
             face_id, image_id, frame_id, embeddings_json = row
-            # Convert JSON string back to numpy array
             embeddings = np.array(json.loads(embeddings_json))
             faces.append(
                 {
@@ -410,7 +407,6 @@ def db_get_all_faces_with_cluster_names() -> (
         faces = []
         for row in rows:
             face_id, image_id, frame_id, embeddings_json, cluster_name = row
-            # Convert JSON string back to numpy array
             embeddings = np.array(json.loads(embeddings_json))
             faces.append(
                 {
@@ -540,14 +536,12 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]
         cluster_embeddings: Dict[ClusterId, List[FaceEmbedding]] = {}
         for row in rows:
             cluster_id, embeddings_json = row
-            # Convert JSON string back to numpy array
             embeddings = np.array(json.loads(embeddings_json))
 
             if cluster_id not in cluster_embeddings:
                 cluster_embeddings[cluster_id] = []
             cluster_embeddings[cluster_id].append(embeddings)
 
-        # Calculate mean embeddings for each cluster
         cluster_means = []
         for cluster_id, embeddings_list in cluster_embeddings.items():
             # Stack all embeddings for this cluster and calculate mean

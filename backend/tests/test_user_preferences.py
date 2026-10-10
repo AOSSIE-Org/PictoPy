@@ -9,9 +9,7 @@ app.include_router(user_preferences_router, prefix="/user_preferences")
 client = TestClient(app)
 
 
-# ##############################
 # Pytest Fixtures
-# ##############################
 
 
 @pytest.fixture
@@ -47,9 +45,7 @@ def empty_metadata():
     return {}
 
 
-# ##############################
 # Test Classes
-# ##############################
 
 
 class TestUserPreferencesAPI:
@@ -567,9 +563,7 @@ class TestVideoFrameIntervalValidation:
         )
 
 
-# ##############################
 # Memories preferences
-# ##############################
 
 
 class TestMemoriesPreferences:

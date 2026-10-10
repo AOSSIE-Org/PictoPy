@@ -10,9 +10,7 @@ from fastapi.testclient import TestClient
 from app.routes import memories as memories_route
 from app.schemas.user_preferences import MemoriesPreferences
 
-# ##############################
 # Pytest Fixtures
-# ##############################
 
 
 @pytest.fixture
@@ -115,9 +113,7 @@ def make_run(status: str) -> Dict[str, Any]:
     }
 
 
-# ##############################
 # POST /memories/generate
-# ##############################
 
 
 class TestGenerateMemories:
@@ -367,9 +363,7 @@ class TestGenerateMemories:
         assert detail["error"] == "Internal server error"
 
 
-# ##############################
 # GET /memories/today
-# ##############################
 
 
 class TestTodayMemory:
@@ -454,9 +448,7 @@ class TestTodayMemory:
             assert client.get("/memories/today").status_code == 500
 
 
-# ##############################
 # GET /memories
-# ##############################
 
 
 class TestListMemories:
@@ -511,9 +503,7 @@ class TestListMemories:
         assert client.get("/memories", params=params).status_code == 422
 
 
-# ##############################
 # GET /memories/{memory_id}
-# ##############################
 
 
 class TestGetMemory:
@@ -557,9 +547,7 @@ class TestGetMemory:
             by_id.assert_not_called()
 
 
-# ##############################
 # PATCH /memories/{memory_id}
-# ##############################
 
 
 class TestUpdateMemory:
@@ -605,9 +593,7 @@ class TestUpdateMemory:
         assert response.status_code == 404
 
 
-# ##############################
 # DELETE /memories/{memory_id}
-# ##############################
 
 
 class TestDeleteMemory:
@@ -623,9 +609,7 @@ class TestDeleteMemory:
             assert client.delete("/memories/missing").status_code == 404
 
 
-# ##############################
 # GET /memories/status
-# ##############################
 
 
 class TestMemoryStatus:

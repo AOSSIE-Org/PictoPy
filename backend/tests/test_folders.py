@@ -40,9 +40,7 @@ from app.database.images import db_create_images_table
 from app.database.videos import db_create_videos_table
 from app.database.yolo_mapping import db_create_YOLO_classes_table
 
-# ##############################
 # Pytest Fixtures
-# ##############################
 
 
 @pytest.fixture(scope="function")
@@ -57,10 +55,8 @@ def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
         monkeypatch.setattr("app.database.videos.DATABASE_PATH", db_path)
         monkeypatch.setattr("app.database.yolo_mapping.DATABASE_PATH", db_path)
 
-        # Build the real schema rather than a hand-written copy: a divergent
-        # CREATE silently reorders columns and drops the ON DELETE CASCADE.
-        # db_delete_folder turns foreign keys on, so the whole FK chain
-        # (folders <- images <- image_classes -> mappings) has to resolve.
+        # The real schema, not a hand-written copy: a divergent CREATE reorders
+        # columns and drops ON DELETE CASCADE, and the whole FK chain must resolve.
         db_create_YOLO_classes_table()
         db_create_folders_table()
         db_create_images_table()  # db_get_all_folder_details LEFT JOINs it
@@ -104,7 +100,6 @@ def app_with_state(test_db):
     app = FastAPI()
     app.include_router(folders_router, prefix="/folders")
 
-    # Mock the executor state
     app.state.executor = MagicMock(spec=ProcessPoolExecutor)
     app.state.indexing_executor = MagicMock(spec=ProcessPoolExecutor)
 
@@ -156,17 +151,13 @@ def sample_folder_details():
     ]
 
 
-# ##############################
 # Test Classes
-# ##############################
 
 
 class TestFoldersAPI:
     """Test class for Folders API endpoints."""
 
-    # ============================================================================
     # POST /folders/add-folder - Add Folder Tests
-    # ============================================================================
 
     @patch("app.routes.folders.folder_util_add_folder_tree")
     @patch("app.routes.folders.db_update_parent_ids_for_subtree")
@@ -203,7 +194,6 @@ class TestFoldersAPI:
         assert data["data"]["folder_id"] == "test-folder-id-123"
         assert data["data"]["folder_path"] == folder_path
 
-        # Verify mocks were called correctly
         mock_folder_exists.assert_called_once_with(folder_path)
         mock_add_folder_tree.assert_called_once()
 
@@ -243,24 +233,30 @@ class TestFoldersAPI:
         assert data["detail"]["success"] is False
         assert data["detail"]["error"] == "Validation Error"
 
-    # @patch('app.routes.folders.os.access')
-    # def test_add_folder_permission_denied(self, mock_access, client, temp_folder_structure):
-    #     """Test adding folder without read permissions."""
-    #     mock_access.return_value = False  # Simulate no read permission
+    @patch("app.routes.folders.os.access")
+    def test_add_folder_permission_denied(
+        self, mock_access, client, temp_folder_structure
+    ):
+        """A folder the process cannot read and traverse is rejected with 401."""
+        mock_access.return_value = False
 
-    #     folder_path = temp_folder_structure["photos"]
-    #     request_data = {
-    #         "folder_path": folder_path,
-    #         "parent_folder_id": None,
-    #         "taggingCompleted": False
-    #     }
+        folder_path = temp_folder_structure["photos"]
+        request_data = {
+            "folder_path": folder_path,
+            "parent_folder_id": None,
+            "taggingCompleted": False,
+        }
 
-    #     response = client.post("/folders/add-folder", json=request_data)
+        response = client.post("/folders/add-folder", json=request_data)
 
-    #     assert response.status_code == 401
-    #     data = response.json()
-    #     assert data["detail"]["success"] is False
-    #     assert data["detail"]["error"] == "Permission denied"
+        assert response.status_code == 401
+        data = response.json()
+        assert data["detail"]["success"] is False
+        assert data["detail"]["error"] == "Permission denied"
+
+        # The mask matters: os.walk needs X_OK, so R_OK alone would admit a
+        # readable-but-unsearchable folder and index nothing under it.
+        mock_access.assert_called_once_with(folder_path, os.R_OK | os.X_OK)
 
     @patch("app.routes.folders.folder_util_add_folder_tree")
     @patch("app.routes.folders.db_update_parent_ids_for_subtree")
@@ -410,9 +406,7 @@ class TestFoldersAPI:
         index_future.set_result(True)
         app_state.executor.submit.assert_called_once()
 
-    # ============================================================================
     # POST /folders/enable-ai-tagging - Enable AI Tagging Tests
-    # ============================================================================
 
     @patch("app.routes.folders.db_enable_ai_tagging_batch")
     def test_enable_ai_tagging_success(self, mock_enable_batch, client):
@@ -448,7 +442,7 @@ class TestFoldersAPI:
 
     def test_enable_ai_tagging_empty_list(self, client):
         """Test enabling AI tagging with empty folder_ids list."""
-        request_data = {"folder_ids": []}
+        request_data: dict[str, list[str]] = {"folder_ids": []}
 
         response = client.post("/folders/enable-ai-tagging", json=request_data)
 
@@ -460,7 +454,7 @@ class TestFoldersAPI:
 
     def test_enable_ai_tagging_missing_field(self, client):
         """Test enabling AI tagging without folder_ids field."""
-        request_data = {}
+        request_data: dict[str, list[str]] = {}
 
         response = client.post("/folders/enable-ai-tagging", json=request_data)
 
@@ -493,13 +487,10 @@ class TestFoldersAPI:
 
         assert response.status_code == 200
 
-        # Verify background processing was triggered
         app_state = client.app.state
         app_state.executor.submit.assert_called_once()
 
-    # ============================================================================
     # POST /folders/disable-ai-tagging - Disable AI Tagging Tests
-    # ============================================================================
 
     @patch("app.routes.folders.db_disable_ai_tagging_batch")
     def test_disable_ai_tagging_success(self, mock_disable_batch, client):
@@ -545,7 +536,7 @@ class TestFoldersAPI:
 
     def test_disable_ai_tagging_empty_list(self, client):
         """Test disabling AI tagging with empty folder_ids list."""
-        request_data = {"folder_ids": []}
+        request_data: dict[str, list[str]] = {"folder_ids": []}
 
         response = client.post("/folders/disable-ai-tagging", json=request_data)
 
@@ -557,7 +548,7 @@ class TestFoldersAPI:
 
     def test_disable_ai_tagging_missing_field(self, client):
         """Test disabling AI tagging without folder_ids field."""
-        request_data = {}
+        request_data: dict[str, list[str]] = {}
 
         response = client.post("/folders/disable-ai-tagging", json=request_data)
 
@@ -594,9 +585,7 @@ class TestFoldersAPI:
         app_state = client.app.state
         app_state.executor.submit.assert_not_called()
 
-    # ============================================================================
     # DELETE /folders/delete-folders - Delete Folders Tests
-    # ============================================================================
 
     @patch("app.routes.folders.db_delete_folders_batch")
     def test_delete_folders_success(self, mock_delete_batch, client):
@@ -745,9 +734,7 @@ class TestFoldersAPI:
         assert data["detail"]["success"] is False
         assert data["detail"]["error"] == "Internal server error"
 
-    # ============================================================================
     # GET /folders/all-folders - Get All Folders Tests
-    # ============================================================================
 
     @patch("app.routes.folders.db_get_all_folder_details")
     def test_get_all_folders_success(
@@ -765,7 +752,6 @@ class TestFoldersAPI:
         assert data["data"]["total_count"] == 2
         assert len(data["data"]["folders"]) == 2
 
-        # Check first folder details
         first_folder = data["data"]["folders"][0]
         assert first_folder["folder_id"] == "folder-id-1"
         assert first_folder["folder_path"] == "/home/user/photos"
@@ -804,9 +790,7 @@ class TestFoldersAPI:
         assert data["detail"]["success"] is False
         assert data["detail"]["error"] == "Internal server error"
 
-    # ============================================================================
     # Edge Cases and Error Handling Tests
-    # ============================================================================
 
     def test_add_folder_malformed_json(self, client):
         """Test adding folder with malformed JSON."""
@@ -854,9 +838,7 @@ class TestFoldersAPI:
         assert data["success"] is True
         assert data["data"]["updated_count"] == 0
 
-    # ============================================================================
     # Unit Tests
-    # ============================================================================
 
 
 class TestFoldersUnit:
@@ -1324,9 +1306,7 @@ class TestFoldersUnit:
         }
 
 
-# ============================================================================
 # Integration & Workflow Tests
-# ============================================================================
 class TestFoldersIntegration:
     @patch("app.routes.folders.folder_util_add_folder_tree")
     @patch("app.routes.folders.db_update_parent_ids_for_subtree")
@@ -1457,7 +1437,6 @@ class TestFoldersIntegration:
         enable_response = client.post("/folders/enable-ai-tagging", json=enable_request)
         assert enable_response.status_code == 200
 
-        # Delete folders
         mock_delete_batch.return_value = 2
         delete_response = client.request(
             "DELETE",

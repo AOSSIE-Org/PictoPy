@@ -22,14 +22,12 @@ def log_memory_usage(func: Callable) -> Callable:
     def wrapper(*args, **kwargs):
         process = psutil.Process()
 
-        # Memory before execution
         mem_before = process.memory_info().rss / 1024 / 1024  # MB
         start_time = time.time()
 
         # Execute function
         result = func(*args, **kwargs)
 
-        # Memory after execution
         mem_after = process.memory_info().rss / 1024 / 1024  # MB
         end_time = time.time()
 

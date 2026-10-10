@@ -13,10 +13,7 @@ interface MemoryFilmstripProps {
   onSelect: (memoryId: string) => void;
 }
 
-/**
- * Horizontal strip of circular covers for jumping between memories without
- * leaving the story viewer.
- */
+/** Jumps between memories without leaving the story viewer. */
 export const MemoryFilmstrip: React.FC<MemoryFilmstripProps> = ({
   memories,
   activeMemoryId,

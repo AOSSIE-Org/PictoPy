@@ -103,7 +103,7 @@ async def lifespan(app: FastAPI):
     # Needs the mappings table (created above): semantic labels register
     # there as class_ids >= SEMANTIC_CLASS_ID_OFFSET
     semantic_util_sync_vocabulary()
-    # New pool, just for folder indexing, so it never queues behind AI tagging
+    # Its own pool, so folder indexing never queues behind AI tagging.
     app.state.indexing_executor = ProcessPoolExecutor(max_workers=INDEXING_MAX_WORKERS)
     # Create ProcessPoolExecutor and attach it to app.state
     app.state.executor = ProcessPoolExecutor(max_workers=1)

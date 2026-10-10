@@ -89,7 +89,6 @@ describe('Sidebar', () => {
           `/${startRoute}`,
         );
 
-        // click nav link
         await user.click(screen.getByText(linkText));
 
         // verify navigation

@@ -12,10 +12,7 @@ interface Dismissal {
   totalItems: number;
 }
 
-/**
- * App-wide alert showing the current background pass (tagging → indexing).
- * Hidden on Settings, which has its own bars. Needs router context.
- */
+// Hidden on Settings, which has its own bars. Needs router context.
 export const LibraryProcessingIndicator: React.FC = () => {
   const { phase, percentage, totalItems, semanticAvailable } =
     useLibraryProcessingStatus();

@@ -2,27 +2,12 @@ import React from 'react';
 import { LucideIcon } from 'lucide-react';
 
 interface SettingsCardProps {
-  /**
-   * Icon to display in the card header
-   */
   icon: LucideIcon;
-  /**
-   * Card title
-   */
   title: string;
-  /**
-   * Card description
-   */
   description?: string;
-  /**
-   * Card content
-   */
   children: React.ReactNode;
 }
 
-/**
- * Reusable settings card component with consistent styling
- */
 const SettingsCard: React.FC<SettingsCardProps> = ({
   icon: Icon,
   title,

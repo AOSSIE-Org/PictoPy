@@ -81,10 +81,9 @@ def db_create_albums_table() -> None:
         if "cover_image_path" not in columns:
             cursor.execute("ALTER TABLE albums ADD COLUMN cover_image_path TEXT")
         if "created_at" not in columns:
-            # No default: SQLite rejects a non-constant one on ALTER TABLE, and
-            # stamping every existing album with the upgrade time would be a
-            # date that never happened. They stay NULL and read as oldest,
-            # which their insertion order already reflects.
+            # No default: SQLite rejects a non-constant one here, and the upgrade
+            # time is a date that never happened. NULL reads as oldest, which
+            # insertion order already reflects.
             cursor.execute("ALTER TABLE albums ADD COLUMN created_at DATETIME")
         if "updated_at" not in columns:
             cursor.execute("ALTER TABLE albums ADD COLUMN updated_at DATETIME")
@@ -244,7 +243,6 @@ def db_update_album(
     cursor = conn.cursor()
     try:
         if password is not None:
-            # Update with new password
             password_hash = bcrypt.hashpw(
                 password.encode("utf-8"), bcrypt.gensalt()
             ).decode("utf-8")
@@ -258,7 +256,6 @@ def db_update_album(
                 (album_name, description, int(is_locked), password_hash, album_id),
             )
         else:
-            # Update without changing password
             cursor.execute(
                 """
                 UPDATE albums
@@ -368,7 +365,6 @@ def db_add_images_to_album(album_id: str, image_ids: list[str]):
     with get_db_connection() as conn:
         cursor = conn.cursor()
 
-        # Generate placeholders safely based on list length
         placeholders = ",".join(["?"] * len(sanitized_ids))
         query = f"SELECT id FROM images WHERE id IN ({placeholders})"
         cursor.execute(query, sanitized_ids)  # Pass string IDs directly
@@ -377,7 +373,6 @@ def db_add_images_to_album(album_id: str, image_ids: list[str]):
         if not valid_images:
             raise ValueError("None of the provided image IDs exist in the database.")
 
-        # Insert into album_images using executemany
         cursor.executemany(
             "INSERT OR IGNORE INTO album_images (album_id, image_id) VALUES (?, ?)",
             [(album_id, img_id) for img_id in valid_images],

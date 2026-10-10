@@ -17,12 +17,10 @@ const folderSlice = createSlice({
   name: 'folders',
   initialState,
   reducers: {
-    // Set all folders
     setFolders(state, action: PayloadAction<FolderDetails[]>) {
       state.folders = action.payload;
     },
 
-    // Add a single folder
     addFolder(state, action: PayloadAction<FolderDetails>) {
       const newFolder = action.payload;
       const existingIndex = state.folders.findIndex(
@@ -32,12 +30,10 @@ const folderSlice = createSlice({
       if (existingIndex === -1) {
         state.folders.push(newFolder);
       } else {
-        // Update existing folder
         state.folders[existingIndex] = newFolder;
       }
     },
 
-    // Update an existing folder
     updateFolder(
       state,
       action: PayloadAction<{
@@ -58,7 +54,6 @@ const folderSlice = createSlice({
       }
     },
 
-    // Remove folders by IDs
     removeFolders(state, action: PayloadAction<string[]>) {
       const folderIdsToRemove = action.payload;
       state.folders = state.folders.filter(
@@ -71,7 +66,6 @@ const folderSlice = createSlice({
       state.folders = [];
     },
 
-    // Set tagging status for folders
     setTaggingStatus(state, action: PayloadAction<FolderTaggingInfo[]>) {
       const map: Record<string, FolderTaggingInfo> = {};
       for (const info of action.payload) {
@@ -81,7 +75,6 @@ const folderSlice = createSlice({
       state.lastUpdatedAt = Date.now();
     },
 
-    // Clear tagging status
     clearTaggingStatus(state) {
       state.taggingStatus = {};
       state.lastUpdatedAt = undefined;

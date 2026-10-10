@@ -150,7 +150,6 @@ export function MediaView({
     resetViewerState();
   }, [resetViewerState]);
 
-  // Keyboard navigation
   useKeyboardNavigation({
     onClose: handleClose,
     onNext: handleNextImage,
@@ -166,10 +165,8 @@ export function MediaView({
     return null;
   }
 
-  // Safe variables
   const currentImagePath = currentImage.path;
   const currentImageKey = currentImage.id || currentImage.path;
-  // console.log(currentImage);
   const currentImageAlt = `image-${currentViewIndex}`;
   return (
     <div className="fixed inset-0 z-50 mt-0 flex flex-col bg-gradient-to-b from-white/95 to-white/98 backdrop-blur-lg dark:from-black/95 dark:to-black/98">

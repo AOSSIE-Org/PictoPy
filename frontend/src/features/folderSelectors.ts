@@ -20,18 +20,15 @@ export const selectFoldersByParentId = createSelector(
     folders.filter((folder) => folder.parent_folder_id === parentId),
 );
 
-// Get root folders (folders with no parent)
 export const selectRootFolders = createSelector([selectAllFolders], (folders) =>
   folders.filter((folder) => !folder.parent_folder_id),
 );
 
-// Get folders with AI tagging enabled
 export const selectAITaggingEnabledFolders = createSelector(
   [selectAllFolders],
   (folders) => folders.filter((folder) => folder.AI_Tagging),
 );
 
-// Get folders with tagging completed
 export const selectTaggingCompletedFolders = createSelector(
   [selectAllFolders],
   (folders) => folders.filter((folder) => folder.taggingCompleted),
@@ -46,7 +43,6 @@ export const selectFoldersByPathPattern = createSelector(
     ),
 );
 
-// Folder hierarchy selectors
 export const selectFolderHierarchy = createSelector(
   [selectAllFolders],
   (folders) => {
@@ -85,7 +81,6 @@ export const selectRecentFolders = createSelector(
       .slice(0, limit),
 );
 
-// Folders grouped by parent
 export const selectFoldersGroupedByParent = createSelector(
   [selectAllFolders],
   (folders) => {

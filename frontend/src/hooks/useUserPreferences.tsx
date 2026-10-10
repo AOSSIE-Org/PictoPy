@@ -27,10 +27,6 @@ export const DEFAULT_MEMORIES_PREFERENCES: MemoriesPreferences = {
   },
 };
 
-/**
- * Custom hook for user preferences
- * Manages preferences state and mutation operations
- */
 export const useUserPreferences = () => {
   const [preferences, setPreferences] = useState<UserPreferencesData>({
     YOLO_model_size: 'nano',
@@ -52,14 +48,11 @@ export const useUserPreferences = () => {
 
   // Non-zero from the moment a write is queued until it settles.
   const pendingWrites = useRef(0);
-  // Bumped when a write is queued. Any read already in flight at that point
-  // describes the server from before it, however late the response arrives,
-  // which is why this counts reads rather than timing them: a read that starts
-  // first can still finish last.
+  // Bumped when a write is queued. A read stamps the value it started under, so
+  // one overtaken by a write is discarded however late its response arrives.
   const writeEpoch = useRef(0);
   const readEpoch = useRef(0);
 
-  // Query for user preferences
   const preferencesQuery = usePictoQuery({
     queryKey: ['userPreferences'],
     queryFn: () => {
@@ -68,7 +61,6 @@ export const useUserPreferences = () => {
     },
   });
 
-  // Update local state when preferences data changes
   useEffect(() => {
     // Applying stale server state would revert the write and hand the next
     // queued one a stale base to build on.
@@ -90,7 +82,6 @@ export const useUserPreferences = () => {
     mutationFn: updateUserPreferences,
   });
 
-  // Apply feedback to the update preferences mutation but hide loader and success dialog
   useMutationFeedback(updatePreferencesMutation, {
     showLoading: false, // Don't show the loading indicator to prevent flicker
     loadingMessage: 'Updating preferences',
@@ -106,15 +97,9 @@ export const useUserPreferences = () => {
   // value rather than what is actually stored.
   const writeQueue = useRef<Promise<unknown>>(Promise.resolve());
 
-  /**
-   * Apply a change optimistically and send it, queued behind any write already
-   * running.
-   *
-   * `build` runs when the write reaches the front of the queue, not when it was
-   * requested, so a queued change is computed from what actually landed before
-   * it. It returns the full next state and the request body, which carries only
-   * the changed keys so a concurrent edit elsewhere in settings survives.
-   */
+  // `build` runs when the write reaches the front of the queue, not when it was
+  // requested, so it sees whatever actually landed first. Its request carries
+  // only changed keys, leaving a concurrent edit elsewhere in settings intact.
   const writePreferences = (
     build: (current: UserPreferencesData) => {
       next: UserPreferencesData;
@@ -152,18 +137,12 @@ export const useUserPreferences = () => {
     return result;
   };
 
-  /**
-   * Update YOLO model size
-   */
   const updateYoloModelSize = async (size: 'nano' | 'small' | 'medium') =>
     writePreferences((current) => ({
       next: { ...current, YOLO_model_size: size },
       request: { YOLO_model_size: size },
     }));
 
-  /**
-   * Toggle GPU acceleration
-   */
   const toggleGpuAcceleration = async () =>
     writePreferences((current) => {
       const GPU_Acceleration = !current.GPU_Acceleration;
@@ -173,18 +152,12 @@ export const useUserPreferences = () => {
       };
     });
 
-  /**
-   * Update the video keyframe sampling interval (seconds)
-   */
   const updateVideoFrameInterval = async (interval: number) =>
     writePreferences((current) => ({
       next: { ...current, Video_Frame_Interval: interval },
       request: { Video_Frame_Interval: interval },
     }));
 
-  /**
-   * Turn finding people in videos on or off.
-   */
   const toggleVideoFaceDetection = async () =>
     writePreferences((current) => {
       const Video_Face_Detection = !current.Video_Face_Detection;
@@ -206,9 +179,6 @@ export const useUserPreferences = () => {
       };
     });
 
-  /**
-   * Patch memories preferences.
-   */
   const updateMemoriesPreferences = async (
     patch: UpdateUserPreferencesRequest['memories'],
   ) =>

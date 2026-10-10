@@ -810,10 +810,8 @@ describe('ZoomableImage controlled transform behavior', () => {
       imageSize: { width: 200, height: 100 },
     });
 
-    // A line-mode wheel (deltaMode === 1) reports scroll in lines, not pixels.
-    // It must be normalized by LINE_HEIGHT_MULTIPLIER (33), so a 3-line notch
-    // produces the same zoomRatio as a 99px pixel-mode notch: exp(99 * 0.001).
-    // Without the multiplier, a 3-line notch would produce exp(3 * 0.001) instead.
+    // A line-mode wheel reports lines, not pixels, so LINE_HEIGHT_MULTIPLIER (33)
+    // must make a 3-line notch match a 99px one: exp(99 * 0.001), not exp(3 * 0.001).
     fireEvent.wheel(viewport, {
       deltaY: -3,
       deltaMode: 1,
@@ -904,10 +902,8 @@ describe('ZoomableImage controlled transform behavior', () => {
   });
 
   describe('control button zoom animation', () => {
-    // jsdom has no TransitionEvent constructor, and fireEvent.transitionEnd does
-    // not deliver `propertyName` to React's synthetic event. Build the event
-    // manually (mirroring firePointerEvent) so the handler's property filter
-    // sees a real value.
+    // jsdom has no TransitionEvent, and fireEvent.transitionEnd drops
+    // `propertyName`, so build it manually for the handler's property filter.
     const fireTransitionEnd = (element: Element, propertyName: string) => {
       const event = new Event('transitionend', {
         bubbles: true,

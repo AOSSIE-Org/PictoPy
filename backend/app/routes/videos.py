@@ -22,7 +22,6 @@ from app.utils.videos import (
 )
 from app.logging.setup_logging import get_logger
 
-# Initialize logger
 logger = get_logger(__name__)
 router = APIRouter()
 

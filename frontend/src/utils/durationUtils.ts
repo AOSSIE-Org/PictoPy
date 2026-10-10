@@ -1,8 +1,5 @@
-/**
- * Formats seconds as `h:mm:ss` when over an hour, otherwise `m:ss`.
- * Negative and non-finite input (an unknown media duration reads as NaN or
- * Infinity) normalises to `0:00` rather than rendering `NaN:NaN`.
- */
+// `h:mm:ss` over an hour, else `m:ss`. Negative and non-finite input (an unknown
+// duration reads NaN) normalises to `0:00` rather than rendering `NaN:NaN`.
 export const formatDuration = (seconds: number): string => {
   const safeSeconds = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
   const hours = Math.floor(safeSeconds / 3600);
