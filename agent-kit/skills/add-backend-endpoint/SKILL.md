@@ -72,7 +72,7 @@ Template: `agent-kit/templates/route.py.md`.
 Follow `backend/tests/test_videos.py`. Cover the success path, the empty case, and at least
 one failure path. The session fixture in `conftest.py` creates every table, so tests get a
 real SQLite database. It is a throwaway `backend/test_db.sqlite3`, not the user's library:
-`tests/db_isolation.py` sets `TEST_MODE=true` before any app import to redirect it.
+`conftest.py` sets `GITHUB_ACTIONS=true` before any app import to redirect it.
 
 ## 7. Verify
 
