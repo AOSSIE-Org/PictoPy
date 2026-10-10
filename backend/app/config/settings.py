@@ -280,6 +280,9 @@ SUPPORTED_IMAGE_EXTENSIONS = {
     ".tiff",
     ".tif",
     ".gif",
+    ".heic",
+    ".heif",
+    ".avif",
 }
 SUPPORTED_VIDEO_EXTENSIONS = {
     ".mp4",

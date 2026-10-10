@@ -7,8 +7,10 @@ import json
 import logging
 import sqlite3
 from typing import List, Optional, Tuple, Dict, Any, Mapping
-from PIL import Image, ExifTags
+from PIL import Image, ExifTags, ImageOps
 from pathlib import Path
+import cv2
+import numpy as np
 
 from app.config.settings import THUMBNAIL_IMAGES_PATH, SUPPORTED_IMAGE_EXTENSIONS
 from app.database.images import (
@@ -33,6 +35,20 @@ from app.utils.extract_location_metadata import (
     MetadataExtractor,
 )
 from app.utils.takeout_sidecar import takeout_sidecar_read
+
+try:
+    import pillow_heif
+
+    pillow_heif.register_heif_opener()
+except ImportError:
+    pass
+
+try:
+    import pillow_avif  # noqa: F401
+except ImportError:
+    pass
+
+IMAGE_EXTENSIONS = SUPPORTED_IMAGE_EXTENSIONS
 
 logger = get_logger(__name__)
 
@@ -226,7 +242,7 @@ def image_util_classify_and_face_detect_images(
             classes = object_classifier.get_classes(image_path)
 
             # Step 2: Insert class-image pairs if classes were detected
-            if len(classes) > 0:
+            if classes:
                 # Create image-class pairs
                 image_class_pairs = [(image_id, class_id) for class_id in classes]
                 logger.debug(f"Image-class pairs: {image_class_pairs}")
@@ -440,8 +456,8 @@ def image_util_generate_thumbnail(
         with Image.open(image_path) as img:
             img.thumbnail(size)
 
-            # Convert to RGB if the image has an alpha channel or is not RGB
-            if img.mode in ("RGBA", "P"):
+            # Ensure image is in RGB mode before saving as JPEG (handles RGBA, P, CMYK, HDR/10-bit modes)
+            if img.mode != "RGB":
                 img = img.convert("RGB")
 
             img.save(thumbnail_path, "JPEG")  # Always save thumbnails as JPEG
@@ -449,6 +465,30 @@ def image_util_generate_thumbnail(
     except Exception as e:
         logger.error(f"Error generating thumbnail for {image_path}: {e}")
         return False
+
+
+def image_util_load_cv2_image(image_path: str) -> np.ndarray | None:
+    """Load an image as a BGR numpy array compatible with OpenCV models.
+
+    Tries cv2.imread first, and falls back to Pillow for formats not
+    natively supported by OpenCV (such as HEIC, HEIF, AVIF).
+    """
+    try:
+        img = cv2.imread(image_path)
+        if img is not None:
+            return img
+    except Exception:
+        pass
+
+    try:
+        with Image.open(image_path) as pil_img:
+            transposed_img = ImageOps.exif_transpose(pil_img)
+            rgb_img = transposed_img.convert("RGB")
+            rgb_array = np.array(rgb_img)
+            return cv2.cvtColor(rgb_array, cv2.COLOR_RGB2BGR)
+    except Exception as e:
+        logger.error(f"Failed to load image for OpenCV from {image_path}: {e}")
+        return None
 
 
 def image_util_remove_obsolete_images(folder_id_list: List[str]) -> int:
