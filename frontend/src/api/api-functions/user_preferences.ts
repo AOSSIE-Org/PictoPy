@@ -34,6 +34,8 @@ export interface UserPreferencesData {
   Video_Frame_Interval: number;
   /** Find people in videos as well as photos. Opt-in: it slows video tagging. */
   Video_Face_Detection: boolean;
+  /** Write tags, faces and embeddings into PNG files. Opt-in: it edits originals. */
+  Metadata_Export: boolean;
   memories: MemoriesPreferences;
 }
 
@@ -46,6 +48,7 @@ export interface UpdateUserPreferencesRequest {
   GPU_Acceleration?: boolean;
   Video_Frame_Interval?: number;
   Video_Face_Detection?: boolean;
+  Metadata_Export?: boolean;
   /** Partial: omitted keys keep their stored values. */
   memories?: Partial<Omit<MemoriesPreferences, 'weights'>> & {
     weights?: Partial<MemoryScoringWeights>;
