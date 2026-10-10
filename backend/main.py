@@ -33,6 +33,7 @@ from app.database.semantic_labels import db_create_semantic_labels_table
 from app.database.image_embeddings import db_create_image_embeddings_table
 from app.database.video_frames import db_create_video_frames_tables
 from app.database.memories import db_create_memories_table
+from app.database.xmp_export_state import db_create_image_xmp_state_table
 from app.utils.semantic_labels import (
     semantic_util_sync_vocabulary,
     semantic_util_build_label_embeddings,
@@ -51,6 +52,9 @@ from app.routes.shutdown import router as shutdown_router
 from app.routes.share import router as share_router
 from app.routes.models import router as models_router, _cleanup_stale_tasks
 from app.routes.config import router as config_router
+from app.routes.metadata_export import router as metadata_export_router
+from app.utils.xmp.debounce import ExportDebouncer
+from app.utils.xmp.exporter import xmp_export_if_enabled
 from app.share.server import share_server_stop
 from fastapi.openapi.utils import get_openapi
 from app.logging.setup_logging import (
@@ -88,6 +92,8 @@ async def lifespan(app: FastAPI):
     db_create_album_images_table()
     db_create_metadata_table()
     db_create_memories_table()  # References images(id) and videos(id)
+    # Last: its triggers watch most of the tables above.
+    db_create_image_xmp_state_table()
     # Nothing is indexing or tagging yet, so anything still flagged busy is
     # left over from a previous session and would block memory generation.
     db_clear_stale_processing_flags()
@@ -107,6 +113,13 @@ async def lifespan(app: FastAPI):
     app.state.executor.submit(semantic_util_build_label_embeddings)
     app.state.executor.submit(semantic_util_score_images)
     app.state.executor.submit(semantic_util_score_videos)
+    # Anything left pending last session (failed writes, edits just before
+    # quitting) is written now; a no-op while the Settings toggle is off.
+    app.state.executor.submit(xmp_export_if_enabled)
+    # Edits from the routes fold into one pass a few seconds after the last.
+    app.state.metadata_export_debouncer = ExportDebouncer(
+        lambda: app.state.executor.submit(xmp_export_if_enabled)
+    )
 
     # Start the SSE model download cleanup task
     cleanup_task = asyncio.create_task(_cleanup_stale_tasks())
@@ -116,6 +129,7 @@ async def lifespan(app: FastAPI):
     finally:
         cleanup_task.cancel()
         await asyncio.gather(cleanup_task, return_exceptions=True)
+        app.state.metadata_export_debouncer.close()
         app.state.indexing_executor.shutdown(wait=True)
         # Closes the only socket bound outside localhost; the in-memory share
         # registry goes with the process.
@@ -199,6 +213,9 @@ app.include_router(shutdown_router, tags=["Shutdown"])
 app.include_router(share_router, prefix="/share", tags=["Share"])
 app.include_router(models_router, prefix="/models", tags=["Models"])
 app.include_router(config_router, prefix="/config", tags=["Config"])
+app.include_router(
+    metadata_export_router, prefix="/metadata-export", tags=["Metadata Export"]
+)
 
 
 # Entry point for running with: python3 main.py

@@ -19,7 +19,7 @@ from app.database.videos import db_get_videos_by_ids
 from app.utils.videos import video_util_to_video_data
 from starlette.datastructures import State
 
-from app.routes.dependencies import get_state
+from app.routes.dependencies import get_state, request_metadata_export
 from app.utils.face_clusters import cluster_util_face_clusters_sync
 from app.schemas.face_clusters import (
     RenameClusterRequest,
@@ -127,6 +127,8 @@ def rename_cluster(
         # appear in, so memories already holding those photos are now ranked
         # on stale inputs.
         _rescore_memories_for_cluster(app_state, cluster_id)
+        # The name is written into every photo of this person.
+        request_metadata_export(app_state)
 
         return RenameClusterResponse(
             success=True,
@@ -367,7 +369,7 @@ def face_tagging(
     response_model=GlobalReclusterResponse,
     responses={code: {"model": ErrorResponse} for code in [500]},
 )
-def trigger_global_reclustering():
+def trigger_global_reclustering(app_state: State = Depends(get_state)):
     """
     Manually trigger global face reclustering.
     This forces full reclustering regardless of the 24-hour rule.
@@ -378,6 +380,7 @@ def trigger_global_reclustering():
         result, total_faces_skipped = cluster_util_face_clusters_sync(
             force_full_reclustering=True
         )
+        request_metadata_export(app_state)
 
         if result == 0:
             return GlobalReclusterResponse(

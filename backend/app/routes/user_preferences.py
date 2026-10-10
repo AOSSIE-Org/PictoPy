@@ -1,8 +1,10 @@
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from starlette.datastructures import State
 from app.database.metadata import db_get_metadata, db_update_metadata
 from app.logging.setup_logging import get_logger
+from app.routes.dependencies import get_state, request_metadata_export
 from app.schemas.user_preferences import (
     GetUserPreferencesResponse,
     UpdateUserPreferencesRequest,
@@ -71,7 +73,9 @@ def get_user_preferences():
     response_model=UpdateUserPreferencesResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
-def update_user_preferences(request: UpdateUserPreferencesRequest):
+def update_user_preferences(
+    request: UpdateUserPreferencesRequest, app_state: State = Depends(get_state)
+):
     """Update user preferences in metadata."""
     try:
         # exclude_unset keeps this a genuine partial update: fields the caller
@@ -98,6 +102,10 @@ def update_user_preferences(request: UpdateUserPreferencesRequest):
                     message="Failed to update user preferences.",
                 ).model_dump(),
             )
+
+        # Turning export on catches the library up without waiting for a sync.
+        if updates.get("Metadata_Export") is True:
+            request_metadata_export(app_state)
 
         return UpdateUserPreferencesResponse(
             success=True,

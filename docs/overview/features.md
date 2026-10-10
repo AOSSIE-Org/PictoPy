@@ -22,6 +22,9 @@
 - **Entirely offline**: All data stays on your local machine.
 - No reliance on remote servers for processing.
 - Models are stored locally and customizable by the user.
+- **Metadata export** (optional, PNG only): saves tags, faces, embeddings, favourites and album names into your
+  PNG files, so the work travels with the photos. Off by default; turn it on, or export the whole library once,
+  under Settings → Image Metadata. See [Metadata Export](metadata-export.md).
 
 ### Efficient Data Handling & Processing
 

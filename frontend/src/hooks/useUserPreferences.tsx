@@ -33,6 +33,7 @@ export const useUserPreferences = () => {
     GPU_Acceleration: false,
     Video_Frame_Interval: 5,
     Video_Face_Detection: false,
+    Metadata_Export: false,
     memories: DEFAULT_MEMORIES_PREFERENCES,
   });
 
@@ -166,6 +167,18 @@ export const useUserPreferences = () => {
       };
     });
 
+  /**
+   * Turn writing metadata into the image files on or off.
+   */
+  const toggleMetadataExport = async () =>
+    writePreferences((current) => {
+      const Metadata_Export = !current.Metadata_Export;
+      return {
+        next: { ...current, Metadata_Export },
+        request: { Metadata_Export },
+      };
+    });
+
   const updateMemoriesPreferences = async (
     patch: UpdateUserPreferencesRequest['memories'],
   ) =>
@@ -192,6 +205,7 @@ export const useUserPreferences = () => {
     toggleGpuAcceleration,
     updateVideoFrameInterval,
     toggleVideoFaceDetection,
+    toggleMetadataExport,
     updateMemoriesPreferences,
 
     // For refetching preferences after external events (e.g., Model Manager window closing)

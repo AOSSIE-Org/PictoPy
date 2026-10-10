@@ -69,6 +69,10 @@ These implement specific features and often use the primitives above:
   the **Find People in Videos** switch, and, while that switch is on, a **Scan videos** button for videos tagged
   before it. The scan runs in the background; the card polls `GET /videos/face-scan-status` for its progress,
   and offers a retry if the scan stopped with an error
+- **MetadataExportCard** (`pages/SettingsPage/components/`) – The **Image Metadata** card: the **Save Metadata
+  Automatically** switch and an **Export metadata** button for the whole library. It polls
+  `GET /metadata-export/status` every 2 s while an export it started is running, and every 10 s while automatic
+  export is on and photos are still pending. See [Metadata Export](../overview/metadata-export.md)
 
 ### Dialogs and feedback
 
