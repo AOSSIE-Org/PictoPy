@@ -48,6 +48,24 @@ def db_create_folders_table() -> None:
             )
             """
         )
+
+        # Guarded ALTER because databases shipped before indexing_status still
+        # carry the six-column table, and CREATE IF NOT EXISTS won't add the
+        # column to one that already exists. Same default as above, so a
+        # migrated schema is identical to a fresh one.
+        cursor.execute("PRAGMA table_info(folders)")
+        if "indexing_status" not in {row[1] for row in cursor.fetchall()}:
+            cursor.execute(
+                "ALTER TABLE folders ADD COLUMN indexing_status TEXT "
+                "DEFAULT 'not_started'"
+            )
+            # These rows were walked by a version that had no column to write,
+            # so they are indexed. Leaving them on the default would read as
+            # queued and spin the UI on a walk nobody is going to run.
+            cursor.execute(
+                "UPDATE folders SET indexing_status = ?", (INDEXING_COMPLETED,)
+            )
+
         conn.commit()
     finally:
         if conn is not None:
@@ -328,7 +346,7 @@ def db_update_ai_tagging_batch(
 
         cursor.execute(
             f"UPDATE folders SET AI_Tagging = ? WHERE folder_id IN ({placeholders})",
-            [ai_tagging_enabled] + folder_ids,
+            [ai_tagging_enabled, *folder_ids],
         )
 
         updated_count = cursor.rowcount
