@@ -6,10 +6,11 @@ Your photos are never *stored* anywhere but your own machine. They are read off 
 
 Where they *travel* depends on which mode you pick. On your own network they go straight to the other device. Over the internet they pass through a relay run by someone else, which can read them on the way past — that mode is described in full below.
 
-Two things are true of every share:
+Three things are true of every share:
 
 - **It only works while PictoPy is running.** Close the app and the link stops working immediately.
 - **Nothing is stored anywhere else.** There is no copy on a server to worry about.
+- **Photos are sent without PictoPy's own metadata.** If you use [metadata export](metadata-export.md), the faces, names and album names saved in your PNG files are removed from each photo as it is sent. Camera details and other programs' metadata are sent as usual.
 
 ## The two modes
 
@@ -104,6 +105,8 @@ A share ends when any of these happens:
 - **You close PictoPy.** Every share ends, always.
 
 There is no way for a share to outlive the app, by design.
+
+Photos a guest has already viewed do not stay available either. Their browser keeps a copy to save downloading it again, but checks with PictoPy before showing it, so once a share stops, those photos stop opening too. A page the guest still has open keeps showing what is already on screen until it is closed or reloaded.
 
 ## When the link does not load
 

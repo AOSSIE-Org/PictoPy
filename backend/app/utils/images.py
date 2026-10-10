@@ -43,7 +43,7 @@ GPS_INFO_TAG = 34853
 logger = logging.getLogger(__name__)
 
 
-def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -> bool:
+def image_util_process_folder_images(folder_data: List[Tuple[str, str, bool]]) -> bool:
     """Main function to process images in multiple folders based on provided folder data.
 
     Args:
@@ -303,7 +303,7 @@ def image_util_is_unchanged(
 
 def image_util_prepare_image_records(
     image_files: List[str],
-    folder_path_to_id: Dict[str, int],
+    folder_path_to_id: Dict[str, str],
     known_state: Optional[Dict[str, ImageSyncState]] = None,
 ) -> List[Dict]:
     """
@@ -451,7 +451,7 @@ def image_util_generate_thumbnail(
         return False
 
 
-def image_util_remove_obsolete_images(folder_id_list: List[int]) -> int:
+def image_util_remove_obsolete_images(folder_id_list: List[str]) -> int:
     """
     Remove obsolete images that no longer exist in the filesystem.
 
@@ -483,8 +483,8 @@ def image_util_remove_obsolete_images(folder_id_list: List[int]) -> int:
 
 
 def image_util_create_folder_path_mapping(
-    folder_ids: List[Tuple[int, str]],
-) -> Dict[str, int]:
+    folder_ids: List[Tuple[str, str]],
+) -> Dict[str, str]:
     """
     Create a dictionary mapping folder paths to their IDs.
 
@@ -494,7 +494,7 @@ def image_util_create_folder_path_mapping(
     Returns:
         Dictionary mapping absolute folder paths to folder IDs
     """
-    folder_path_to_id: Dict[str, int] = {}
+    folder_path_to_id: Dict[str, str] = {}
     for folder_id, folder_path in folder_ids:
         path = os.path.abspath(folder_path)
         folder_path_to_id[path] = folder_id
@@ -502,8 +502,8 @@ def image_util_create_folder_path_mapping(
 
 
 def image_util_find_folder_id_for_image(
-    image_path: str, folder_path_to_id: Dict[str, int]
-) -> Optional[int]:
+    image_path: str, folder_path_to_id: Dict[str, str]
+) -> Optional[str]:
     """
     Find the most specific folder ID for a given image path.
 

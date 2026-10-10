@@ -81,6 +81,9 @@ class UserPreferencesData(BaseModel):
     # Finding people in videos runs a second detector over every keyframe with
     # a person in it, so it is opt-in.
     Video_Face_Detection: bool = VIDEO_FACE_DETECTION
+    # Writes tags, faces and embeddings into the user's original PNGs, so it
+    # is opt-in.
+    Metadata_Export: bool = False
     memories: MemoriesPreferences = Field(default_factory=MemoriesPreferences)
 
 
@@ -131,6 +134,7 @@ class UpdateUserPreferencesRequest(BaseModel):
         default=None, ge=VIDEO_FRAME_INTERVAL_MIN, le=VIDEO_FRAME_INTERVAL_MAX
     )
     Video_Face_Detection: Optional[bool] = None
+    Metadata_Export: Optional[bool] = None
     memories: Optional[MemoriesPreferencesUpdate] = None
 
 
