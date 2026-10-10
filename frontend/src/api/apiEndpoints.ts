@@ -17,6 +17,11 @@ export const videosEndpoints = {
   faceScanStatus: '/videos/face-scan-status',
 };
 
+export const metadataExportEndpoints = {
+  run: '/metadata-export/run',
+  status: '/metadata-export/status',
+};
+
 export const faceClustersEndpoints = {
   getAllClusters: '/face-clusters/',
   searchForFaces: '/face-clusters/face-search?input_type=path',

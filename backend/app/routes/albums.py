@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, status, Body, Path
+from fastapi import APIRouter, Depends, HTTPException, status, Body, Path
+from starlette.datastructures import State
 import uuid
 from app.schemas.album import (
     GetAlbumsResponse,
@@ -37,6 +38,8 @@ from app.utils.albums import (
     MemoryNotFoundError,
     album_util_create_from_memory,
 )
+
+from app.routes.dependencies import get_state, request_metadata_export
 
 router = APIRouter()
 
@@ -117,6 +120,7 @@ def create_album(body: CreateAlbumRequest):
 )
 def create_album_from_memory(
     body: CreateAlbumFromMemoryRequest,
+    app_state: State = Depends(get_state),
 ) -> CreateAlbumFromMemoryResponse:
     """
     Copy a memory's photos into a new album.
@@ -149,6 +153,7 @@ def create_album_from_memory(
         raise _album_exists(body.name) from e
     except Exception as e:
         raise _internal_error(f"Failed to create album from memory: {e}") from e
+    request_metadata_export(app_state)
 
     return CreateAlbumFromMemoryResponse(
         success=True,
@@ -200,7 +205,11 @@ def get_album(album_id: str = Path(...)):
 
 # PUT /albums/{album_id} - Update Album
 @router.put("/{album_id}", response_model=SuccessResponse)
-def update_album(album_id: str = Path(...), body: UpdateAlbumRequest = Body(...)):
+def update_album(
+    album_id: str = Path(...),
+    body: UpdateAlbumRequest = Body(...),
+    app_state: State = Depends(get_state),
+):
     album = db_get_album(album_id)
     if not album:
         raise HTTPException(
@@ -237,6 +246,8 @@ def update_album(album_id: str = Path(...), body: UpdateAlbumRequest = Body(...)
         db_update_album(
             album_id, body.name, body.description, body.is_locked, body.password
         )
+        # A rename or lock change alters every member's exported albums.
+        request_metadata_export(app_state)
         return SuccessResponse(success=True, msg="Album updated successfully")
     except Exception as e:
         raise HTTPException(
@@ -249,7 +260,7 @@ def update_album(album_id: str = Path(...), body: UpdateAlbumRequest = Body(...)
 
 # DELETE /albums/{album_id} - Delete an album
 @router.delete("/{album_id}", response_model=SuccessResponse)
-def delete_album(album_id: str = Path(...)):
+def delete_album(album_id: str = Path(...), app_state: State = Depends(get_state)):
     album = db_get_album(album_id)
     if not album:
         raise HTTPException(
@@ -263,6 +274,7 @@ def delete_album(album_id: str = Path(...)):
 
     try:
         db_delete_album(album_id)
+        request_metadata_export(app_state)
         return SuccessResponse(success=True, msg="Album deleted successfully")
     except Exception as e:
         raise HTTPException(
@@ -326,7 +338,11 @@ def get_album_images(
 
 # POST /albums/{album_id}/images - Add images to an album
 @router.post("/{album_id}/images", response_model=SuccessResponse)
-def add_images_to_album(album_id: str = Path(...), body: ImageIdsRequest = Body(...)):
+def add_images_to_album(
+    album_id: str = Path(...),
+    body: ImageIdsRequest = Body(...),
+    app_state: State = Depends(get_state),
+):
     album = db_get_album(album_id)
     if not album:
         raise HTTPException(
@@ -350,6 +366,7 @@ def add_images_to_album(album_id: str = Path(...), body: ImageIdsRequest = Body(
 
     try:
         db_add_images_to_album(album_id, body.image_ids)
+        request_metadata_export(app_state)
         return SuccessResponse(
             success=True, msg=f"Added {len(body.image_ids)} images to album"
         )
@@ -364,7 +381,11 @@ def add_images_to_album(album_id: str = Path(...), body: ImageIdsRequest = Body(
 
 # DELETE /albums/{album_id}/images/{image_id} - Remove image from album
 @router.delete("/{album_id}/images/{image_id}", response_model=SuccessResponse)
-def remove_image_from_album(album_id: str = Path(...), image_id: str = Path(...)):
+def remove_image_from_album(
+    album_id: str = Path(...),
+    image_id: str = Path(...),
+    app_state: State = Depends(get_state),
+):
     album = db_get_album(album_id)
     if not album:
         raise HTTPException(
@@ -378,6 +399,7 @@ def remove_image_from_album(album_id: str = Path(...), image_id: str = Path(...)
 
     try:
         db_remove_image_from_album(album_id, image_id)
+        request_metadata_export(app_state)
         return SuccessResponse(
             success=True, msg="Image removed from album successfully"
         )
@@ -400,7 +422,9 @@ def remove_image_from_album(album_id: str = Path(...), image_id: str = Path(...)
 # DELETE /albums/{album_id}/images - Remove multiple images from album
 @router.delete("/{album_id}/images", response_model=SuccessResponse)
 def remove_images_from_album(
-    album_id: str = Path(...), body: ImageIdsRequest = Body(...)
+    album_id: str = Path(...),
+    body: ImageIdsRequest = Body(...),
+    app_state: State = Depends(get_state),
 ):
     album = db_get_album(album_id)
     if not album:
@@ -425,6 +449,7 @@ def remove_images_from_album(
 
     try:
         db_remove_images_from_album(album_id, body.image_ids)
+        request_metadata_export(app_state)
         return SuccessResponse(
             success=True, msg=f"Removed {len(body.image_ids)} images from album"
         )

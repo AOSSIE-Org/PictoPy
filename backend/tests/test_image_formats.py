@@ -6,6 +6,7 @@ and image_util_load_cv2_image() accepting modern and mobile formats
 
 import os
 import tempfile
+from typing import Iterator
 
 import pytest
 from PIL import Image
@@ -18,12 +19,12 @@ from app.utils.images import (
 
 
 @pytest.fixture
-def temp_dir():
+def temp_dir() -> Iterator[str]:
     with tempfile.TemporaryDirectory() as tmp:
         yield tmp
 
 
-def _make_image(path: str, fmt: str, mode: str = "RGB", size=(10, 10)):
+def _make_image(path: str, fmt: str, mode: str = "RGB", size=(10, 10)) -> None:
     img = Image.new(mode, size, color="red")
     img.save(path, fmt)
 
