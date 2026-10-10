@@ -100,7 +100,7 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
           <DialogHeader>
             <DialogTitle>Create New Album</DialogTitle>
             <DialogDescription>
-              Create a new album to organize your photos and videos.
+              Create a new album to organize your photos.
             </DialogDescription>
           </DialogHeader>
 
