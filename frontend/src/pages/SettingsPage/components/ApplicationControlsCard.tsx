@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Settings as SettingsIcon, RefreshCw, Users } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -9,8 +9,7 @@ import { useUpdater } from '@/hooks/useUpdater';
 import { useDispatch } from 'react-redux';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
-import { triggerGlobalReclustering } from '@/api/api-functions/face_clusters';
-import { usePictoMutation } from '@/hooks/useQueryExtension';
+import { useGlobalRecluster } from '@/hooks/useGlobalRecluster';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { showGlobalAlert } from '@/features/globalAlertSlice';
 
@@ -32,11 +31,11 @@ const ApplicationControlsCard: React.FC = () => {
 
   const [updateDialogOpen, setUpdateDialogOpen] = useState<boolean>(false);
 
-  const reclusterMutation = usePictoMutation({
-    mutationFn: triggerGlobalReclustering,
-    autoInvalidateTags: ['clusters'],
-    onSuccess: (data) => {
-      const facesSkipped = data.data?.faces_skipped;
+  const reclusterJob = useGlobalRecluster();
+
+  useEffect(() => {
+    if (reclusterJob.isSuccess) {
+      const facesSkipped = reclusterJob.successData?.faces_skipped;
 
       if (facesSkipped != null && facesSkipped > 0) {
         dispatch(
@@ -46,34 +45,29 @@ const ApplicationControlsCard: React.FC = () => {
           }),
         );
       }
-    },
-  });
+    }
+  }, [reclusterJob.isSuccess, reclusterJob.successData, dispatch]);
 
   const feedbackOptions = React.useMemo(
     () => ({
-      loadingMessage: 'Starting global face reclustering...',
+      loadingMessage:
+        'Reclustering faces... this can take a while on large libraries.',
       successTitle: 'Reclustering Completed',
       successMessage:
-        reclusterMutation.successMessage ||
+        reclusterJob.successMessage ||
         'Global face reclustering completed successfully.',
       errorTitle: 'Reclustering Failed',
       errorMessage:
-        reclusterMutation.errorMessage ||
+        reclusterJob.errorMessage ||
         'Failed to complete global face reclustering.',
-      // You can use reclusterMutation.successData?.clusters_created to show the number of clusters created if needed
-      // Example: `Clusters created: ${reclusterMutation.successData?.clusters_created}`
     }),
-    [
-      reclusterMutation.successMessage,
-      reclusterMutation.errorMessage,
-      reclusterMutation.successData,
-    ],
+    [reclusterJob.successMessage, reclusterJob.errorMessage],
   );
 
-  useMutationFeedback(reclusterMutation, feedbackOptions);
+  useMutationFeedback(reclusterJob, feedbackOptions);
 
   const onGlobalReclusterClick = () => {
-    reclusterMutation.mutate(undefined);
+    reclusterJob.trigger();
   };
 
   const onCheckUpdatesClick = () => {
