@@ -1,5 +1,7 @@
-from platformdirs import user_data_dir
 import os
+import tempfile
+
+from platformdirs import user_data_dir
 
 # Model Exports Path
 MODEL_EXPORTS_PATH = "app/models/ONNX_Exports"
@@ -28,3 +30,7 @@ else:
     DATABASE_PATH = os.path.join(user_data_dir("PictoPy"), "database", "PictoPy.db")
 THUMBNAIL_IMAGES_PATH = "./images/thumbnails"
 IMAGES_PATH = "./images"
+
+# Shared session token file for authenticated shutdown.
+SHUTDOWN_TOKEN_FILE: str = os.path.join(tempfile.gettempdir(), "pictopy_shutdown.token")
+SHUTDOWN_TOKEN: str = ""
