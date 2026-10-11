@@ -1597,9 +1597,14 @@
             "in": "query",
             "required": false,
             "schema": {
-              "$ref": "#/components/schemas/InputType",
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/InputType"
+                }
+              ],
               "description": "Choose input type: 'path' or 'base64'",
-              "default": "path"
+              "default": "path",
+              "title": "Input Type"
             },
             "description": "Choose input type: 'path' or 'base64'"
           }
@@ -2388,7 +2393,7 @@
           "Share"
         ],
         "summary": "Create Share",
-        "description": "Issue a share token and make sure the network listener is up.\n\nAn album's local lock is deliberately not consulted: locking protects the\nalbum inside PictoPy, while sharing carries its own authorization.",
+        "description": "Issue a share token and make sure the network listener is up.\n\nAn album's local lock is deliberately not consulted: locking protects the\nalbum inside PictoPy, while sharing carries its own authorization \u2014 the\noptional password on this request, which is hashed and never read back.",
         "operationId": "create_share_share_albums__album_id__post",
         "parameters": [
           {
@@ -3070,6 +3075,18 @@
               }
             ],
             "title": "Expires In Minutes"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
           }
         },
         "type": "object",
@@ -4036,6 +4053,17 @@
             "type": "boolean",
             "title": "Isfavourite"
           },
+          "favouritedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Favouritedat"
+          },
           "tags": {
             "anyOf": [
               {
@@ -4103,7 +4131,6 @@
           "metadata": {
             "anyOf": [
               {
-                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -5035,7 +5062,6 @@
           "signals": {
             "anyOf": [
               {
-                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -5263,7 +5289,6 @@
           "metadata": {
             "anyOf": [
               {
-                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -5500,6 +5525,17 @@
             "type": "boolean",
             "title": "Isfavourite"
           },
+          "favouritedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Favouritedat"
+          },
           "tags": {
             "anyOf": [
               {
@@ -5570,6 +5606,17 @@
           "isFavourite": {
             "type": "boolean",
             "title": "Isfavourite"
+          },
+          "favouritedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Favouritedat"
           },
           "tags": {
             "anyOf": [
@@ -5653,6 +5700,10 @@
             ],
             "title": "Expires At"
           },
+          "is_protected": {
+            "type": "boolean",
+            "title": "Is Protected"
+          },
           "urls": {
             "items": {
               "$ref": "#/components/schemas/ShareUrl"
@@ -5669,6 +5720,7 @@
           "image_count",
           "port",
           "created_at",
+          "is_protected",
           "urls"
         ],
         "title": "Share"
@@ -6287,6 +6339,17 @@
           "isFavourite": {
             "type": "boolean",
             "title": "Isfavourite"
+          },
+          "favouritedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Favouritedat"
           },
           "tags": {
             "anyOf": [

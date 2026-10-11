@@ -4,6 +4,8 @@ Hi there! Thank you for considering contributing to **PictoPy** – we’re exci
 
 > **Note:** Do not open a PR for an issue that maintainers have not reviewed and labelled. Wait for the maintainer to give a green light.
 
+NOTE: Low-effort, unreviewed, or AI-generated issues and PRs that don't engage/add much value to the actual codebase/product will be closed without discussion.
+
 ## Setting Up the Project
 
 1. Setup Using Script (Recommended for Windows, Debian-based OS like Ubuntu, and Fedora/RedHat-based OS): [Guide](docs/Script_Setup_Guide.md)

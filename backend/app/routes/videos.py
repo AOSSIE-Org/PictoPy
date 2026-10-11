@@ -36,6 +36,7 @@ class VideoData(BaseModel):
     thumbnailPath: Optional[str]
     metadata: VideoMetadataModel
     isFavourite: bool
+    favouritedAt: Optional[str] = None
     tags: Optional[List[str]] = None
 
 
@@ -59,6 +60,7 @@ def _to_video_data(videos: List[dict]) -> List[VideoData]:
                     thumbnailPath=video["thumbnailPath"],
                     metadata=video["metadata"],
                     isFavourite=video.get("isFavourite", False),
+                    favouritedAt=video.get("favouritedAt"),
                     tags=video["tags"],
                 )
             )

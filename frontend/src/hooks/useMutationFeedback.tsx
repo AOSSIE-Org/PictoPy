@@ -84,11 +84,16 @@ export const useMutationFeedback = (
 
   const { isPending, isSuccess, isError, error } = mutationState;
 
-  // Handle loading state
+  // Handle loading state. Gated on showLoading entirely -- not just for
+  // showLoader -- so a call with showLoading: false never touches the
+  // (global, single-owner) loader, even once its own isPending goes false.
+  // Otherwise a second feedback call for the same surface would hide a
+  // loader that a sibling call is still legitimately showing.
   useEffect(() => {
-    if (showLoading && isPending) {
+    if (!showLoading) return;
+    if (isPending) {
       dispatch(showLoader(loadingMessage));
-    } else if (!isPending) {
+    } else {
       dispatch(hideLoader());
     }
   }, [isPending, showLoading, loadingMessage, dispatch]);

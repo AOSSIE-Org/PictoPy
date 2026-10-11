@@ -9,6 +9,7 @@ import SettingsCard from './SettingsCard';
 import { avatars } from '@/constants/avatars';
 import { CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -207,7 +208,7 @@ const AccountSettingsCard = forwardRef<AccountSettingsCardHandle>(
         description="Manage your account details and profile information."
       >
         <CardContent className="p-0">
-          <div className="grid gap-8 border-white/5 p-6 md:grid-cols-[minmax(0,280px)_1fr] md:gap-10 md:p-8">
+          <div className="grid gap-8 p-6 md:grid-cols-[minmax(0,280px)_1fr] md:gap-10 md:p-8">
             {/* LEFT: identity */}
             <div className="flex flex-col items-center md:items-start">
               <button
@@ -218,9 +219,9 @@ const AccountSettingsCard = forwardRef<AccountSettingsCardHandle>(
               >
                 <span
                   aria-hidden="true"
-                  className="absolute inset-0 rounded-full bg-black/30 blur-xl transition-opacity group-hover:opacity-100"
+                  className="bg-foreground/10 absolute inset-0 rounded-full opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-100"
                 />
-                <span className="relative inline-flex h-40 w-40 items-center justify-center rounded-full ring-2 ring-black ring-offset-4 ring-offset-transparent">
+                <span className="ring-border ring-offset-card relative inline-flex h-40 w-40 items-center justify-center rounded-full ring-2 ring-offset-4">
                   {selectedAvatar ? (
                     <img
                       src={selectedAvatar}
@@ -233,14 +234,14 @@ const AccountSettingsCard = forwardRef<AccountSettingsCardHandle>(
                     </div>
                   )}
                 </span>
-                <span className="absolute right-2 bottom-2 flex h-9 w-9 items-center justify-center rounded-full bg-neutral-800/90 text-white shadow-lg ring-1 ring-white/10 transition-transform group-hover:scale-105">
+                <span className="bg-primary text-primary-foreground ring-card absolute right-2 bottom-2 flex h-9 w-9 items-center justify-center rounded-full shadow-lg ring-2 transition-transform group-hover:scale-105">
                   <Pencil className="h-4 w-4" />
                 </span>
               </button>
 
               <div className="mt-8 w-full space-y-2">
-                <Label className="text-muted-foreground text-xs font-semibold tracking-[0.15em]">
-                  DISPLAY NAME
+                <Label className="text-muted-foreground text-xs font-semibold tracking-[0.15em] uppercase">
+                  Display name
                 </Label>
                 {isEditingName ? (
                   <>
@@ -262,14 +263,15 @@ const AccountSettingsCard = forwardRef<AccountSettingsCardHandle>(
                           handleCancelNameEdit();
                         }
                       }}
-                      className={`h-10 w-full rounded-none border-0 border-b bg-transparent px-0 text-lg shadow-none focus-visible:ring-0 ${
+                      className={cn(
+                        'h-10 w-full rounded-none border-0 border-b bg-transparent px-0 text-lg shadow-none focus-visible:ring-0',
                         nameError
-                          ? 'border-red-500 placeholder:text-red-500/80'
-                          : 'border-white/20 focus-visible:border-blue-500'
-                      }`}
+                          ? 'border-destructive placeholder:text-destructive/70'
+                          : 'border-border focus-visible:border-primary',
+                      )}
                     />
                     {longWordError ? (
-                      <p className="text-xs text-red-500">
+                      <p className="text-destructive text-xs">
                         A single word in your name cannot exceed 30 characters.
                       </p>
                     ) : (
@@ -283,7 +285,7 @@ const AccountSettingsCard = forwardRef<AccountSettingsCardHandle>(
                     type="button"
                     onClick={handleStartEditName}
                     aria-label="Edit name"
-                    className="group flex w-full items-center justify-between border-b border-white/20 pb-2 text-left transition-colors hover:border-white/40"
+                    className="group border-border hover:border-foreground/40 flex w-full items-center justify-between border-b pb-2 text-left transition-colors"
                   >
                     <span className="text-lg font-medium">
                       {name || 'Add your name'}
@@ -296,10 +298,10 @@ const AccountSettingsCard = forwardRef<AccountSettingsCardHandle>(
 
             {/* RIGHT: avatar picker */}
             <div>
-              <Label className="text-muted-foreground text-xs font-semibold tracking-[0.15em]">
-                CHOOSE AVATAR
+              <Label className="text-muted-foreground text-xs font-semibold tracking-[0.15em] uppercase">
+                Choose avatar
               </Label>
-              <div className="mt-8 grid grid-cols-4 gap-3 sm:gap-4">
+              <div className="mt-8 grid grid-cols-[repeat(4,5.625rem)] gap-4">
                 {avatars.map((avatar) => {
                   const isSelected = selectedAvatar === avatar;
                   return (
@@ -307,19 +309,22 @@ const AccountSettingsCard = forwardRef<AccountSettingsCardHandle>(
                       type="button"
                       key={avatar}
                       onClick={() => handleAvatarSelect(avatar)}
-                      className={`group relative aspect-square w-22.5 overflow-hidden rounded-full transition-all duration-200 ${
+                      className={cn(
+                        'group relative aspect-square w-full rounded-full transition-all duration-200',
                         isSelected
-                          ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-transparent'
-                          : 'ring-1 ring-white/5 hover:-translate-y-0.5 hover:ring-white/20'
-                      }`}
+                          ? 'ring-primary ring-offset-card ring-2 ring-offset-2'
+                          : 'ring-border hover:ring-foreground/30 ring-1 hover:-translate-y-0.5',
+                      )}
                     >
-                      <img
-                        src={avatar}
-                        alt="Avatar"
-                        className="h-full w-full object-cover"
-                      />
+                      <span className="block h-full w-full overflow-hidden rounded-full">
+                        <img
+                          src={avatar}
+                          alt="Avatar"
+                          className="h-full w-full object-cover"
+                        />
+                      </span>
                       {isSelected && (
-                        <span className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white shadow-md">
+                        <span className="bg-primary text-primary-foreground ring-card absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full shadow-md ring-2">
                           <Check className="h-3.5 w-3.5" strokeWidth={3} />
                         </span>
                       )}
@@ -331,7 +336,7 @@ const AccountSettingsCard = forwardRef<AccountSettingsCardHandle>(
           </div>
 
           {/* FOOTER */}
-          <div className="flex flex-col-reverse items-stretch gap-3 border-t border-white/5 px-6 py-4 sm:flex-row sm:items-center sm:justify-between md:px-8">
+          <div className="border-border flex flex-col-reverse items-stretch gap-3 border-t px-6 py-4 sm:flex-row sm:items-center sm:justify-between md:px-8">
             <p className="text-muted-foreground text-xs">
               {hasUnsavedChanges
                 ? 'You have unsaved changes'
@@ -351,7 +356,7 @@ const AccountSettingsCard = forwardRef<AccountSettingsCardHandle>(
                 disabled={
                   !selectedAvatar || longWordError || !hasUnsavedChanges
                 }
-                className="flex-1 bg-blue-500 text-white hover:bg-blue-600 sm:flex-none"
+                className="flex-1 sm:flex-none"
               >
                 Save Changes
               </Button>
