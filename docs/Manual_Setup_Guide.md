@@ -59,9 +59,11 @@ Before setting up the Python backend and sync-microservice, you need to have **M
    npm install
    ```
 
-4. **Next Steps:**
+4. **Start the Tauri desktop app in development mode:**
 
-   The frontend desktop application communicates with both the FastAPI backend (port `52123`) and the sync-microservice (port `52124`). Do not start the frontend yet; proceed through the backend and sync-microservice setup sections below first. Once all three components are configured, launch them together under [Running the Complete Application](#running-the-complete-application).
+   ```bash
+   npm run tauri dev
+   ```
 
 ## Python (FastAPI) Backend Setup Steps
 
