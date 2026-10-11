@@ -74,14 +74,18 @@ You remain the author of everything you submit — read your diff before opening
 
 ## Testing
 
-### Frontend
+### Automated Unit Testing
+
+#### Frontend
+
+Frontend unit tests use Jest and mocked API handlers. They run independently and **do not require** the backend or sync microservice to be running:
 
 ```bash
 cd frontend
 npm test
 ```
 
-### Backend
+#### Backend
 
 - FastAPI
 
@@ -96,6 +100,12 @@ npm test
   cd frontend/src-tauri/
   cargo test
   ```
+
+### Manual Testing & Running the App
+
+To test UI changes manually with real data, the desktop frontend requires both the FastAPI backend (port `52123`) and sync-microservice (port `52124`) running concurrently. If started without these services, the app prompts *"Waiting for servers to start"*.
+
+See the [Manual Setup Guide](docs/Manual_Setup_Guide.md#running-the-complete-application) or [Script Setup Guide](docs/Script_Setup_Guide.md) for instructions on launching all three services in development mode.
 
 ## Building for Production
 
