@@ -9,3 +9,4 @@ export * from './albums';
 export * from './memories';
 export * from './share';
 export * from './models';
+export * from './metadata_export';
