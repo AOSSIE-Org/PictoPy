@@ -99,11 +99,7 @@ export function MediaView({
   const { toggleFavourite } = useToggleFav();
   const { deleteImages } = useDeleteImages();
 
-  /**
-   * Opens the delete dialog — unless "Don't show again" was checked before,
-   * in which case it deletes immediately using the Settings preference,
-   * with no dialog shown at all.
-   */
+  // May delete straight away: "Don't show again" skips the dialog entirely.
   const handleOpenDeleteDialog = useCallback(() => {
     if (getSkipDeleteConfirmationPreference()) {
       if (!currentImage?.id) return;
