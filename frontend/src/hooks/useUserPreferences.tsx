@@ -167,9 +167,6 @@ export const useUserPreferences = () => {
       };
     });
 
-  /**
-   * Turn writing metadata into the image files on or off.
-   */
   const toggleMetadataExport = async () =>
     writePreferences((current) => {
       const Metadata_Export = !current.Metadata_Export;

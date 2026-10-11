@@ -487,12 +487,9 @@ class TestMalformedPackets:
 
 
 # --- the namespace spelled some other way, in packets that cannot be parsed --
-#
-# A parsed packet is judged by its tree, which resolves every spelling. These
-# cover the packets we cannot parse: besides literally, XML can spell our
-# namespace only with numeric character references, declared entities, or in
-# UTF-16/32. PictoPy always writes it literally in UTF-8, so these exist only
-# if another tool both re-encodes our data and breaks the XML.
+# A parsed packet's tree resolves every spelling. Unparseable ones can spell our
+# namespace only via character references, entities or UTF-16/32, and PictoPy writes
+# it literally in UTF-8, so these need another tool to re-encode it and break the XML.
 
 UNCLOSED = b"<dc:creator>" + K + b"</dc:creator>"  # description never closed
 
