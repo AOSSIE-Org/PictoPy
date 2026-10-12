@@ -38,9 +38,9 @@ export const useFolderOperations = () => {
     refetchInterval: 1000,
     refetchIntervalInBackground: true,
     enabled: folders.some((f) => f.AI_Tagging),
-    retry: 2, // Retry failed requests up to 2 times before giving up
-    retryOnMount: false, // Don't retry on component mount
-    refetchOnWindowFocus: false, // Don't refetch when window gains focus
+    retry: 2,
+    retryOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   useMutationFeedback(
@@ -155,15 +155,12 @@ export const useFolderOperations = () => {
   };
 
   return {
-    // Data
     folders,
     isLoading: foldersQuery.isLoading,
 
-    // Operations
     toggleAITagging,
     deleteFolder,
 
-    // Mutation states (for use in UI, e.g., disabling buttons)
     enableAITaggingPending: enableAITaggingMutation.isPending,
     disableAITaggingPending: disableAITaggingMutation.isPending,
     deleteFolderPending: deleteFolderMutation.isPending,

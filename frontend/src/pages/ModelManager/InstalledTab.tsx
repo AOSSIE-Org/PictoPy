@@ -177,7 +177,6 @@ export const InstalledTab: React.FC<InstalledTabProps> = ({
 
   return (
     <div className="space-y-8">
-      {/* Standard Tiers */}
       <section>
         <h2 className="mb-4 text-lg font-semibold">Installed Tiers</h2>
         {standardTiers.length === 0 ? (
@@ -295,7 +294,6 @@ export const InstalledTab: React.FC<InstalledTabProps> = ({
         </section>
       )}
 
-      {/* Required Tiers */}
       {requiredModels.length > 0 && (
         <section>
           <h2 className="mb-4 text-lg font-semibold">Always Installed</h2>

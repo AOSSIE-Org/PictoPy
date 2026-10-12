@@ -218,7 +218,6 @@ const UserPreferencesCard: React.FC = () => {
       description="Configure AI model settings and performance options"
     >
       <div className="space-y-6">
-        {/* YOLO Model Size Setting */}
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <Label
@@ -284,7 +283,6 @@ const UserPreferencesCard: React.FC = () => {
           </DropdownMenu>
         </div>
 
-        {/* GPU Acceleration Setting */}
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <Label
@@ -311,7 +309,6 @@ const UserPreferencesCard: React.FC = () => {
           </div>
         </div>
 
-        {/* Delete From Computer Setting */}
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <Label
@@ -372,7 +369,6 @@ const UserPreferencesCard: React.FC = () => {
               id="video-tagging-settings"
               className="border-border space-y-6 border-t p-4"
             >
-              {/* Video Keyframe Interval Setting */}
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <Label
@@ -413,7 +409,6 @@ const UserPreferencesCard: React.FC = () => {
                 </DropdownMenu>
               </div>
 
-              {/* Finding people in videos */}
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <Label
@@ -476,7 +471,6 @@ const UserPreferencesCard: React.FC = () => {
                 </div>
               )}
 
-              {/* Video Frame Cache */}
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <Label className="text-foreground text-sm font-medium">
@@ -542,7 +536,6 @@ const UserPreferencesCard: React.FC = () => {
               id="memories-settings"
               className="border-border space-y-6 border-t p-4"
             >
-              {/* Generate Memories Setting */}
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <Label
@@ -569,7 +562,6 @@ const UserPreferencesCard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Desktop Notifications Setting */}
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <Label
@@ -596,7 +588,6 @@ const UserPreferencesCard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Seconds Per Photo Setting */}
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <Label
@@ -638,7 +629,6 @@ const UserPreferencesCard: React.FC = () => {
                 </DropdownMenu>
               </div>
 
-              {/* Minimum Photos Setting */}
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <Label
@@ -688,7 +678,6 @@ const UserPreferencesCard: React.FC = () => {
                 </DropdownMenu>
               </div>
 
-              {/* Maximum Photos Setting */}
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <Label

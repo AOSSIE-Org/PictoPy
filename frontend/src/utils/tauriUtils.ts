@@ -6,25 +6,22 @@ declare global {
   }
 }
 
-// Check if we're running in a Tauri environment
 export const isTauriEnvironment = (): boolean => {
-  // Method 1: Use official Tauri API (recommended)
+  // window.isTauri is the official check, available since Tauri 2.0.0-beta.9.
   try {
-    // This is the official way to detect Tauri environment
-    // Available since Tauri 2.0.0-beta.9
     if (typeof window !== 'undefined' && window.isTauri) {
       return true;
     }
   } catch (error) {
-    // Fallback to manual detection if official API fails
+    // Fall through to the manual checks below.
   }
 
-  // Method 2: Check for __TAURI_INTERNALS__ (Tauri v2 manual detection)
+  // Tauri v2 internals, for builds where isTauri is unset.
   if (typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window) {
     return true;
   }
 
-  // Method 3: Fallback to __TAURI__ for backward compatibility (requires withGlobalTauri: true)
+  // Older global, only present with withGlobalTauri: true.
   if (typeof window !== 'undefined' && '__TAURI__' in window) {
     return true;
   }

@@ -2,12 +2,10 @@ import { RootState } from '@/app/store';
 import { createSelector } from '@reduxjs/toolkit';
 import { FolderDetails } from '@/types/Folder';
 
-// Basic selectors
 export const selectFolderState = (state: RootState) => state.folders;
 
 export const selectAllFolders = (state: RootState) => state.folders.folders;
 
-// Memoized selectors using createSelector
 export const selectFolderById = createSelector(
   [selectAllFolders, (_: RootState, folderId: string) => folderId],
   (folders, folderId) =>
@@ -34,7 +32,6 @@ export const selectTaggingCompletedFolders = createSelector(
   (folders) => folders.filter((folder) => folder.taggingCompleted),
 );
 
-// Get folders by path pattern (case-insensitive search)
 export const selectFoldersByPathPattern = createSelector(
   [selectAllFolders, (_: RootState, pattern: string) => pattern.toLowerCase()],
   (folders, pattern) =>
@@ -61,7 +58,6 @@ export const selectFolderHierarchy = createSelector(
   },
 );
 
-// Statistics selectors
 export const selectFolderStats = createSelector(
   [selectAllFolders],
   (folders) => ({

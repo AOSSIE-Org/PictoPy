@@ -5,7 +5,6 @@ import { MediaViewProps } from '@/types/Media';
 import { selectCurrentViewIndex } from '@/features/imageSelectors';
 import { setCurrentViewIndex, closeImageView } from '@/features/imageSlice';
 
-// Modular components
 import { MediaViewControls } from './MediaViewControls';
 import { ZoomControls } from './ZoomControls';
 import { MediaThumbnails } from './MediaThumbnails';
@@ -15,7 +14,6 @@ import { NavigationButtons } from './NavigationButtons';
 import { ConfirmDialog } from '@/components/Dialog/ConfirmDialog';
 import type { ImageViewerRef } from './ImageViewer';
 
-// Custom hooks
 import { useImageViewControls } from '@/hooks/useImageViewControls';
 import { useSlideshow } from '@/hooks/useSlideshow';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
@@ -38,10 +36,8 @@ export function MediaView({
 }: MediaViewProps) {
   const dispatch = useDispatch();
 
-  // Redux selectors
   const currentViewIndex = useSelector(selectCurrentViewIndex);
   const totalImages = images.length;
-  // guard: images default to empty array in the signature so `images.length` is safe
 
   const currentImage = useMemo(() => {
     if (currentViewIndex >= 0 && currentViewIndex < images.length) {
@@ -52,7 +48,6 @@ export function MediaView({
 
   const imageViewerRef = useRef<ImageViewerRef>(null);
 
-  // Local UI state
   const [showInfo, setShowInfo] = useState(false);
   const [showThumbnails, setShowThumbnails] = useState(false);
   const [resetSignal, setResetSignal] = useState(0);
@@ -60,14 +55,12 @@ export function MediaView({
   const [deleteFromDevice, setDeleteFromDevice] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
 
-  // Custom hooks
   const { viewState, handlers } = useImageViewControls();
   const resetViewerState = useCallback(() => {
     handlers.resetZoom();
     setResetSignal((s) => s + 1);
   }, [handlers]);
 
-  // Navigation handlers
   const handleNextImage = useCallback(() => {
     if (currentViewIndex < images.length - 1) {
       dispatch(setCurrentViewIndex(currentViewIndex + 1));
@@ -125,13 +118,11 @@ export function MediaView({
     deleteImages({ imageIds: [currentImage.id], deleteFromDevice });
   }, [currentImage, deleteImages, deleteFromDevice, dontShowAgain]);
 
-  // Loop to first image handler for slideshow
   const handleLoopToStart = useCallback(() => {
     dispatch(setCurrentViewIndex(0));
     resetViewerState();
   }, [dispatch, resetViewerState]);
 
-  // Slideshow functionality
   const { isSlideshowActive, toggleSlideshow } = useSlideshow(
     totalImages,
     handleNextImage,
@@ -149,16 +140,14 @@ export function MediaView({
     }
   };
 
-  // Toggle functions
   const toggleInfo = useCallback(() => {
     setShowInfo((prev) => !prev);
   }, []);
 
-  // Hooks that depend on currentImage but always declared
+  // Declared before the early return below, since hooks cannot be conditional.
   const handleToggleFavourite = useCallback(() => {
     if (currentImage) {
       if (currentImage?.id) {
-        // Use custom handler if provided, otherwise use default
         if (onToggleFavorite) {
           onToggleFavorite(currentImage.id);
         } else {
@@ -198,7 +187,6 @@ export function MediaView({
     onToggleInfo: toggleInfo,
   });
 
-  // Early return if no images or invalid index
   if (!images?.length || currentViewIndex === -1 || !currentImage) {
     return null;
   }
@@ -208,7 +196,6 @@ export function MediaView({
   const currentImageAlt = `image-${currentViewIndex}`;
   return (
     <div className="fixed inset-0 z-50 mt-0 flex flex-col bg-linear-to-b from-white/95 to-white/98 backdrop-blur-lg dark:from-black/95 dark:to-black/98">
-      {/* Controls */}
       <MediaViewControls
         showInfo={showInfo}
         onToggleInfo={toggleInfo}
@@ -242,7 +229,6 @@ export function MediaView({
         onDontShowAgainChange={setDontShowAgain}
       />
 
-      {/* Main viewer area */}
       <div
         className="relative flex h-full w-full items-center justify-center overflow-visible"
         onClick={(e) => {
@@ -260,7 +246,6 @@ export function MediaView({
           />
         )}
 
-        {/* Navigation buttons */}
         <NavigationButtons
           onPrevious={handlePreviousImage}
           onNext={handleNextImage}
@@ -269,7 +254,6 @@ export function MediaView({
         />
       </div>
 
-      {/* Zoom controls */}
       {type === 'image' && (
         <ZoomControls
           onZoomIn={handleZoomIn}
@@ -280,7 +264,6 @@ export function MediaView({
         />
       )}
 
-      {/* Thumbnails */}
       <div
         onMouseEnter={() => setShowThumbnails(true)}
         onMouseLeave={() => setShowThumbnails(false)}
@@ -294,7 +277,6 @@ export function MediaView({
         />
       </div>
 
-      {/* Info panel */}
       <MediaInfoPanel
         show={showInfo}
         onClose={toggleInfo}

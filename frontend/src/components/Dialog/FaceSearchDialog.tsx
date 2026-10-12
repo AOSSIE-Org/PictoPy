@@ -116,7 +116,6 @@ export function FaceSearchDialog() {
           </DialogHeader>
 
           <div className="grid grid-cols-2 gap-4 py-4">
-            {/* Upload Button */}
             <Button
               onClick={handlePickFile}
               disabled={false}
@@ -130,7 +129,6 @@ export function FaceSearchDialog() {
               </span>
             </Button>
 
-            {/* Webcam Button */}
             <Button
               onClick={handleWebCam}
               disabled={false}

@@ -531,8 +531,7 @@ export const SearchResults = () => {
             )
           )}
 
-          {/* Videos: symmetric — a video-search error is inline and never
-              hides successfully-fetched photos. */}
+          {/* Videos: likewise inline, so a video-search error never hides the photos. */}
           {videoSearchError ? (
             <div className="text-muted-foreground mb-6 flex items-center gap-2 text-sm">
               <AlertCircle className="text-destructive h-4 w-4 shrink-0" />

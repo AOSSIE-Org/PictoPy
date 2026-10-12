@@ -401,7 +401,6 @@ export default function NetflixStylePlayer({
         </div>
       )}
 
-      {/* Progress Bar */}
       <div
         className={`absolute right-0 bottom-16 left-0 px-4 transition-opacity ${
           controlsVisible
@@ -464,7 +463,6 @@ export default function NetflixStylePlayer({
         </div>
       </div>
 
-      {/* Controls */}
       <div
         className={`absolute right-0 bottom-4 left-0 flex items-center justify-between px-4 transition-opacity ${
           controlsVisible
@@ -517,7 +515,6 @@ export default function NetflixStylePlayer({
           </div>
         </div>
 
-        {/* Timestamp and Fullscreen */}
         <div className="flex items-center space-x-4">
           <div className="rounded-full bg-black/50 p-2 text-white">
             {formatDuration(currentTime) + ' / ' + formatDuration(duration)}

@@ -57,13 +57,10 @@ export function VideoCard({ video, className, onClick }: VideoCardProps) {
               <Film className="text-muted-foreground h-10 w-10" />
             </div>
           )}
-          {/* Dark overlay on hover */}
           <div className="pointer-events-none absolute inset-0 bg-black/30 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
 
-          {/* Playback: a real button covering the thumbnail, kept a sibling of
-              the favourite button so the two never nest. Both the control and
-              its play glyph are omitted when there's nothing to activate, so a
-              non-playable card never looks playable. */}
+          {/* Playback: a real button over the thumbnail, a sibling of the favourite
+              button so the two never nest. Omitted when there is nothing to play. */}
           {onClick && (
             <>
               <div
@@ -106,7 +103,6 @@ export function VideoCard({ video, className, onClick }: VideoCardProps) {
             </Button>
           </div>
 
-          {/* Duration badge */}
           {duration && (
             <div className="pointer-events-none absolute right-2 bottom-2 z-20 rounded bg-black/70 px-1.5 py-0.5 text-xs font-medium text-white">
               {duration}

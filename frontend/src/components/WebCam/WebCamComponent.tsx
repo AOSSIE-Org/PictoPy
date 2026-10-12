@@ -230,7 +230,6 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
                 </>
               )}
 
-              {/* Camera Selection Dropdown */}
               <div className="flex w-full max-w-md flex-col items-center gap-4">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

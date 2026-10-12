@@ -5,13 +5,11 @@ import { AppSidebar } from '../Navigation/Sidebar/AppSidebar';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { ROUTES } from '@/constants/routes';
 
-// Display current routes
 const LocationDisplay = () => {
   const location = useLocation();
   return <div data-testid="location-display">{location.pathname}</div>;
 };
 
-// Sidebar + routes display
 const SidebarWithRoutes = () => (
   <SidebarProvider>
     <AppSidebar />
@@ -39,7 +37,6 @@ describe('Sidebar', () => {
         </SidebarProvider>,
       );
 
-      // Verify key navigation items exist
       expect(screen.getByText('Home')).toBeInTheDocument();
       expect(screen.getByText('AI Tagging')).toBeInTheDocument();
       expect(screen.getByText('Favourites')).toBeInTheDocument();
@@ -84,14 +81,12 @@ describe('Sidebar', () => {
         const user = userEvent.setup();
         render(<SidebarWithRoutes />, { initialRoutes: [`/${startRoute}`] });
 
-        // verify start location
         expect(screen.getByTestId('location-display')).toHaveTextContent(
           `/${startRoute}`,
         );
 
         await user.click(screen.getByText(linkText));
 
-        // verify navigation
         expect(screen.getByTestId('location-display')).toHaveTextContent(
           `/${route}`,
         );

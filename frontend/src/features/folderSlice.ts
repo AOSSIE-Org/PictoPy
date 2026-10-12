@@ -61,7 +61,6 @@ const folderSlice = createSlice({
       );
     },
 
-    // Clear all folder data
     clearFolders(state) {
       state.folders = [];
     },

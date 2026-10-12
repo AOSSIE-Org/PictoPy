@@ -61,7 +61,6 @@ export const Home = () => {
 
   return (
     <div className="relative flex h-full flex-col pr-6">
-      {/* Gallery Section */}
       <div
         ref={scrollableRef}
         className="hide-scrollbar flex-1 overflow-x-hidden overflow-y-auto"
@@ -101,7 +100,6 @@ export const Home = () => {
         <VideoPlayerOverlay videos={matchedVideos} />
       )}
 
-      {/* Timeline Scrollbar */}
       {monthMarkers.length > 0 && (
         <TimelineScrollbar
           scrollableRef={scrollableRef}

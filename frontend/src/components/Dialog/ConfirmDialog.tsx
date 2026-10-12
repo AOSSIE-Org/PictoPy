@@ -44,7 +44,7 @@ interface DialogCheckboxProps {
   card?: boolean;
 }
 
-/** Shared checkbox + label (+ optional hint) row, reused for both the body option and the footer's "don't show again". */
+/** Checkbox row shared by the body option and the footer's "don't show again". */
 const DialogCheckbox: React.FC<DialogCheckboxProps> = ({
   id,
   label,

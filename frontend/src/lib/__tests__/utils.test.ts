@@ -14,8 +14,6 @@ function fakeAxiosError(
   };
 }
 
-// cn (classname merge)
-
 describe('cn', () => {
   test('merges multiple class names', () => {
     expect(cn('px-4', 'py-2')).toBe('px-4 py-2');
@@ -34,8 +32,6 @@ describe('cn', () => {
     expect(cn('base', false, null, undefined, 'extra')).toBe('base extra');
   });
 });
-
-// getErrorMessage
 
 describe('getErrorMessage', () => {
   test('returns default message for null / undefined', () => {

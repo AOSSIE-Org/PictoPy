@@ -35,9 +35,7 @@ export const formatMemoryDate = (isoDate: string | null): string => {
   });
 };
 
-/**
- * Format a memory's span, collapsing a single day and a single month.
- */
+/** Format a memory's span, collapsing a single day and a single month. */
 export const formatDateRange = (
   startDate: string | null,
   endDate: string | null,

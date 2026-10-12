@@ -214,9 +214,8 @@ type ManualAnimationFrames = {
   flushNextFrame: () => void;
 };
 
-// Replaces the synchronous rAF/cAF mocks (installed in beforeEach) with a manual
-// queue so a single generation of scheduled fit attempts can be flushed at a
-// time. This makes the fit-retry loop deterministic to assert against.
+// Swaps beforeEach's synchronous rAF/cAF mocks for a manual queue, so one
+// generation of fit attempts flushes at a time and the retry loop is deterministic.
 const setupManualAnimationFrames = (): ManualAnimationFrames => {
   const frames = new Map<number, FrameRequestCallback>();
   let nextFrameId = 1;

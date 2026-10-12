@@ -8,7 +8,6 @@ import { setClusters } from '@/features/faceClustersSlice';
 import type { Cluster } from '@/types/Media';
 import { selectName, selectAvatar } from '@/features/onboardingSelectors';
 
-// Mock dependencies
 jest.mock('react-redux', () => ({
   useDispatch: jest.fn(),
   useSelector: jest.fn(),
@@ -91,10 +90,8 @@ describe('Navbar Component', () => {
     setupUseSelector([]);
     render(<Navbar />);
 
-    // Initially closed
     expect(screen.queryByText('Favourites')).not.toBeInTheDocument();
 
-    // Click to open
     const searchInput = screen.getByPlaceholderText('Add to your search');
     fireEvent.click(searchInput);
 
@@ -105,11 +102,9 @@ describe('Navbar Component', () => {
     setupUseSelector([]);
     render(<Navbar />);
 
-    // Open dropdown
     fireEvent.click(screen.getByPlaceholderText('Add to your search'));
     expect(screen.getByText('Favourites')).toBeInTheDocument();
 
-    // Click outside
     fireEvent.mouseDown(document.body);
 
     expect(screen.queryByText('Favourites')).not.toBeInTheDocument();
@@ -119,11 +114,9 @@ describe('Navbar Component', () => {
     setupUseSelector([]);
     render(<Navbar />);
 
-    // Open dropdown
     fireEvent.click(screen.getByPlaceholderText('Add to your search'));
     expect(screen.getByText('Favourites')).toBeInTheDocument();
 
-    // Press Escape
     fireEvent.keyDown(document, { key: 'Escape' });
 
     expect(screen.queryByText('Favourites')).not.toBeInTheDocument();
@@ -150,7 +143,6 @@ describe('Navbar Component', () => {
       }),
     );
 
-    // Mock that we now have clusters
     setupUseSelector([
       {
         cluster_id: '1',
@@ -173,7 +165,6 @@ describe('Navbar Component', () => {
     setupUseSelector([]);
     render(<Navbar />);
 
-    // Open dropdown
     fireEvent.click(screen.getByPlaceholderText('Add to your search'));
     expect(screen.getByText('Favourites')).toBeInTheDocument();
 
@@ -181,7 +172,6 @@ describe('Navbar Component', () => {
 
     expect(mockNavigate).toHaveBeenCalledWith('/favourites');
 
-    // Dropdown should be closed
     expect(screen.queryByText('Favourites')).not.toBeInTheDocument();
   });
 
@@ -197,7 +187,6 @@ describe('Navbar Component', () => {
       },
     ];
 
-    // Mock usePictoQuery to return success with data
     (usePictoQuery as jest.Mock).mockReturnValue({
       data: {
         data: {

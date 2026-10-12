@@ -85,7 +85,7 @@ export const useUserPreferences = () => {
   useMutationFeedback(updatePreferencesMutation, {
     showLoading: false, // Don't show the loading indicator to prevent flicker
     loadingMessage: 'Updating preferences',
-    showSuccess: false, // Don't show the success InfoDialog
+    showSuccess: false,
     successTitle: 'Preferences Updated',
     successMessage: 'Your preferences have been saved successfully.',
     errorTitle: 'Update Error',
@@ -192,12 +192,10 @@ export const useUserPreferences = () => {
     }));
 
   return {
-    // Data
     preferences,
     memoriesPreferences: preferences.memories ?? DEFAULT_MEMORIES_PREFERENCES,
     isLoading: preferencesQuery.isLoading,
 
-    // Operations
     updateYoloModelSize,
     toggleGpuAcceleration,
     updateVideoFrameInterval,
@@ -208,7 +206,6 @@ export const useUserPreferences = () => {
     // For refetching preferences after external events (e.g., Model Manager window closing)
     refetch: preferencesQuery.refetch,
 
-    // Mutation state (for use in UI, e.g., disabling buttons)
     isUpdating: updatePreferencesMutation.isPending,
   };
 };

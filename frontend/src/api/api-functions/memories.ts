@@ -2,8 +2,6 @@ import { memoriesEndpoints } from '../apiEndpoints';
 import { apiClient } from '../axiosConfig';
 import type { BackendRes } from '@/hooks/useQueryExtension';
 
-// Data Types
-
 export type MemoryEventType = 'anniversary' | 'import_event' | 'semantic_event';
 
 export type MemoryStatus = 'pending' | 'complete' | 'failed' | 'empty';
@@ -98,8 +96,6 @@ export interface UpdateMemoryRequest {
   dismissed?: boolean;
   notified?: boolean;
 }
-
-// API Functions
 
 /** List memory cards, newest first. */
 export const getMemories = async (

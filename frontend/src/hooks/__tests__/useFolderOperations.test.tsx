@@ -69,8 +69,8 @@ describe('useFolderOperations - delete folder cache invalidation', () => {
   });
 
   it('invalidates the memories query when folder deletion succeeds', async () => {
-    // Invalidates the 5-minute frontend cache so the UI immediately reflects synchronous
-    // backend deletions without requiring the user to manually regenerate.
+    // Deleting invalidates the 5-minute cache, so the UI reflects the backend's
+    // synchronous delete straight away.
     deleteFolders.mockResolvedValueOnce({ success: true, data: {} });
     const { result, invalidateSpy } = renderUseFolderOperations();
 
