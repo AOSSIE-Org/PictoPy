@@ -4,10 +4,6 @@ from app.utils.YOLO import class_names
 
 
 def db_create_YOLO_classes_table():
-    # print current directory:
-    import os
-
-    print(os.getcwd())
     conn = None
     try:
         conn = sqlite3.connect(DATABASE_PATH)
