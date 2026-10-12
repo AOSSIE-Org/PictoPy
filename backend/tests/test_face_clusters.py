@@ -509,13 +509,8 @@ def poll_until_terminal(job_client, task_id, timeout=10.0):
 
 
 class TestGlobalReclusterAPI:
-    """Test class for the global reclustering background job endpoints.
-
-    These tests use TestClient as a context manager so that a single event
-    loop is shared across requests: the job is an asyncio task created by
-    POST and read back by a later GET, and a per-request loop would discard
-    it in between.
-    """
+    """TestClient runs as a context manager so POST and the later GET share one
+    event loop; a per-request loop would drop the job's asyncio task between them."""
 
     @pytest.fixture(autouse=True)
     def reset_recluster_state(self):
@@ -551,9 +546,8 @@ class TestGlobalReclusterAPI:
 
     @patch("app.routes.face_clusters.cluster_util_face_clusters_sync")
     def test_second_trigger_rejoins_running_job(self, mock_recluster):
-        """Triggering while a job is in flight returns the running task_id
-        instead of starting a second pass, which would race on the cluster
-        tables (a full recluster deletes and rebuilds every cluster)."""
+        """A trigger while a job is in flight rejoins its task_id instead of
+        starting a second pass that would race on the cluster tables."""
         release = threading.Event()
 
         def blocking_recluster(**_kwargs):
@@ -606,13 +600,8 @@ class TestGlobalReclusterAPI:
 
     @pytest.mark.asyncio
     async def test_cleanup_reaps_tasks_past_ttl(self):
-        """The periodic cleanup loop drops a finished task once it has sat
-        past RECLUSTER_TASK_TTL_MINUTES, and leaves a fresher one alone.
-
-        Patches asyncio.sleep (rather than waiting on the loop's real 5-minute
-        interval) so the loop body actually runs within the test, then cancels
-        it after the reap instead of letting it run forever.
-        """
+        """A finished task past RECLUSTER_TASK_TTL_MINUTES is reaped and a fresher
+        one kept. asyncio.sleep is patched so the 5-minute loop runs in the test."""
         stale_entry = face_clusters_module.ReclusterTask(status="complete")
         stale_entry.finished_at = datetime.now(timezone.utc) - timedelta(
             minutes=face_clusters_module.RECLUSTER_TASK_TTL_MINUTES + 1

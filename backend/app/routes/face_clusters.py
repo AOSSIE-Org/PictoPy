@@ -139,11 +139,8 @@ async def _run_global_recluster(task_id: str, app_state: State) -> None:
 
 
 async def _cleanup_stale_recluster_tasks() -> None:
-    """Periodically drop finished reclustering results once they age out.
-
-    Running tasks are left untouched (a legitimate recluster can run for a
-    long time, and the concurrency guard already bounds them to one).
-    """
+    """Drop finished reclustering results once they age out. Running tasks stay:
+    one can legitimately run long, and the concurrency guard caps them at one."""
     while True:
         await asyncio.sleep(300)  # run every 5 minutes
         now = datetime.now(timezone.utc)

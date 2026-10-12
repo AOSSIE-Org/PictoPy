@@ -108,8 +108,6 @@ async def lifespan(app: FastAPI):
     semantic_util_sync_vocabulary()
     # New pool, just for folder indexing, so it never queues behind AI tagging
     app.state.indexing_executor = ProcessPoolExecutor(max_workers=INDEXING_MAX_WORKERS)
-    # NOTE: model-download/reclustering job tracking is in-memory and per-worker
-    # (see run.sh/run-server.ps1), so this must stay a single worker.
     app.state.executor = ProcessPoolExecutor(max_workers=1)
     # Self-gating no-ops unless something is missing/stale (fresh install,
     # checkpoint swap, edited seed). Single-worker executor runs them in
@@ -127,7 +125,6 @@ async def lifespan(app: FastAPI):
 
     # Start the SSE model download cleanup task
     cleanup_task = asyncio.create_task(_cleanup_stale_tasks())
-    # Start the global-reclustering finished-task cleanup loop
     recluster_cleanup_task = asyncio.create_task(_cleanup_stale_recluster_tasks())
 
     try:

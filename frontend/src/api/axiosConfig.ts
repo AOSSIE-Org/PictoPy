@@ -1,12 +1,9 @@
 import axios from 'axios';
 import { BACKEND_URL, SYNC_MICROSERVICE_URL } from '@/config/Backend';
 
-// Default timeout for ordinary requests. Endpoints whose runtime scales with
-// library size pass a longer per-call `timeout` override instead.
 const DEFAULT_TIMEOUT_MS = 30000;
 
-// Endpoints that scan the full library (face search, multi-person search)
-// should pass `{ timeout: LONG_REQUEST_TIMEOUT_MS }` per call instead.
+// Passed per call by endpoints that scan the whole library, like face search.
 export const LONG_REQUEST_TIMEOUT_MS = 120000;
 
 // Create simple axios instance with basic configuration

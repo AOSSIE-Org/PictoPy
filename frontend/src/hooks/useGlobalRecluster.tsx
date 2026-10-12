@@ -35,14 +35,7 @@ export type UseGlobalReclusterResult = ReclusterState & { trigger: () => void };
 const toError = (err: unknown): Error =>
   err instanceof Error ? err : new Error(getErrorMessage(err));
 
-/**
- * Triggers global face reclustering and polls for completion.
- *
- * Reclustering runs over every face embedding in the library, so the
- * backend starts it as a background job and returns a task_id immediately
- * instead of blocking the HTTP request. This hook polls the job's status
- * endpoint until it reaches a terminal state.
- */
+// Starts the backend's recluster job and polls it until it completes or fails.
 export function useGlobalRecluster(): UseGlobalReclusterResult {
   const queryClient = useQueryClient();
   const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
