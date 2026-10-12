@@ -50,7 +50,7 @@ def _album_exists(name: str) -> HTTPException:
         detail=ErrorResponse(
             success=False,
             error="Album Already Exists",
-            message=f"Album '{name}' is already in the database.",
+            message=f"An album with the name {name} already exists, would you like to save this as {name}1",
         ).model_dump(),
     )
 
@@ -241,6 +241,10 @@ def update_album(
                     message="The current password is incorrect.",
                 ).model_dump(),
             )
+
+    existing_album = db_get_album_by_name(body.name)
+    if existing_album and existing_album["album_id"] != album_id:
+        raise _album_exists(body.name)
 
     try:
         db_update_album(
