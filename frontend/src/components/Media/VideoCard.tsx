@@ -60,7 +60,8 @@ export function VideoCard({ video, className, onClick }: VideoCardProps) {
           <div className="pointer-events-none absolute inset-0 bg-black/30 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
 
           {/* Playback: a real button over the thumbnail, a sibling of the favourite
-              button so the two never nest. Omitted when there is nothing to play. */}
+              button so the two never nest. With nothing to play, button and glyph
+              are both left out, so the card never looks playable. */}
           {onClick && (
             <>
               <div

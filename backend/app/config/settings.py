@@ -179,7 +179,7 @@ SIGLIP2_EMBED_BATCH_SIZE = _get_env_int("SIGLIP2_EMBED_BATCH_SIZE", 8, min_value
 SIGLIP2_TEXT_MAX_LENGTH = 64
 SIGLIP2_TOKENIZER_PAD_ID = 0
 SIGLIP2_TOKENIZER_PAD_TOKEN = "<pad>"
-# Bare-noun queries score low in absolute terms; 0.02 was measured to cut true positives.
+# Bare-noun queries score low in absolute terms; 0.02 measurably cut true positives.
 SIGLIP2_MATCH_THRESHOLD = _get_env_float("SIGLIP2_MATCH_THRESHOLD", 0.01, min_value=0.0)
 
 # Ensembled label vectors score ~2 orders of magnitude below live queries, so

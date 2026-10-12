@@ -1,6 +1,6 @@
-//! Exposes the share server beyond the LAN through an SSH reverse tunnel, using
-//! the platform's own ssh rather than a bundled ~40MB binary. The child is owned
-//! here so it dies with the app: an orphan leaves an album reachable publicly.
+//! Exposes the share server beyond the LAN through an SSH reverse tunnel. Uses the
+//! platform's ssh rather than bundling a ~40MB binary served from unversioned URLs.
+//! The child is owned here so it dies with the app: an orphan exposes an album.
 
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -169,6 +169,7 @@ impl<C: TunnelChild> Default for TunnelStateOf<C> {
 
 /// Splits on whitespace rather than matching the sentence around it -- the
 /// wording is the provider's to change, and one already differs from its docs.
+/// Each event is one line: the shell plugin frames output with read_line.
 fn find_url(line: &str, suffix: &str) -> Option<String> {
     line.split_whitespace()
         .filter(|token| token.starts_with("https://"))

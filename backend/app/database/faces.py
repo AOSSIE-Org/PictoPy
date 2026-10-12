@@ -72,9 +72,9 @@ def db_create_faces_table() -> None:
             )
         """
         )
-        # Legacy databases predate frame_id, and CREATE IF NOT EXISTS won't add it. No CHECK
-        # for the exclusive arc: SQLite can't ALTER one in, so fresh and migrated schemas
-        # would differ.
+        # Legacy databases predate frame_id, and CREATE IF NOT EXISTS won't add
+        # it. No CHECK for the exclusive arc: SQLite can't ALTER one in, so fresh
+        # and migrated schemas would differ.
         cursor.execute("PRAGMA table_info(faces)")
         if "frame_id" not in {row[1] for row in cursor.fetchall()}:
             cursor.execute(

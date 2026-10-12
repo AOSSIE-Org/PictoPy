@@ -134,6 +134,7 @@ def post_folder_add_sequence(folder_path: str, folder_id: str):
         folder_data = []
         folder_ids_and_paths = db_get_folder_ids_by_path_prefix(folder_path)
 
+        # recursive=False: the prefix match already lists every subfolder.
         for folder_id_from_db, folder_path_from_db in folder_ids_and_paths:
             folder_data.append((folder_path_from_db, folder_id_from_db, False))
 

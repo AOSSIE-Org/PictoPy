@@ -54,7 +54,8 @@ def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
         monkeypatch.setattr("app.database.yolo_mapping.DATABASE_PATH", db_path)
 
         # The real schema, not a hand-written copy: a divergent CREATE reorders
-        # columns and drops ON DELETE CASCADE, and the whole FK chain must resolve.
+        # columns and drops ON DELETE CASCADE, and the FK chain (folders <- images
+        # <- image_classes -> mappings) must resolve.
         db_create_YOLO_classes_table()
         db_create_folders_table()
         db_create_images_table()  # db_get_all_folder_details LEFT JOINs it

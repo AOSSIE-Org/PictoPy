@@ -243,6 +243,7 @@ class InterceptHandler(logging.Handler):
 
         record.msg = f"[{module_name}] {msg}"
         record.args = ()
+        # Cleared so the same traceback is not printed twice.
         record.exc_info = None
         record.stack_info = None
 

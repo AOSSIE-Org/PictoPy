@@ -64,7 +64,7 @@ export const useMemory = (memoryId?: string) => {
 };
 
 // `forcePolling` covers the gap after /generate: refetchInterval reads the
-// cached status, still 'complete', so polling would never start on its own.
+// cached status, not 'running' yet, so polling would never start on its own.
 export const useMemoryStatus = (
   enabled: boolean = true,
   forcePolling: boolean = false,

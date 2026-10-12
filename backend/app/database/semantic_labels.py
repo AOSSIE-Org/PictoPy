@@ -19,7 +19,8 @@ def db_create_semantic_labels_table():
         cursor = conn.cursor()
 
         # The pre-vocabulary schema shipped with no writer, so it is guaranteed
-        # empty: drop and recreate rather than ALTER.
+        # empty: drop and recreate rather than ALTER. image_semantic_labels, also
+        # never written, is superseded by image_classes.score.
         cursor.execute("PRAGMA table_info(semantic_labels)")
         columns = {row[1] for row in cursor.fetchall()}
         if columns and "descriptions" not in columns:

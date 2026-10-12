@@ -221,7 +221,7 @@ if __name__ == "__main__":
         host="localhost",
         port=52123,
         log_level="info",
-        log_config=None,  # keep our logging setup; Uvicorn's default config would replace it
+        log_config=None,  # Uvicorn's default config would replace ours
     )
     server = Server(config)
     server.run()

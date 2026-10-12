@@ -36,8 +36,8 @@ GPS_NOVELTY_SCALE_KM = 50.0
 HOME_CELL_PRECISION = 1
 MIN_IMAGES_FOR_HOME = 20
 
-# BOTH must hold. Visual similarity alone collapses a daily coffee or a revisited
-# viewpoint into one survivor -- near-identical, yet genuinely distinct photos.
+# A near-duplicate needs BOTH: visual similarity alone would collapse a daily
+# coffee or a revisited viewpoint into one survivor, though those are distinct.
 DUP_COSINE = 0.90
 DUP_WINDOW_SECONDS = 120.0
 

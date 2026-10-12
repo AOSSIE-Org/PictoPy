@@ -13,9 +13,9 @@ def siglip_util_preprocess_image(img_path: str, resolution: int) -> np.ndarray |
     Returns a [3, R, R] float32 array or None if the image is corrupt/unreadable.
     """
     try:
-        # PIL bicubic measures cosine ~0.984 against HF SiglipImageProcessor;
-        # exact parity would mean shipping transformers. SIGLIP2_MATCH_THRESHOLD
-        # was tuned here, so recalibration must use this function, not HF's.
+        # PIL bicubic, antialiased since Pillow 9.1, measures cosine ~0.984 against
+        # HF's SiglipImageProcessor; parity would mean shipping transformers.
+        # SIGLIP2_MATCH_THRESHOLD was tuned here, so recalibrate with this, not HF's.
         img = (
             Image.open(img_path)
             .convert("RGB")
@@ -57,6 +57,7 @@ def siglip_util_tokenize_query(query: str) -> tuple[np.ndarray, np.ndarray]:
 
     # Guards check-load-assign only: racing threads could otherwise interleave
     # the _tokenizer/_tokenizer_key writes and leave the pair mismatched.
+    # encode() never touches the cache, so it runs outside on a local.
     with _tokenizer_lock:
         if _tokenizer is None or _tokenizer_key != current_key:
             tokenizer_path = get_model_path(current_key)

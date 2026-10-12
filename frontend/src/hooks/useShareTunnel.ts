@@ -3,7 +3,8 @@ import { startTunnel, stopTunnel, tunnelStatus } from '@/utils/tunnel';
 import { ShareTunnel } from '@/types/Share';
 
 // One tunnel forwards the whole share port, so it belongs to the app, not to an
-// album. Asks the Rust side rather than trusting what a dialog last saw.
+// album. Asks the Rust side rather than trusting what a dialog last saw: a share
+// can be stopped before the first status lookup resolves.
 export const useShareTunnel = (): ShareTunnel => {
   const [url, setUrl] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);

@@ -135,8 +135,9 @@ class TestSemanticSearchEndpoint:
         mock_get_path.return_value = "/models/text.onnx"
         mock_exists.return_value = True
 
-        # Realistic dot magnitudes, not saturated toy vectors. img_high has the
-        # *lower* score despite being listed first, so a broken sort shows.
+        # Both clear SIGLIP2_MATCH_THRESHOLD with distinct scores at realistic dot
+        # magnitudes, not saturated toy vectors. img_high scores *lower* despite
+        # being listed first, so a broken sort shows.
         mock_get_all_embeddings.return_value = (
             ["img_high", "img_highest"],
             np.array([[0.13, 0.0], [0.16, 0.0]], dtype=np.float32),
