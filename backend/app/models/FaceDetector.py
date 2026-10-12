@@ -1,5 +1,3 @@
-# app/detectors/FaceDetector.py
-
 from typing import Dict, List, Optional, TypedDict
 
 import cv2
