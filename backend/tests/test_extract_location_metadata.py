@@ -11,9 +11,6 @@ def extractor():
     return MetadataExtractor()
 
 
-# Test Classes
-
-
 LATITUDE_LIMIT = 90.0
 LONGITUDE_LIMIT = 180.0
 

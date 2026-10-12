@@ -26,7 +26,6 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 
-# Response Models
 class GetAllVideosResponse(BaseModel):
     success: bool
     message: str
@@ -433,7 +432,6 @@ def toggle_favourite(req: ToggleFavouriteRequest):
                     message=f"No video with id '{video_id}' could be toggled",
                 ).model_dump(),
             )
-        # Fetch updated status to return
         video = db_get_video_by_id(video_id)
         if not video:
             raise HTTPException(

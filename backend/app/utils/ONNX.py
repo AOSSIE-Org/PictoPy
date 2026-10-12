@@ -18,7 +18,7 @@ def ONNX_util_get_execution_providers(exclude: tuple[str, ...] = ()) -> list:
 
     metadata = db_get_metadata()
 
-    # Default to CPU if no preferences found
+    # GPU acceleration stays on unless the user turned it off.
     gpu_acceleration = True
 
     if metadata and "user_preferences" in metadata:

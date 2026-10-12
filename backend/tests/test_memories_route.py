@@ -10,8 +10,6 @@ from fastapi.testclient import TestClient
 from app.routes import memories as memories_route
 from app.schemas.user_preferences import MemoriesPreferences
 
-# Pytest Fixtures
-
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:

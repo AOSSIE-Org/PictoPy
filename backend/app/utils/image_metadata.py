@@ -17,7 +17,6 @@ def extract_metadata(image_path):
     try:
         with Image.open(image_path) as image:
             try:
-                # Basic image info
                 info_dict = {
                     "image_size": image.size,
                     "image_format": image.format,
@@ -57,7 +56,6 @@ def extract_metadata(image_path):
     except Exception as e:
         raise RuntimeError(f"Unexpected error processing {image_path}: {e}")
 
-    # File size extraction
     try:
         metadata["file_size"] = os.path.getsize(image_path)
     except OSError as file_error:
@@ -65,7 +63,6 @@ def extract_metadata(image_path):
             f"Could not retrieve file size for {image_path}. Error: {file_error}"
         )
 
-    # Image creation date
     try:
         creation_time = os.path.getctime(image_path)
         metadata["creation_date"] = datetime.fromtimestamp(creation_time).strftime(

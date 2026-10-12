@@ -18,8 +18,6 @@ app.include_router(albums_router.router, prefix="/albums", tags=["albums"])
 
 client = TestClient(app)
 
-# Pytest Fixtures
-
 
 def album_row(
     album: dict[str, Any],
@@ -83,9 +81,6 @@ def mock_db_locked_album():
         "is_locked": True,
         "password_hash": "a_very_secure_hash",
     }
-
-
-# Test Classes
 
 
 class TestAlbumRoutes:

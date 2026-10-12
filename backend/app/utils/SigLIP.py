@@ -24,7 +24,7 @@ def siglip_util_preprocess_image(img_path: str, resolution: int) -> np.ndarray |
 
         img_np = np.asarray(img).astype(np.float32) / 255.0
 
-        # Normalize: (x - 0.5) / 0.5 (SigLIP mean=std=0.5 per channel)
+        # SigLIP normalizes with mean = std = 0.5 per channel.
         img_np = (img_np - 0.5) / 0.5
 
         # Transpose HWC -> CHW
@@ -77,9 +77,8 @@ def siglip_util_tokenize_query(query: str) -> tuple[np.ndarray, np.ndarray]:
         1, SIGLIP2_TEXT_MAX_LENGTH
     )
 
-    # attention_mask: np.ones, NOT encoding's mask.
-    # SigLIP trains fixed-length without pad masking; ONNX export validated with all-ones mask.
-    # Encoding's real mask (zeros on padding) would deviate from validated numbers.
+    # All ones, not the encoding's mask: SigLIP trains fixed-length without pad
+    # masking, and the ONNX export was validated against an all-ones mask.
     attention_mask = np.ones((1, SIGLIP2_TEXT_MAX_LENGTH), dtype=np.int64)
 
     return input_ids, attention_mask

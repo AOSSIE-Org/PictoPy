@@ -63,10 +63,8 @@ from app.logging.setup_logging import (
     get_logger,
 )
 
-# Set up standard logging first
 setup_logging("backend")
 
-# Configure Uvicorn logging to use our custom formatter
 configure_uvicorn_logging("backend")
 
 path = os.path.dirname(DATABASE_PATH)
@@ -77,7 +75,6 @@ os.makedirs(THUMBNAIL_IMAGES_PATH, exist_ok=True)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create tables and initialize systems
     generate_openapi_json()
     db_create_folders_table()
     db_create_images_table()
@@ -137,7 +134,6 @@ async def lifespan(app: FastAPI):
         app.state.executor.shutdown(wait=True)
 
 
-# Create FastAPI app
 app = FastAPI(
     lifespan=lifespan,
     title="PictoPy",
@@ -152,7 +148,6 @@ app = FastAPI(
 )
 
 
-# Initialize logger for this module
 logger = get_logger(__name__)
 
 
@@ -182,17 +177,15 @@ def generate_openapi_json():
         logger.error(f"Failed to generate openapi.json: {e}")
 
 
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# Basic health check endpoint
 @app.get("/health", tags=["Health"])
 async def root():
     return {"message": "PictoPy Server is up and running!"}
@@ -218,7 +211,6 @@ app.include_router(
 )
 
 
-# Entry point for running with: python3 main.py
 if __name__ == "__main__":
     multiprocessing.freeze_support()  # Required for Windows
     logger = get_logger(__name__)
@@ -229,7 +221,7 @@ if __name__ == "__main__":
         host="localhost",
         port=52123,
         log_level="info",
-        log_config=None,  # This is crucial - disable Uvicorn's default logging config
+        log_config=None,  # keep our logging setup; Uvicorn's default config would replace it
     )
     server = Server(config)
     server.run()

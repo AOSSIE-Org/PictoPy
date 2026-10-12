@@ -1,11 +1,9 @@
-# Standard library imports
 import sqlite3
 from typing import Any, List, Mapping, Optional, Tuple, TypedDict, Union
 import json
 
 from datetime import datetime
 
-# App-specific imports
 from app.config.settings import (
     DATABASE_PATH,
 )
@@ -13,7 +11,6 @@ from app.logging.setup_logging import get_logger
 
 logger = get_logger(__name__)
 
-# Type definitions
 VideoId = str
 VideoPath = str
 FolderId = str

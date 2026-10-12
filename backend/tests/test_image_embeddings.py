@@ -146,8 +146,7 @@ class TestImageEmbeddingsDB:
 
         assert db_count_embeddings("siglip2-base-patch16-224") == 1
         assert db_count_embeddings("siglip2-large-patch16-384") == 1
-        # Now that the DB is genuinely isolated per test, this is exact --
-        # no leftover rows from real usage or other tests to tolerate.
+        # Exact: each test gets its own database, so there are no stray rows to tolerate.
         assert db_count_embeddings() == 2
 
     def test_get_all_embeddings_empty_returns_empty_matrix(self):

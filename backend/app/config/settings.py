@@ -15,11 +15,10 @@ else:
         os.path.join(os.path.dirname(__file__), "..", "models", "ONNX_Exports")
     )
 
-# Microservice URLs
 SYNC_MICROSERVICE_URL = "http://localhost:52124"
 
-# The album share listener. Unlike the two services above this one binds
-# 0.0.0.0, so it is reachable by anything that can route to this machine.
+# The album share listener. Unlike the backend and sync service it binds 0.0.0.0,
+# so anything that can route to this machine can reach it.
 SHARE_SERVER_PORT = 52125
 
 CONFIDENCE_PERCENT = 0.6
@@ -180,7 +179,7 @@ SIGLIP2_EMBED_BATCH_SIZE = _get_env_int("SIGLIP2_EMBED_BATCH_SIZE", 8, min_value
 SIGLIP2_TEXT_MAX_LENGTH = 64
 SIGLIP2_TOKENIZER_PAD_ID = 0
 SIGLIP2_TOKENIZER_PAD_TOKEN = "<pad>"
-# bare-noun queries score low in absolute terms; 0.02 measured to cut true positives.
+# Bare-noun queries score low in absolute terms; 0.02 was measured to cut true positives.
 SIGLIP2_MATCH_THRESHOLD = _get_env_float("SIGLIP2_MATCH_THRESHOLD", 0.01, min_value=0.0)
 
 # Ensembled label vectors score ~2 orders of magnitude below live queries, so

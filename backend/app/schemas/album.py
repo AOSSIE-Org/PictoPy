@@ -16,9 +16,6 @@ class Album(BaseModel):
     updated_at: Optional[str] = None
 
 
-# Request Handler
-
-
 class CreateAlbumRequest(BaseModel):
     name: str = Field(..., min_length=1)
     description: Optional[str] = ""
@@ -84,9 +81,6 @@ class ImageIdsRequest(BaseModel):
             cleaned.append(img_id.strip())
 
         return cleaned
-
-
-# Response Handler
 
 
 class GetAlbumsResponse(BaseModel):

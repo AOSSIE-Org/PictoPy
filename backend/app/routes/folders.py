@@ -131,7 +131,6 @@ def post_folder_add_sequence(folder_path: str, folder_id: str):
     """
     folder_ids_and_paths = []
     try:
-        # Get all folder IDs and paths that match the root path prefix
         folder_data = []
         folder_ids_and_paths = db_get_folder_ids_by_path_prefix(folder_path)
 

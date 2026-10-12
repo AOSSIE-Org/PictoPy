@@ -1,5 +1,5 @@
-# This DB module stores curated memories: persisted, scored collections of
-# images surfaced proactively rather than browsed.
+# Curated memories: persisted, scored collections of images that PictoPy
+# surfaces on its own rather than waiting to be browsed.
 import json
 import sqlite3
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple, TypedDict

@@ -230,7 +230,6 @@ class InterceptHandler(logging.Handler):
         elif "." in module_name:
             module_name = module_name.split(".")[-1]
 
-        # Create a message that includes the original module in the format
         msg = record.getMessage()
 
         record.msg = f"[{module_name}] {msg}"
@@ -255,7 +254,6 @@ def configure_uvicorn_logging(component_name: str) -> None:
 
     intercept_handler = InterceptHandler(component_name)
 
-    # Make sure the handler uses our ColorFormatter
     config = load_config()
     component_config = config.get("components", {}).get(
         component_name, {"prefix": component_name.upper(), "color": "white"}
@@ -272,12 +270,11 @@ def configure_uvicorn_logging(component_name: str) -> None:
 
     for logger_name in ["uvicorn", "uvicorn.error", "uvicorn.access"]:
         uvicorn_logger = logging.getLogger(logger_name)
-        uvicorn_logger.handlers = []  # Clear existing handlers
-        uvicorn_logger.propagate = False  # Don't propagate to root
-        uvicorn_logger.setLevel(logging.INFO)  # Ensure log level is at least INFO
+        uvicorn_logger.handlers = []
+        uvicorn_logger.propagate = False
+        uvicorn_logger.setLevel(logging.INFO)
         uvicorn_logger.addHandler(intercept_handler)
 
-    # Also configure asyncio logger similarly
     asyncio_logger = logging.getLogger("asyncio")
     asyncio_logger.handlers = []
     asyncio_logger.propagate = False

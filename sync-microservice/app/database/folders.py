@@ -5,7 +5,6 @@ from app.logging.setup_logging import get_sync_logger
 
 logger = get_sync_logger(__name__)
 
-# Type definitions
 FolderId = str
 FolderPath = str
 FolderIdPath = Tuple[FolderId, str]

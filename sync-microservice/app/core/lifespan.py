@@ -12,7 +12,6 @@ from app.logging.setup_logging import get_sync_logger
 
 logger = get_sync_logger(__name__)
 
-# Global variable to track watcher status
 watcher_started = False
 
 
@@ -24,7 +23,6 @@ async def lifespan(app: FastAPI):
     global watcher_started
 
     try:
-        # Startup
         logger.info("Starting PictoPy Sync Microservice...")
 
         logger.info("Checking database connection...")
@@ -68,7 +66,6 @@ async def lifespan(app: FastAPI):
         logger.error(f"Unexpected error during startup: {e}")
         raise
     finally:
-        # Shutdown
         logger.info("Shutting down sync microservice...")
         if watcher_started:
             watcher_util_stop_folder_watcher()

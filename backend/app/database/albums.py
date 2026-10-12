@@ -348,14 +348,12 @@ def db_add_images_to_album(album_id: str, image_ids: list[str]):
     Safely adds images to an album using parameterized queries.
     Maintains UUID support and uses efficient single queries.
     """
-    # Validate input type
     if not isinstance(image_ids, list):
         raise ValueError("image_ids must be a list of IDs")
 
-    # Remove integer conversion - keep IDs as strings for UUID support
+    # IDs are UUID strings, so they are never cast to int.
     sanitized_ids = []
     for img_id in image_ids:
-        # Basic validation - ensure it's a non-empty string
         if isinstance(img_id, str) and img_id.strip():
             sanitized_ids.append(img_id.strip())
 
@@ -367,7 +365,7 @@ def db_add_images_to_album(album_id: str, image_ids: list[str]):
 
         placeholders = ",".join(["?"] * len(sanitized_ids))
         query = f"SELECT id FROM images WHERE id IN ({placeholders})"
-        cursor.execute(query, sanitized_ids)  # Pass string IDs directly
+        cursor.execute(query, sanitized_ids)
         valid_images = [row[0] for row in cursor.fetchall()]
 
         if not valid_images:

@@ -234,8 +234,8 @@ def get_cluster_images(cluster_id: str):
             for img in images_data
         ]
 
-        # Step 4: Videos the same person appears in, as the videos routes
-        # return them, so the frontend renders them with the same card.
+        # Videos this person appears in, shaped like the videos routes return them so
+        # the frontend reuses the same card.
         videos = video_util_to_video_data(
             db_get_videos_by_ids(db_get_video_ids_by_cluster_id(cluster_id))
         )
@@ -317,7 +317,7 @@ def face_tagging(
                 ).model_dump(),
             )
 
-        MAX_B64_LEN = 14_000_000  # 10MB
+        MAX_B64_LEN = 14_000_000  # about 10MB once base64-decoded
         if len(base64_data) > MAX_B64_LEN:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

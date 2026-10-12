@@ -4,12 +4,10 @@ from typing import List, Optional, Dict, Union, Any
 from app.schemas.videos import VideoData
 
 
-# Request Models
 class RenameClusterRequest(BaseModel):
     cluster_name: str
 
 
-# Response Models
 class RenameClusterData(BaseModel):
     cluster_id: str
     cluster_name: str

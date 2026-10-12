@@ -57,7 +57,6 @@ async def shutdown():
     except Exception as e:
         logger.error(f"Error stopping folder watcher: {e}")
 
-    # Define callback to handle potential exceptions in the background task
     def _handle_shutdown_exception(task: asyncio.Task):
         try:
             task.result()

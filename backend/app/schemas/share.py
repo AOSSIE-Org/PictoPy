@@ -4,8 +4,6 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.share.registry import PASSWORD_MAX_BYTES
 
-# Request Handler
-
 
 class CreateShareRequest(BaseModel):
     # None means the share lives until it is revoked or PictoPy closes.
@@ -21,9 +19,6 @@ class CreateShareRequest(BaseModel):
         if value is not None and len(value.encode("utf-8")) > PASSWORD_MAX_BYTES:
             raise ValueError(f"Password must be at most {PASSWORD_MAX_BYTES} bytes")
         return value
-
-
-# Response Handler
 
 
 class ShareInterface(BaseModel):

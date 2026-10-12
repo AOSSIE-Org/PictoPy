@@ -180,9 +180,7 @@ class TestSemanticSearchEndpoint:
         # Query must be stripped + lowercased before templating, so casing/
         # whitespace differences hit the calibration-validated regime.
         mock_tokenize.assert_called_once_with("This is a photo of beach.")
-        # The definitive proof of correct sorting: matched_ids (built from
-        # matched_pairs.sort(..., reverse=True)) must already be in
-        # descending-score order by the time it reaches this call.
+        # The proof the sort works: ids reach this call in descending-score order.
         mock_get_images_by_ids.assert_called_once_with(["img_highest", "img_high"])
 
     @patch("app.database.image_embeddings.db_get_all_embeddings")
@@ -198,9 +196,8 @@ class TestSemanticSearchEndpoint:
         mock_get_path,
         mock_get_all_embeddings,
     ):
-        # min_length=1 on the FastAPI Query param only checks raw string
-        # length, so a whitespace-only query slips past it -- the route's
-        # own strip().lower() + empty-check is what should catch this.
+        # min_length=1 checks the raw string, so a whitespace-only query gets past it;
+        # the route's own strip() and empty check must catch it.
         mock_registry_keys.return_value = ("siglip2_base_vision", "siglip2_base_text")
         mock_tok_key.return_value = "siglip2_base_tokenizer"
         mock_get_path.return_value = "/models/text.onnx"

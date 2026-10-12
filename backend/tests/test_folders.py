@@ -40,8 +40,6 @@ from app.database.images import db_create_images_table
 from app.database.videos import db_create_videos_table
 from app.database.yolo_mapping import db_create_YOLO_classes_table
 
-# Pytest Fixtures
-
 
 @pytest.fixture(scope="function")
 def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
@@ -149,9 +147,6 @@ def sample_folder_details():
             0,
         ),
     ]
-
-
-# Test Classes
 
 
 class TestFoldersAPI:
@@ -294,7 +289,7 @@ class TestFoldersAPI:
         assert data["success"] is True
         assert data["data"]["folder_id"] == "child-folder-id"
 
-        # Verify parent lookup was not called since parent_id was provided
+        # parent_id was provided, so no lookup is needed.
         mock_find_parent.assert_not_called()
 
     @patch("app.routes.folders.folder_util_add_folder_tree")
@@ -326,7 +321,7 @@ class TestFoldersAPI:
 
         response = client.post("/folders/add-folder", json=request_data)
 
-        assert response.status_code == 422  # Validation error
+        assert response.status_code == 422
 
     @patch("app.routes.folders.folder_util_add_folder_tree")
     @patch("app.routes.folders.db_update_parent_ids_for_subtree")
@@ -359,8 +354,7 @@ class TestFoldersAPI:
 
         assert response.status_code == 200
 
-        # Indexing pool used, AI/misc pool untouched
-        # Access the app state through the client
+        # Indexing pool used, AI/misc pool untouched.
         app_state = client.app.state
         app_state.indexing_executor.submit.assert_called_once()
         app_state.executor.submit.assert_not_called()
@@ -458,7 +452,7 @@ class TestFoldersAPI:
 
         response = client.post("/folders/enable-ai-tagging", json=request_data)
 
-        assert response.status_code == 422  # Validation error
+        assert response.status_code == 422
 
     @patch("app.routes.folders.db_enable_ai_tagging_batch")
     def test_enable_ai_tagging_database_error(self, mock_enable_batch, client):
@@ -552,7 +546,7 @@ class TestFoldersAPI:
 
         response = client.post("/folders/disable-ai-tagging", json=request_data)
 
-        assert response.status_code == 422  # Validation error
+        assert response.status_code == 422
 
     @patch("app.routes.folders.db_disable_ai_tagging_batch")
     def test_disable_ai_tagging_database_error(self, mock_disable_batch, client):
@@ -581,7 +575,7 @@ class TestFoldersAPI:
 
         assert response.status_code == 200
 
-        # Verify NO background processing was triggered (unlike enable)
+        # Unlike enable, disabling queues no background work.
         app_state = client.app.state
         app_state.executor.submit.assert_not_called()
 
@@ -837,8 +831,6 @@ class TestFoldersAPI:
         data = response.json()
         assert data["success"] is True
         assert data["data"]["updated_count"] == 0
-
-    # Unit Tests
 
 
 class TestFoldersUnit:
@@ -1306,7 +1298,6 @@ class TestFoldersUnit:
         }
 
 
-# Integration & Workflow Tests
 class TestFoldersIntegration:
     @patch("app.routes.folders.folder_util_add_folder_tree")
     @patch("app.routes.folders.db_update_parent_ids_for_subtree")
