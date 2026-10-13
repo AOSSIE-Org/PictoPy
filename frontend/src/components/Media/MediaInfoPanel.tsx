@@ -217,17 +217,21 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
                   e.preventDefault();
                   if (currentImage?.path) {
                     try {
-                      // 1. Find the last slash (/) or backslash (\) in the file path
                       const lastSeparator = Math.max(
                         currentImage.path.lastIndexOf('/'),
                         currentImage.path.lastIndexOf('\\')
                       );
                       
-                      // 2. Extract just the folder path (remove the filename)
                       if (lastSeparator !== -1) {
-                        const folderPath = currentImage.path.substring(0, lastSeparator);
+                        let folderPath = currentImage.path.substring(0, lastSeparator);
                         
-                        // 3. Tell the OS to open that folder in File Explorer / Finder
+                        // Handle root-level paths to preserve the root separator
+                        if (/^[A-Za-z]:$/.test(folderPath)) {
+                          folderPath += '\\'; // e.g., "C:" becomes "C:\"
+                        } else if (folderPath === '') {
+                          folderPath = '/'; // e.g., "/image.jpg" becomes "/"
+                        }
+                        
                         await open(folderPath);
                       }
                     } catch (err) {
