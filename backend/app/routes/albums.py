@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Body, Path
 from starlette.datastructures import State
+import sqlite3
 import uuid
 from app.schemas.album import (
     GetAlbumsResponse,
@@ -253,6 +254,8 @@ def update_album(
         # A rename or lock change alters every member's exported albums.
         request_metadata_export(app_state)
         return SuccessResponse(success=True, msg="Album updated successfully")
+    except sqlite3.IntegrityError as e:
+        raise _album_exists(body.name) from e
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

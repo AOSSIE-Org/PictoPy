@@ -1,5 +1,6 @@
 import sys
 import os
+import sqlite3
 import pytest
 import bcrypt
 from fastapi import FastAPI
@@ -481,6 +482,35 @@ class TestAlbumRoutes:
             assert response.status_code == 200
             assert response.json()["success"] is True
             mock_update.assert_called_once()
+
+    def test_update_album_integrity_error_mapped_to_conflict(self, mock_db_album):
+        """Test that a database uniqueness collision during update returns 409."""
+        current_album = album_row(mock_db_album)
+
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_get_album_by_name"
+        ) as mock_get_by_name, patch(
+            "app.routes.albums.db_update_album"
+        ) as mock_update:
+            mock_get_album.return_value = current_album
+            # Pre-check passes (e.g. race condition where name wasn't taken yet)
+            mock_get_by_name.return_value = None
+            mock_update.side_effect = sqlite3.IntegrityError(
+                "UNIQUE constraint failed: albums.album_name"
+            )
+
+            response = client.put(
+                f"/albums/{current_album['album_id']}",
+                json={"name": "RaceName", "description": "", "is_locked": False},
+            )
+            assert response.status_code == 409
+            json_response = response.json()
+            assert json_response["detail"]["success"] is False
+            assert json_response["detail"]["error"] == "Album Already Exists"
+            assert (
+                json_response["detail"]["message"]
+                == "An album with the name RaceName already exists, would you like to save this as RaceName1"
+            )
 
     def test_delete_album_success(self, mock_db_album):
         """
