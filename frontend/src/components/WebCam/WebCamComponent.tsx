@@ -117,14 +117,15 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
     setShowCamera(true);
   };
 
-  const handleSearchCapturedImage = () => {
+    const handleSearchCapturedImage = () => {
     if (capturedImageUrl) {
       // The results page runs the search for the captured photo (a data URL).
       dispatch(startSearch(capturedImageUrl));
       navigate(`/${ROUTES.FACE_SEARCH}`, {
         replace: location.pathname === `/${ROUTES.FACE_SEARCH}`,
       });
-      onClose();
+      // Reset the captured photo too, so the next open shows the live camera.
+      handleClose();
     } else {
       dispatch(
         showInfoDialog({
