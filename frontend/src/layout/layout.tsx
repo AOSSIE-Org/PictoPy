@@ -5,11 +5,14 @@ import { Outlet, useLocation } from 'react-router';
 import { clearSearch } from '@/features/searchSlice';
 import { useDispatch } from 'react-redux';
 import { useEffect } from 'react';
+import { ROUTES } from '@/constants/routes';
 const Layout: React.FC = () => {
   const dispatch = useDispatch();
   const location = useLocation();
   useEffect(() => {
-    if (location.pathname !== '/home') {
+    // The face search results page owns the search state while it is open;
+    // leaving it for any other page resets the search.
+    if (location.pathname !== `/${ROUTES.FACE_SEARCH}`) {
       dispatch(clearSearch());
     }
   }, [location, dispatch]);
