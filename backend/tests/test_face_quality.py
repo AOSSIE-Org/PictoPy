@@ -2,21 +2,12 @@ import numpy as np
 
 from app.utils.face_quality import face_passes_quality_gate
 
-# ##############################
-# Helpers
-# ##############################
-
 
 def sharp_gray(size: int = 50) -> np.ndarray:
     """A deterministic high-variance (sharp) grayscale image."""
     img = np.zeros((size, size), dtype=np.uint8)
     img[::2] = 255  # alternating rows -> large Laplacian variance
     return img
-
-
-# ##############################
-# Quality gate
-# ##############################
 
 
 class TestFaceQualityGate:

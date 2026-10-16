@@ -46,8 +46,7 @@ describe('SearchResults Page', () => {
   });
 
   const renderWithQuery = (queryValue: string) => {
-    // MemoryRouter in test-utils defaults to initialEntries=['/']
-    // We can pass initialRoutes via options to inject search params
+    // initialRoutes injects the search params; test-utils' MemoryRouter defaults to '/'.
     return render(<SearchResults />, {
       initialRoutes: [`/search?value=${encodeURIComponent(queryValue)}`],
     });
@@ -60,14 +59,12 @@ describe('SearchResults Page', () => {
     expect(searchImagesByTag).not.toHaveBeenCalled();
     expect(searchVideosByTag).not.toHaveBeenCalled();
 
-    // Check for empty state message
     expect(
       screen.getByText(/Please enter a search term to find/i),
     ).toBeInTheDocument();
   });
 
   test('renders loading and success state with images', async () => {
-    // Mock successful API response
     (searchImagesByTag as jest.Mock).mockResolvedValue({
       success: true,
       data: [
@@ -93,10 +90,8 @@ describe('SearchResults Page', () => {
       expect(searchImagesByTag).toHaveBeenCalledWith({ tag: 'cat' }),
     );
 
-    // Header should reflect the query
     expect(screen.getByText('Results for "cat"')).toBeInTheDocument();
 
-    // Wait for images to render
     await waitFor(() => {
       expect(
         screen.queryByText(/No photos or videos found matching your search/i),
@@ -406,10 +401,9 @@ describe('SearchResults Page', () => {
   });
 
   test('resets the main scroll container to the top on a new search', async () => {
-    // The real scroll container lives in the layout, which this page-level
-    // test does not mount. Stand one in and give its scrollTo the same
-    // observable effect a browser has -- it updates scrollTop -- so the test
-    // can assert the user-visible scroll state rather than a spy call.
+    // The real scroll container lives in the layout, which this test does not mount.
+    // Stand one in whose scrollTo updates scrollTop like a browser's, so the test can
+    // assert the visible scroll state rather than a spy call.
     const scrollContainer = document.createElement('div');
     scrollContainer.id = 'main-scroll-container';
     const scrollTo = jest.fn((options?: ScrollToOptions) => {

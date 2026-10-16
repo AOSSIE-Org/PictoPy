@@ -85,28 +85,24 @@ class_names = [
     "toothbrush",
 ]
 
-# Create a list of colors for each class where each color is a tuple of 3 integer values
+# Fixed seed so each class keeps the same box color between runs.
 rng = np.random.default_rng(3)
 colors = rng.uniform(0, 255, size=(len(class_names), 3))
 
 
 def YOLO_util_nms(boxes, scores, iou_threshold):
-    # Sort by score
     sorted_indices = np.argsort(scores)[::-1]
 
     keep_boxes = []
     while sorted_indices.size > 0:
-        # Pick the last box
+        # Keep the best remaining box and drop any that overlap it past iou_threshold.
         box_id = sorted_indices[0]
         keep_boxes.append(box_id)
 
-        # Compute IoU of the picked box with the rest
         ious = YOLO_util_compute_iou(boxes[box_id, :], boxes[sorted_indices[1:], :])
 
-        # Remove boxes with IoU over the threshold
         keep_indices = np.where(ious < iou_threshold)[0]
 
-        # print(keep_indices.shape, sorted_indices.shape)
         sorted_indices = sorted_indices[keep_indices + 1]
 
     return keep_boxes
@@ -128,28 +124,24 @@ def YOLO_util_multiclass_nms(boxes, scores, class_ids, iou_threshold):
 
 
 def YOLO_util_compute_iou(box, boxes):
-    # Compute xmin, ymin, xmax, ymax for both boxes
     xmin = np.maximum(box[0], boxes[:, 0])
     ymin = np.maximum(box[1], boxes[:, 1])
     xmax = np.minimum(box[2], boxes[:, 2])
     ymax = np.minimum(box[3], boxes[:, 3])
 
-    # Compute intersection area
     intersection_area = np.maximum(0, xmax - xmin) * np.maximum(0, ymax - ymin)
 
-    # Compute union area
     box_area = (box[2] - box[0]) * (box[3] - box[1])
     boxes_area = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
     union_area = box_area + boxes_area - intersection_area
 
-    # Compute IoU
     iou = intersection_area / union_area
 
     return iou
 
 
 def YOLO_util_xywh2xyxy(x):
-    # Convert bounding box (x, y, w, h) to bounding box (x1, y1, x2, y2)
+    # x, y is the box center.
     y = np.copy(x)
     y[..., 0] = x[..., 0] - x[..., 2] / 2
     y[..., 1] = x[..., 1] - x[..., 3] / 2
@@ -169,7 +161,6 @@ def YOLO_util_draw_detections(
 
     det_img = YOLO_util_draw_masks(det_img, boxes, class_ids, mask_alpha)
 
-    # Draw bounding boxes and labels of detections
     for class_id, box, score in zip(class_ids, boxes, scores):
         if score < confidence_threshold or class_id >= len(class_names) - 1:
             color = colors[-1]
@@ -230,13 +221,12 @@ def YOLO_util_draw_masks(
 ) -> np.ndarray:
     mask_img = image.copy()
 
-    # Draw bounding boxes and labels of detections
     for box, class_id in zip(boxes, classes):
         color = colors[class_id]
 
         x1, y1, x2, y2 = box.astype(int)
 
-        # Draw fill rectangle in mask image
+        # Thickness -1 fills the rectangle.
         cv2.rectangle(mask_img, (x1, y1), (x2, y2), color, -1)
 
     return cv2.addWeighted(mask_img, mask_alpha, image, 1 - mask_alpha, 0)
@@ -254,18 +244,15 @@ def YOLO_util_get_model_path(model_type: str = "object") -> str:
     """
     from app.database.metadata import db_get_metadata
 
-    # Get metadata from database
     metadata = db_get_metadata()
 
     # Default model size if no preferences found
     model_size = "small"
 
-    # Extract YOLO model size from user preferences
     if metadata and "user_preferences" in metadata:
         user_prefs = metadata["user_preferences"]
         model_size = user_prefs.get("YOLO_model_size", "small")
 
-    # Define model mappings
     model_mappings = {
         "object": {
             "nano": settings.NANO_OBJ_DETECTION_MODEL,
@@ -279,8 +266,6 @@ def YOLO_util_get_model_path(model_type: str = "object") -> str:
         },
     }
 
-    # Get the appropriate model mapping
     models = model_mappings.get(model_type, model_mappings["object"])
 
-    # Return the model path with fallback to small
     return models.get(model_size, models["small"])

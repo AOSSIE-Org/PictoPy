@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event';
 import Settings from '../SettingsPage/Settings';
 
 describe('Settings Page', () => {
-  // shared setup for all tests
   const setupTest = async () => {
     const user = userEvent.setup();
     render(<Settings />);
@@ -116,7 +115,6 @@ describe('Settings Page', () => {
         await user.click(dropdownTrigger);
         await user.click(screen.getByRole('menuitem', { name: /small/i }));
 
-        // reopen and verify options still available
         await user.click(dropdownTrigger);
         expect(screen.getAllByRole('menuitem')).toHaveLength(4);
       });
@@ -153,13 +151,4 @@ describe('Settings Page', () => {
       });
     });
   });
-
-  // eslint-disable-next-line no-warning-comments
-  /**
-   * FUTURE: System integrations (future scope)
-   * Belongs in E2E tests (Playwright/Cypress) rather than Jest
-   * - Full user flows with mocked/real backend
-   * - Update preferences API verification
-   * - Check for updates flow
-   */
 });

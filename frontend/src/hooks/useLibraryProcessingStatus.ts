@@ -40,11 +40,8 @@ const aggregate = (data: APIResponse | undefined) => {
   return { totalItems, taggedItems, embeddedItems };
 };
 
-/**
- * Aggregated background-processing progress across all AI-tagging folders.
- * Derived purely from polled database state (not task events), so it
- * survives restarts and refreshes. Polls fast while busy, slow when idle.
- */
+// Derived from polled database state, not task events, so it survives restarts
+// and refreshes. Polls fast while busy, slow when idle.
 export const useLibraryProcessingStatus = (): LibraryProcessingStatus => {
   const { data: statusData, isSuccess: isStatusSuccess } = usePictoQuery({
     queryKey: ['models', 'status'],

@@ -56,7 +56,7 @@ export const AlbumDetail = () => {
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
 
-  // Get password from navigation state if album is locked
+  // Locked albums pass their password through navigation state.
   const password = location.state?.password;
 
   const { data: albumData, isLoading: isLoadingAlbum } = usePictoQuery({
@@ -121,7 +121,6 @@ export const AlbumDetail = () => {
       const backendAlbum = (responseData?.album || responseData) as any;
 
       if (backendAlbum && backendAlbum.album_id) {
-        // Transform backend format to frontend format
         const albumInfo: Album = {
           id: backendAlbum.album_id,
           name: backendAlbum.album_name,
@@ -153,10 +152,8 @@ export const AlbumDetail = () => {
       const responseData = imagesData as any;
       const imageIds = (responseData?.image_ids || []) as string[];
 
-      // Get full image data from all images
       const allImages = (allImagesData?.data || []) as Image[];
 
-      // Filter images that are in this album
       const albumImages = allImages.filter((img) => imageIds.includes(img.id));
 
       dispatch(setAlbumImages(albumImages));
@@ -231,7 +228,6 @@ export const AlbumDetail = () => {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
       <DetailPageHeader
         backLabel="Back to Albums"
         onBack={handleBack}
@@ -286,7 +282,6 @@ export const AlbumDetail = () => {
         }
       />
 
-      {/* Images Grid */}
       <div className="flex-1 overflow-y-auto pt-2">
         {isLoadingContent ? (
           <div className="grid grid-cols-2 gap-4 pb-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
@@ -333,10 +328,8 @@ export const AlbumDetail = () => {
         )}
       </div>
 
-      {/* Media View */}
       {isImageViewOpen && <MediaView images={images} />}
 
-      {/* Add Images Dialog */}
       <AddImagesToAlbumDialog
         isOpen={isAddImagesDialogOpen}
         onClose={() => {

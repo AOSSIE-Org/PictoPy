@@ -8,13 +8,8 @@ interface UseStoryProgressOptions {
   onComplete: () => void;
 }
 
-/**
- * Drives the segmented progress bar in the story viewer.
- *
- * Uses requestAnimationFrame rather than setInterval so the bar fills smoothly
- * and pauses resume from where they stopped instead of restarting the slide.
- * Returns progress through the current slide, 0 to 1.
- */
+// requestAnimationFrame, not setInterval, so the bar fills smoothly and a pause
+// resumes where it stopped. Returns progress through the slide, 0 to 1.
 export const useStoryProgress = ({
   index,
   durationMs,

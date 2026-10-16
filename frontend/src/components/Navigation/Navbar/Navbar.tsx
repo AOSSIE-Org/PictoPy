@@ -106,7 +106,6 @@ export function Navbar() {
 
   return (
     <div className="sticky top-0 z-40 flex h-14 w-full items-center justify-between border-b pr-4 backdrop-blur">
-      {/* Logo */}
       <div className="flex w-[256px] items-center justify-center">
         <Link to="/" className="flex items-center space-x-2">
           <img src="/128x128.png" width={32} height={32} alt="PictoPy Logo" />
@@ -114,13 +113,11 @@ export function Navbar() {
         </Link>
       </div>
 
-      {/* Search Bar */}
       <div className="mx-auto flex max-w-lg flex-1 justify-center px-4">
         <div
           ref={wrapperRef}
           className="dark:bg-muted/50 relative flex w-full items-center gap-1 rounded-md bg-neutral-100 px-1 py-1"
         >
-          {/* Query Image */}
           {queryImage && (
             <div className="relative mr-2 ml-2">
               <img
@@ -145,7 +142,6 @@ export function Navbar() {
             </div>
           )}
 
-          {/* Input */}
           <Input
             type="search"
             placeholder="Add to your search"
@@ -159,7 +155,6 @@ export function Navbar() {
             }}
           />
 
-          {/* FaceSearch Dialog */}
           <FaceSearchDialog />
 
           <button
@@ -182,7 +177,6 @@ export function Navbar() {
               >
                 <Separator />
 
-                {/* FavoritesRow */}
                 <button
                   type="button"
                   className="hover:bg-accent flex w-full cursor-pointer items-center justify-between px-4 py-3 transition-colors"
@@ -196,7 +190,6 @@ export function Navbar() {
 
                 <Separator />
 
-                {/* FaceClustersRow */}
                 {clusters && clusters.length > 0 && (
                   <div className="flex flex-row flex-nowrap justify-between overflow-hidden px-4">
                     {clusters.slice(0, 6).map((cluster: Cluster) => (
@@ -233,7 +226,6 @@ export function Navbar() {
 
                 <Separator />
 
-                {/* SeeAllPeopleButton */}
                 <button
                   type="button"
                   className="text-muted-foreground hover:text-foreground hover:bg-accent flex w-full cursor-pointer items-center justify-center gap-1 px-4 py-2 text-sm transition-colors"
@@ -248,7 +240,6 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Right Side */}
       <div className="flex items-center space-x-4">
         <ThemeSelector />
         <div className="flex items-center space-x-2">

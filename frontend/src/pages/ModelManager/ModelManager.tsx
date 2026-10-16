@@ -34,9 +34,9 @@ export const ModelManager: React.FC = () => {
     refetchInterval: downloadingTiers.size > 0 ? 3000 : false,
   });
 
-  // Polling updates statusData which drives AvailableTab's tier filtering.
-  // Polling clears downloadingTiers to stop further SSE connections, while
-  // installedJustNow in AvailableTab controls whether the completed card stays visible until tab remount.
+  // Each poll refreshes statusData, which drives AvailableTab's tier filter, and
+  // clears downloadingTiers to stop further SSE connections. AvailableTab's
+  // installedJustNow keeps the completed card visible until the tab remounts.
   useEffect(() => {
     if (statusData?.data && downloadingTiers.size > 0) {
       const newDownloading = new Map(downloadingTiers);
@@ -101,7 +101,6 @@ export const ModelManager: React.FC = () => {
           tabs={TABS}
         />
 
-        {/* Content Area */}
         <div className="mx-4 my-8 flex-1 overflow-y-auto">
           <h1 className="mb-6 text-2xl font-bold">{activeTab}</h1>
 

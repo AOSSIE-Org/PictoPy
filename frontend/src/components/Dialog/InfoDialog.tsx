@@ -26,7 +26,6 @@ export const InfoDialog: React.FC<InfoDialogProps> = ({
     dispatch(hideInfoDialog());
   };
 
-  // Define styles and icons based on variant
   const variantStyles = {
     info: {
       iconColor: 'text-primary',

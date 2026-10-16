@@ -76,7 +76,6 @@ export const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({
         'Current password is required to modify locked album';
     }
 
-    // If making album locked (and it wasn't before), require new password
     if (formData.is_locked && !album?.is_locked && !formData.password.trim()) {
       newErrors.password = 'Password is required for locked albums';
     }
@@ -100,12 +99,11 @@ export const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({
       is_locked: formData.is_locked,
     };
 
-    // Add current password if album was originally locked (required by backend)
+    // The backend requires the current password to change a locked album.
     if (album.is_locked) {
       requestData.current_password = formData.current_password.trim();
     }
 
-    // Add new password if provided (for locking or changing password)
     if (formData.password.trim()) {
       requestData.password = formData.password.trim();
     }
@@ -137,7 +135,6 @@ export const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
-            {/* Album Name */}
             <div className="grid gap-2">
               <Label htmlFor="name">
                 Album Name <span className="text-destructive">*</span>
@@ -156,7 +153,6 @@ export const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({
               )}
             </div>
 
-            {/* Album Description */}
             <div className="grid gap-2">
               <Label htmlFor="description">Description</Label>
               <Textarea
@@ -174,7 +170,6 @@ export const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({
               )}
             </div>
 
-            {/* Current Password (shown if album was originally locked) */}
             {album?.is_locked && (
               <div className="grid gap-2">
                 <Label htmlFor="current_password">
@@ -206,7 +201,6 @@ export const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({
               </div>
             )}
 
-            {/* Lock Album Toggle */}
             <div className="flex items-center justify-between space-x-2">
               <div className="space-y-0.5">
                 <Label htmlFor="locked">Lock Album</Label>
@@ -223,7 +217,6 @@ export const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({
               />
             </div>
 
-            {/* New Password Field */}
             {formData.is_locked && (
               <div className="grid gap-2">
                 <Label htmlFor="password">

@@ -20,10 +20,8 @@ export interface Share {
   urls: ShareUrl[];
 }
 
-/**
- * Where a share can be reached from. LAN keeps everything on the local network;
- * internet opens a tunnel, which means the photos pass through a third party.
- */
+// LAN stays on the local network; internet opens a tunnel, so the photos pass
+// through a third party.
 export type ShareMode = 'lan' | 'internet';
 
 export interface CreateShareRequest {
@@ -47,10 +45,7 @@ export interface ShareTunnel {
 
 export interface ShareAlbumDialogProps {
   album: Album | null;
-  /**
-   * Every live share for this album, newest first. An album can be shared more
-   * than once, and stopping has to account for all of them.
-   */
+  /** Newest first. An album can hold several, and stopping must cover them all. */
   shares: Share[];
   isOpen: boolean;
   onClose: () => void;

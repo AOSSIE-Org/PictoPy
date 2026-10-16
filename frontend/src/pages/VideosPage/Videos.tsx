@@ -42,7 +42,6 @@ export const Videos = () => {
 
   return (
     <div className="relative flex h-full flex-col pr-6">
-      {/* Gallery Section */}
       <div
         ref={scrollableRef}
         className="hide-scrollbar min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
@@ -65,7 +64,6 @@ export const Videos = () => {
         )}
       </div>
 
-      {/* Timeline Scrollbar */}
       {monthMarkers.length > 0 && (
         <TimelineScrollbar
           scrollableRef={scrollableRef}

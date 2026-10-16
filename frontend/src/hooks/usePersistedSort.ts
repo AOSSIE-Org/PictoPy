@@ -1,12 +1,7 @@
 import { useCallback, useState } from 'react';
 
-/**
- * A sort selection that survives a reload, stored per surface like the theme.
- *
- * The stored value is checked against the options currently on offer: one left
- * behind by an older build would otherwise sort the grid by nothing, with no
- * option showing as selected and no way to tell why.
- */
+// The stored value is checked against the options on offer: one left by an older
+// build would sort the grid by nothing, with no option showing as selected.
 export function usePersistedSort<T extends string>(
   storageKey: string,
   defaultValue: T,

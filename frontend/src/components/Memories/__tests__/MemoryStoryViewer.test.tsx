@@ -72,10 +72,8 @@ const makeMockStory = (overrides: Partial<MemoryStory> = {}): MemoryStory =>
     ...overrides,
   }) as MemoryStory;
 
-/**
- * The theme ships muted, so ducking is only observable with it turned on -
- * otherwise these assertions pass on the default and prove nothing.
- */
+// The theme ships muted, so ducking is only observable with it on -- otherwise
+// these assertions pass on the default and prove nothing.
 const renderViewer = (themeAudible = false) =>
   render(<MemoryStoryViewer memoryId="mem-1" memories={[]} musicEnabled />, {
     preloadedState: {

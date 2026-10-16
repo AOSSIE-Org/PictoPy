@@ -1,5 +1,3 @@
-# app/detectors/FaceDetector.py
-
 from typing import Dict, List, Optional, TypedDict
 
 import cv2
@@ -16,7 +14,6 @@ from app.config.settings import (
 )
 from app.utils.face_quality import face_passes_quality_gate
 
-# Initialize logger
 logger = get_logger(__name__)
 
 
@@ -76,7 +73,6 @@ class FaceDetector:
                 faces_skipped += 1
                 continue
 
-            # Create bounding box dictionary in JSON format
             bbox = {"x": x1, "y": y1, "width": x2 - x1, "height": y2 - y1}
             bboxes.append(bbox)
             confidences.append(float(score))
