@@ -5,7 +5,6 @@ import uuid
 import datetime
 from typing import Iterable, List, Optional, Tuple, Dict, Any, Mapping
 import json
-import logging
 import sqlite3
 from PIL import Image, ExifTags, ImageOps
 from pathlib import Path
