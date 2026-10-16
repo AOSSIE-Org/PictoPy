@@ -3,6 +3,7 @@ import { Settings as SettingsIcon, RefreshCw, Users } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import UpdateDialog from '@/components/Updater/UpdateDialog';
+import { ConfirmDialog } from '@/components/Dialog/ConfirmDialog';
 import SettingsCard from './SettingsCard';
 
 import { useUpdater } from '@/hooks/useUpdater';
@@ -31,6 +32,8 @@ const ApplicationControlsCard: React.FC = () => {
   } = useUpdater();
 
   const [updateDialogOpen, setUpdateDialogOpen] = useState<boolean>(false);
+  const [reclusterDialogOpen, setReclusterDialogOpen] =
+    useState<boolean>(false);
 
   const reclusterMutation = usePictoMutation({
     mutationFn: triggerGlobalReclustering,
@@ -73,6 +76,10 @@ const ApplicationControlsCard: React.FC = () => {
   useMutationFeedback(reclusterMutation, feedbackOptions);
 
   const onGlobalReclusterClick = () => {
+    setReclusterDialogOpen(true);
+  };
+
+  const onGlobalReclusterConfirm = () => {
     reclusterMutation.mutate(undefined);
   };
 
@@ -160,6 +167,16 @@ const ApplicationControlsCard: React.FC = () => {
           </Button>
         </div>
       </SettingsCard>
+
+      <ConfirmDialog
+        open={reclusterDialogOpen}
+        onOpenChange={setReclusterDialogOpen}
+        title="Start Global Reclustering?"
+        description="This process will rebuild all face clusters from scratch. It may take a significant amount of time and system resources. Are you sure you want to continue?"
+        confirmLabel="Recluster"
+        cancelLabel="Cancel"
+        onConfirm={onGlobalReclusterConfirm}
+      />
 
       <UpdateDialog
         update={updateAvailable}
