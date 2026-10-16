@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Body, Path
 from starlette.datastructures import State
+import sqlite3
 import uuid
 from app.schemas.album import (
     GetAlbumsResponse,
@@ -50,7 +51,7 @@ def _album_exists(name: str) -> HTTPException:
         detail=ErrorResponse(
             success=False,
             error="Album Already Exists",
-            message=f"Album '{name}' is already in the database.",
+            message=f"An album with the name {name} already exists, would you like to save this as {name}1",
         ).model_dump(),
     )
 
@@ -242,6 +243,10 @@ def update_album(
                 ).model_dump(),
             )
 
+    existing_album = db_get_album_by_name(body.name)
+    if existing_album and existing_album["album_id"] != album_id:
+        raise _album_exists(body.name)
+
     try:
         db_update_album(
             album_id, body.name, body.description, body.is_locked, body.password
@@ -249,6 +254,8 @@ def update_album(
         # A rename or lock change alters every member's exported albums.
         request_metadata_export(app_state)
         return SuccessResponse(success=True, msg="Album updated successfully")
+    except sqlite3.IntegrityError as e:
+        raise _album_exists(body.name) from e
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
