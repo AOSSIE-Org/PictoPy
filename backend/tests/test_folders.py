@@ -1,6 +1,6 @@
 import sqlite3
 import uuid
-from typing import Iterator
+from typing import Dict, Iterator, List
 
 import pytest
 from fastapi import FastAPI
@@ -16,6 +16,9 @@ from app.routes.folders import router as folders_router
 from app.routes.folders import _curate_memories
 
 from app.database.folders import (
+    INDEXING_COMPLETED,
+    INDEXING_IN_PROGRESS,
+    INDEXING_NOT_STARTED,
     db_create_folders_table,
     db_disable_ai_tagging_batch,
     db_enable_ai_tagging_batch,
@@ -35,6 +38,7 @@ from app.database.folders import (
     db_get_all_folder_ids,
     db_get_all_folders,
     db_find_parent_folder_id,
+    db_update_folder_indexing_status,
 )
 from app.database.images import db_create_images_table
 from app.database.videos import db_create_videos_table
@@ -154,6 +158,47 @@ def sample_folder_details():
             0,
         ),
     ]
+
+
+def downgrade_folders_table(db_path: str) -> None:
+    """Rebuild folders without indexing_status, as shipped databases have it.
+
+    Written out rather than derived from the production CREATE so it keeps
+    describing the schema that was actually released, whatever that one grows
+    next.
+    """
+    conn = sqlite3.connect(db_path)
+    conn.execute("DROP TABLE folders")
+    conn.execute(
+        """
+        CREATE TABLE folders (
+            folder_id TEXT PRIMARY KEY,
+            parent_folder_id TEXT,
+            folder_path TEXT UNIQUE,
+            last_modified_time INTEGER,
+            AI_Tagging BOOLEAN,
+            taggingCompleted BOOLEAN,
+            FOREIGN KEY (parent_folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
+        )
+        """
+    )
+    conn.commit()
+    conn.close()
+
+
+def insert_legacy_folder(db_path: str, folder_id: str, folder_path: str) -> None:
+    """Insert a folder the way the pre-indexing_status version did."""
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        """
+        INSERT INTO folders (folder_id, folder_path, parent_folder_id,
+                             last_modified_time, AI_Tagging, taggingCompleted)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (folder_id, folder_path, None, 1693526400, True, True),
+    )
+    conn.commit()
+    conn.close()
 
 
 # ##############################
@@ -448,7 +493,7 @@ class TestFoldersAPI:
 
     def test_enable_ai_tagging_empty_list(self, client):
         """Test enabling AI tagging with empty folder_ids list."""
-        request_data = {"folder_ids": []}
+        request_data: Dict[str, List[str]] = {"folder_ids": []}
 
         response = client.post("/folders/enable-ai-tagging", json=request_data)
 
@@ -460,7 +505,7 @@ class TestFoldersAPI:
 
     def test_enable_ai_tagging_missing_field(self, client):
         """Test enabling AI tagging without folder_ids field."""
-        request_data = {}
+        request_data: Dict[str, List[str]] = {}
 
         response = client.post("/folders/enable-ai-tagging", json=request_data)
 
@@ -545,7 +590,7 @@ class TestFoldersAPI:
 
     def test_disable_ai_tagging_empty_list(self, client):
         """Test disabling AI tagging with empty folder_ids list."""
-        request_data = {"folder_ids": []}
+        request_data: Dict[str, List[str]] = {"folder_ids": []}
 
         response = client.post("/folders/disable-ai-tagging", json=request_data)
 
@@ -557,7 +602,7 @@ class TestFoldersAPI:
 
     def test_disable_ai_tagging_missing_field(self, client):
         """Test disabling AI tagging without folder_ids field."""
-        request_data = {}
+        request_data: Dict[str, List[str]] = {}
 
         response = client.post("/folders/disable-ai-tagging", json=request_data)
 
@@ -1322,6 +1367,62 @@ class TestFoldersUnit:
             ("child_1", "/root/child1"),
             ("child_2", "/root/child2"),
         }
+
+    # ============================================================================
+    # Schema Migration Tests
+    # ============================================================================
+
+    def test_create_folders_table_adds_indexing_status_to_a_shipped_database(
+        self, test_db
+    ):
+        """CREATE IF NOT EXISTS is a no-op once the table exists, so without the
+        guarded ALTER every query naming the column raises on an upgrade."""
+        downgrade_folders_table(test_db)
+
+        db_create_folders_table()
+
+        conn = sqlite3.connect(test_db)
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(folders)")}
+        conn.close()
+        assert "indexing_status" in columns
+
+    def test_create_folders_table_backfills_existing_folders_as_completed(
+        self, test_db
+    ):
+        """A folder the previous version walked is indexed, not queued. Left on
+        the column default it would read as pending and spin the UI forever."""
+        downgrade_folders_table(test_db)
+        insert_legacy_folder(test_db, "folder-id-1", "/home/user/photos")
+
+        db_create_folders_table()
+
+        assert db_get_all_folder_details()[0][6] == INDEXING_COMPLETED
+
+    def test_create_folders_table_leaves_new_folders_on_the_schema_default(
+        self, test_db
+    ):
+        """Only the rows that predate the column are backfilled; folders added
+        afterwards still start unindexed so their walk is tracked."""
+        downgrade_folders_table(test_db)
+        db_create_folders_table()
+
+        db_insert_folders_batch(
+            [("folder-id-1", "/tmp/photos", None, 1693526400, True, False)]
+        )
+
+        assert db_get_all_folder_details()[0][6] == INDEXING_NOT_STARTED
+
+    def test_create_folders_table_does_not_rewrite_a_tracked_status(self, test_db):
+        """This runs on every launch, so a second pass must not overwrite a
+        status the app has written since the migration."""
+        downgrade_folders_table(test_db)
+        insert_legacy_folder(test_db, "folder-id-1", "/home/user/photos")
+        db_create_folders_table()
+        db_update_folder_indexing_status("folder-id-1", INDEXING_IN_PROGRESS)
+
+        db_create_folders_table()
+
+        assert db_get_all_folder_details()[0][6] == INDEXING_IN_PROGRESS
 
 
 # ============================================================================
