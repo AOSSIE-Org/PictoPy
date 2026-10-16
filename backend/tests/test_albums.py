@@ -1,5 +1,6 @@
 import sys
 import os
+import sqlite3
 import pytest
 import bcrypt
 from fastapi import FastAPI
@@ -420,6 +421,96 @@ class TestAlbumRoutes:
                 mock_update_album.assert_called_once()
             else:
                 mock_update_album.assert_not_called()
+
+    def test_update_album_duplicate_name(self, mock_db_album):
+        """
+        Test renaming an album to a name that belongs to another album return 409.
+        """
+        current_album = album_row(mock_db_album)
+        other_album = album_row(
+            {
+                "album_id": "other-album-id-123",
+                "album_name": "Vacation",
+                "description": "",
+                "is_locked": False,
+                "password_hash": None,
+            }
+        )
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_get_album_by_name"
+        ) as mock_get_by_name, patch(
+            "app.routes.albums.db_update_album"
+        ) as mock_update:
+            mock_get_album.return_value = current_album
+            mock_get_by_name.return_value = other_album
+
+            response = client.put(
+                f"/albums/{current_album['album_id']}",
+                json={"name": "Vacation", "description": "", "is_locked": False},
+            )
+            assert response.status_code == 409
+            json_response = response.json()
+            assert json_response["detail"]["success"] is False
+            assert json_response["detail"]["error"] == "Album Already Exists"
+            assert (
+                json_response["detail"]["message"]
+                == "An album with the name Vacation already exists, would you like to save this as Vacation1"
+            )
+            mock_update.assert_not_called()
+
+    def test_update_albums_same_name_allowed(self, mock_db_album):
+        """Test updating an album keeping its current name succeeds without 409."""
+        current_album = album_row(mock_db_album)
+
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_get_album_by_name"
+        ) as mock_get_by_name, patch(
+            "app.routes.albums.db_update_album"
+        ) as mock_update:
+            mock_get_album.return_value = current_album
+            mock_get_by_name.return_value = current_album
+
+            response = client.put(
+                f"/albums/{current_album['album_id']}",
+                json={
+                    "name": current_album["album_name"],
+                    "description": "Updated description",
+                    "is_locked": False,
+                },
+            )
+
+            assert response.status_code == 200
+            assert response.json()["success"] is True
+            mock_update.assert_called_once()
+
+    def test_update_album_integrity_error_mapped_to_conflict(self, mock_db_album):
+        """Test that a database uniqueness collision during update returns 409."""
+        current_album = album_row(mock_db_album)
+
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_get_album_by_name"
+        ) as mock_get_by_name, patch(
+            "app.routes.albums.db_update_album"
+        ) as mock_update:
+            mock_get_album.return_value = current_album
+            # Pre-check passes (e.g. race condition where name wasn't taken yet)
+            mock_get_by_name.return_value = None
+            mock_update.side_effect = sqlite3.IntegrityError(
+                "UNIQUE constraint failed: albums.album_name"
+            )
+
+            response = client.put(
+                f"/albums/{current_album['album_id']}",
+                json={"name": "RaceName", "description": "", "is_locked": False},
+            )
+            assert response.status_code == 409
+            json_response = response.json()
+            assert json_response["detail"]["success"] is False
+            assert json_response["detail"]["error"] == "Album Already Exists"
+            assert (
+                json_response["detail"]["message"]
+                == "An album with the name RaceName already exists, would you like to save this as RaceName1"
+            )
 
     def test_delete_album_success(self, mock_db_album):
         """

@@ -4,6 +4,8 @@ on:
   schedule:
     - cron: "17 2 * * *"
   workflow_dispatch:
+  pull_request_target:
+    types: [reopened]
 
 permissions:
   contents: read
@@ -12,6 +14,7 @@ permissions:
 
 jobs:
   stale-merge-conflicts:
+    if: github.event_name != 'pull_request_target'
     runs-on: ubuntu-latest
 
     steps:
@@ -56,3 +59,26 @@ jobs:
             This PR still had unresolved merge conflicts, and there was no activity within 5 days of the stale warning being posted.
 
             You may reopen this PR or submit a new one after resolving the merge conflicts.
+
+  remove-stale-labels:
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove stale merge conflict labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          if ! LABELS=$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/labels" --jq '.[].name'); then
+            echo "Failed to list labels for PR: $PR_NUMBER" >&2
+            exit 1
+          fi
+          for LABEL in "stale merge conflict" "closed stale merge conflict"; do
+            if grep -qx "$LABEL" <<<"$LABELS"; then
+              gh api -X DELETE "repos/$REPO/issues/$PR_NUMBER/labels/$(echo "$LABEL" | sed 's/ /%20/g')"
+              echo "Removed label: $LABEL"
+            else
+              echo "Label not found: $LABEL (skipping)"
+            fi
+          done
