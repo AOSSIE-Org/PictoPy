@@ -57,7 +57,11 @@ Miss one of these and it silently half-works:
 ## Tests
 
 - `tests/test_<resource>.py`. Config in `pytest.ini`: `pythonpath = .`, `testpaths = tests`.
-- The session fixture in `conftest.py` creates every table and sets `TEST_MODE=true`.
+- `conftest.py` sets `GITHUB_ACTIONS=true` before any app import, which points
+  `DATABASE_PATH` at a throwaway `backend/test_db.sqlite3`, the same file CI uses. Keep
+  app imports below that line: `settings.py` resolves the path at import time, so one
+  moved above it makes `conftest.py` refuse to load.
+- The session fixture in `conftest.py` creates every table.
 - Run with `cd backend && pytest`.
 
 ## Environment
