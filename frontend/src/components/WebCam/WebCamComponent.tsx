@@ -117,7 +117,7 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
     setShowCamera(true);
   };
 
-    const handleSearchCapturedImage = () => {
+  const handleSearchCapturedImage = () => {
     if (capturedImageUrl) {
       // The results page runs the search for the captured photo (a data URL).
       dispatch(startSearch(capturedImageUrl));
