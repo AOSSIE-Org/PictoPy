@@ -45,3 +45,6 @@ custom-protocol = ["tauri/custom-protocol"]
 ci = []
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+
+[target.'cfg(target_os = "linux")'.dependencies]
+webkit2gtk = "2"
