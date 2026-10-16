@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import TypedDict, Literal
 import os
 import sys
+from typing import Literal, TypedDict
+
 from platformdirs import user_data_dir
 
 FeatureType = Literal[
@@ -201,3 +202,14 @@ def get_siglip2_tokenizer_key(checkpoint: str) -> str:
     if key not in MODEL_REGISTRY:
         raise ValueError(f"Unknown SigLIP2 tokenizer key for checkpoint: {checkpoint}")
     return key
+
+
+def is_model_available(key: str) -> bool:
+    """Return True if the model is registered and has published weights (not a placeholder)."""
+    if key not in MODEL_REGISTRY:
+        return False
+    spec = MODEL_REGISTRY[key]
+    return (
+        spec.get("url") != "PLACEHOLDER_URL"
+        and spec.get("sha256") != "PLACEHOLDER_SHA256"
+    )
