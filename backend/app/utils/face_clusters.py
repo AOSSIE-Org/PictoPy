@@ -35,6 +35,7 @@ from app.database.metadata import (
 from app.config.settings import (
     DATABASE_PATH,
     PICTO_CLUSTERING_EPS,
+    PICTO_CLUSTERING_EPS_SAMPLE_SIZE,
     PICTO_CLUSTERING_MIN_SAMPLES,
     PICTO_CLUSTERING_SIMILARITY_THRESHOLD,
     PICTO_CLUSTERING_MERGE_THRESHOLD,
@@ -246,7 +247,21 @@ def _validate_embedding(embedding: NDArray, min_norm: float = 1e-6) -> bool:
     return True
 
 
-def estimate_eps(embeddings: np.ndarray, k: int) -> Optional[float]:
+def estimate_eps(
+    embeddings: np.ndarray,
+    k: int,
+    sample_size: int = PICTO_CLUSTERING_EPS_SAMPLE_SIZE,
+) -> Optional[float]:
+    if len(embeddings) <= k:
+        return None
+
+    # A sample gives a stable 90th-percentile k-distance; running kNN over every
+    # face is the second O(N^2) cost this path removes. Seeded for repeatability.
+    if len(embeddings) > sample_size:
+        rng = np.random.default_rng(0)
+        embeddings = embeddings[
+            rng.choice(len(embeddings), size=sample_size, replace=False)
+        ]
     if len(embeddings) <= k:
         return None
 
