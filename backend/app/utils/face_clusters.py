@@ -161,7 +161,8 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
         # Convert to list for batch insert
         cluster_list = list(unique_clusters.values())
 
-        # Perform all database operations within a single transaction
+        # Rebuild in one transaction: batched inserts, then the foreign-key
+        # updates. Nothing slow runs while the write lock is held.
         with get_db_connection() as conn:
             cursor = conn.cursor()
             # Clear old clusters first
@@ -173,23 +174,32 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
             # Now update face cluster assignments (foreign keys will be valid)
             db_update_face_cluster_ids_batch(results, cursor)
 
-            # Finally, generate and update face images for each cluster
-            for cluster_id in unique_clusters.keys():
-                face_image_base64 = _generate_cluster_face_image(cluster_id, cursor)
-                if face_image_base64:
-                    # Update the cluster with the generated face image
-                    success = _update_cluster_face_image(
-                        cluster_id, face_image_base64, cursor
-                    )
-                    if not success:
-                        raise RuntimeError(
-                            f"Failed to update face image for cluster {cluster_id}"
-                        )
-
             # Update metadata with new reclustering time, preserving other values
             current_metadata = metadata or {}
             current_metadata["reclustering_time"] = datetime.now().timestamp()
             db_update_metadata(current_metadata, cursor)
+
+        # Thumbnails read image files off disk, so they used to hold SQLite's
+        # write lock for the whole rebuild. Generate after the commit; a failure
+        # is cosmetic, so warn instead of rolling the rebuild back.
+        face_images = {}
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            for cluster_id in unique_clusters.keys():
+                face_image_base64 = _generate_cluster_face_image(cluster_id, cursor)
+                if face_image_base64:
+                    face_images[cluster_id] = face_image_base64
+
+        if face_images:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                for cluster_id, face_image_base64 in face_images.items():
+                    if not _update_cluster_face_image(
+                        cluster_id, face_image_base64, cursor
+                    ):
+                        logger.warning(
+                            f"Failed to update face image for cluster {cluster_id}"
+                        )
         # Deleting the old clusters above unassigned every keyframe face too
         # (ON DELETE SET NULL); re-attach them to the rebuilt clusters.
         cluster_util_attach_keyframe_faces()
