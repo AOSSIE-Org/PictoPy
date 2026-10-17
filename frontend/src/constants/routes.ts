@@ -12,4 +12,5 @@ export const ROUTES = {
   PERSON: 'person/:clusterId',
   MODEL_MANAGER: 'model-manager',
   SEARCH: 'search',
+  FACE_SEARCH: 'face-search',
 };

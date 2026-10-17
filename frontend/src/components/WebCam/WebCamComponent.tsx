@@ -1,5 +1,4 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { useMutationFeedback } from '../../hooks/useMutationFeedback.tsx';
 import Webcam from 'react-webcam';
 import { X, RotateCcw, Search, Camera, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,17 +16,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useDispatch } from 'react-redux';
-import { startSearch, clearSearch } from '@/features/searchSlice';
-import type { Image } from '@/types/Media';
-import { usePictoMutation } from '@/hooks/useQueryExtension';
-import {
-  fetchSearchedFacesBase64,
-  type FaceSearchResponse,
-} from '@/api/api-functions';
+import { startSearch } from '@/features/searchSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
-import { setImages } from '@/features/imageSlice.ts';
-import { setVideos } from '@/features/videoSlice';
-import { DefaultError } from '@tanstack/react-query';
+import { useLocation, useNavigate } from 'react-router';
+import { ROUTES } from '@/constants/routes';
 
 interface WebcamComponentProps {
   isOpen: boolean;
@@ -41,44 +33,8 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
   const webcamRef = useRef<Webcam>(null);
   const dispatch = useDispatch();
-
-  const searchByFaceMutation = usePictoMutation<
-    FaceSearchResponse,
-    DefaultError,
-    string,
-    unknown,
-    Image[]
-  >({
-    mutationFn: async (base64_data: string) =>
-      fetchSearchedFacesBase64({ base64_data }),
-  });
-
-  useMutationFeedback(searchByFaceMutation, {
-    showLoading: true,
-    loadingMessage: 'Searching faces...',
-    errorTitle: 'Search Error',
-    errorMessage: 'Failed to search images. Please try again.',
-    onSuccess: () => {
-      const result = searchByFaceMutation.data?.data;
-      const videos = searchByFaceMutation.data?.videos;
-      if ((result && result.length > 0) || (videos && videos.length > 0)) {
-        dispatch(setImages(result ?? []));
-        dispatch(setVideos(videos ?? []));
-      } else {
-        dispatch(
-          showInfoDialog({
-            title: 'No Match Found',
-            message:
-              'We couldn’t find any matching faces in your gallery for this photo.',
-            variant: 'info',
-          }),
-        );
-        dispatch(setImages([]));
-        dispatch(clearSearch());
-      }
-      searchByFaceMutation.reset();
-    },
-  });
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Enumerate available video devices
   useEffect(() => {
@@ -163,9 +119,13 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
 
   const handleSearchCapturedImage = () => {
     if (capturedImageUrl) {
+      // The results page runs the search for the captured photo (a data URL).
       dispatch(startSearch(capturedImageUrl));
-      searchByFaceMutation.mutate(capturedImageUrl);
-      onClose();
+      navigate(`/${ROUTES.FACE_SEARCH}`, {
+        replace: location.pathname === `/${ROUTES.FACE_SEARCH}`,
+      });
+      // Reset the captured photo too, so the next open shows the live camera.
+      handleClose();
     } else {
       dispatch(
         showInfoDialog({
