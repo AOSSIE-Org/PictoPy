@@ -315,16 +315,21 @@ def estimate_eps(
     return float(estimated_eps)
 
 
-def cluster_util_cluster_all_face_embeddings(
+def _cluster_face_rows(
+    face_rows: List[Dict],
     eps: float = PICTO_CLUSTERING_EPS,
     min_samples: int = PICTO_CLUSTERING_MIN_SAMPLES,
     similarity_threshold: float = PICTO_CLUSTERING_SIMILARITY_THRESHOLD,
     merge_threshold: float = None,
 ) -> Tuple[List[ClusterResult], int]:
     """
-    Cluster face embeddings using DBSCAN with similarity validation.
+    Cluster face rows with DBSCAN over a sparse cosine-distance graph.
+
+    DB-free, so the caller picks the rows: every photo face for a full pass, or
+    just the leftovers for a delta pass.
 
     Args:
+        face_rows: rows with "face_id", "embeddings", "image_id" and "cluster_name"
         eps: DBSCAN epsilon parameter for maximum distance between samples (default: 0.75)
         min_samples: DBSCAN minimum samples parameter for core points (default: 2)
         similarity_threshold: Minimum similarity to consider same person (default: 0.65, range: 0.65-0.90)
@@ -333,15 +338,7 @@ def cluster_util_cluster_all_face_embeddings(
     Returns:
         List of ClusterResult objects containing face_id, embedding, cluster_uuid, and cluster_name
     """
-    # Photo faces only: DBSCAN chains through keyframe faces and fuses different
-    # people, so those are attached afterwards by cluster_util_attach_keyframe_faces.
-    faces_data = [
-        face
-        for face in db_get_all_faces_with_cluster_names()
-        if not face.get("frame_id")
-    ]
-
-    if not faces_data:
+    if not face_rows:
         return [], 0
 
     # Extract embeddings and face IDs with validation
@@ -351,7 +348,7 @@ def cluster_util_cluster_all_face_embeddings(
     existing_cluster_names = []
     invalid_count = 0
 
-    for face in faces_data:
+    for face in face_rows:
         embedding = face["embeddings"]
 
         # Validate embedding before adding
@@ -488,6 +485,37 @@ def cluster_util_cluster_all_face_embeddings(
     results = _enforce_one_face_per_image(results, face_to_image)
 
     return results, total_faces_skipped
+
+
+def cluster_util_cluster_all_face_embeddings(
+    eps: float = PICTO_CLUSTERING_EPS,
+    min_samples: int = PICTO_CLUSTERING_MIN_SAMPLES,
+    similarity_threshold: float = PICTO_CLUSTERING_SIMILARITY_THRESHOLD,
+    merge_threshold: float = None,
+) -> Tuple[List[ClusterResult], int]:
+    """
+    Cluster every photo face embedding in the database using DBSCAN.
+
+    Args:
+        eps: DBSCAN epsilon parameter for maximum distance between samples (default: 0.75)
+        min_samples: DBSCAN minimum samples parameter for core points (default: 2)
+        similarity_threshold: Minimum similarity to consider same person (default: 0.65, range: 0.65-0.90)
+        merge_threshold: Similarity threshold for post-clustering merge (default: None, uses similarity_threshold)
+
+    Returns:
+        List of ClusterResult objects containing face_id, embedding, cluster_uuid, and cluster_name
+    """
+    # Photo faces only: DBSCAN chains through keyframe faces and fuses different
+    # people, so those are attached afterwards by cluster_util_attach_keyframe_faces.
+    faces_data = [
+        face
+        for face in db_get_all_faces_with_cluster_names()
+        if not face.get("frame_id")
+    ]
+
+    return _cluster_face_rows(
+        faces_data, eps, min_samples, similarity_threshold, merge_threshold
+    )
 
 
 def cluster_util_assign_cluster_to_faces_without_clusterId(
