@@ -4,6 +4,8 @@ import json
 import base64
 import cv2
 import sqlite3
+import sys
+import time
 from datetime import datetime
 from sklearn.cluster import DBSCAN
 from sklearn.neighbors import NearestNeighbors
@@ -41,6 +43,11 @@ from app.config.settings import (
     PICTO_CLUSTERING_MERGE_THRESHOLD,
 )
 from app.logging.setup_logging import get_logger
+
+try:
+    import resource
+except ImportError:  # Windows has no resource module
+    resource = None
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -118,6 +125,20 @@ def cluster_util_is_reclustering_needed(metadata) -> bool:
     return False
 
 
+def _peak_rss_mb() -> str:
+    """Peak resident memory for this process, in MiB, as a string.
+
+    The OOM reports on large libraries quote this number, so every pass logs
+    it and the peaks show up in the user's logs.
+    """
+    if resource is None:
+        return "n/a"
+    rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    # Linux reports KiB, macOS bytes.
+    mib = rss / 1024 if sys.platform != "darwin" else rss / (1024 * 1024)
+    return f"{mib:.0f}"
+
+
 def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
     """
     Smart face clustering with transaction safety.
@@ -126,6 +147,7 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
     Args:
         force_full_reclustering: If True, forces full reclustering regardless of 24-hour rule
     """
+    started = time.perf_counter()
     metadata = db_get_metadata()
     if force_full_reclustering or cluster_util_is_reclustering_needed(metadata):
         # Perform clustering operation
@@ -203,6 +225,10 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
         # Deleting the old clusters above unassigned every keyframe face too
         # (ON DELETE SET NULL); re-attach them to the rebuilt clusters.
         cluster_util_attach_keyframe_faces()
+        logger.info(
+            f"Full face clustering pass: {len(cluster_list)} cluster(s) in "
+            f"{time.perf_counter() - started:.1f}s (peak RSS {_peak_rss_mb()} MiB)"
+        )
         return len(cluster_list), total_faces_skipped
     else:
         face_cluster_mappings, total_faces_skipped = (
@@ -212,6 +238,10 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
             cursor = conn.cursor()
             db_update_face_cluster_ids_batch(face_cluster_mappings, cursor)
         cluster_util_attach_keyframe_faces()
+        logger.info(
+            f"Incremental face clustering pass: {len(face_cluster_mappings)} face(s) in "
+            f"{time.perf_counter() - started:.1f}s (peak RSS {_peak_rss_mb()} MiB)"
+        )
         return len(face_cluster_mappings), total_faces_skipped
 
 
