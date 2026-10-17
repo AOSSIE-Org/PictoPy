@@ -897,6 +897,7 @@ class TestReclusterWithNoFaces:
         mock_delete.assert_called_once()
 
     @patch("app.utils.face_clusters.db_delete_all_clusters")
+    @patch("app.utils.face_clusters.cluster_util_cluster_unassigned_face_embeddings")
     @patch("app.utils.face_clusters.get_db_connection")
     @patch("app.utils.face_clusters.db_update_face_cluster_ids_batch")
     @patch(
@@ -911,6 +912,7 @@ class TestReclusterWithNoFaces:
         mock_assign,
         mock_update_batch,
         mock_conn,
+        mock_delta,
         mock_delete,
     ):
         """Only a full recluster rebuilds from scratch; the incremental path
@@ -918,10 +920,41 @@ class TestReclusterWithNoFaces:
         mock_metadata.return_value = {"user_preferences": {}}
         mock_needed.return_value = False
         mock_assign.return_value = ([{"face_id": 1, "cluster_id": "c1"}], 0)
+        mock_delta.return_value = ([], 0)
 
         cluster_util_face_clusters_sync()
 
         mock_delete.assert_not_called()
+
+
+class TestIncrementalDeltaClustering:
+    """A leftover that matches no existing person used to wait for the next full
+    pass. It now forms a new cluster on the incremental path instead."""
+
+    @patch("app.utils.face_clusters._generate_cluster_face_image", return_value=None)
+    @patch(
+        "app.utils.face_clusters.cluster_util_is_reclustering_needed",
+        return_value=False,
+    )
+    def test_leftovers_become_a_new_person_without_a_full_pass(
+        self, _needed, _avatar, people
+    ):
+        rng = np.random.default_rng(5)
+        first = photo_face(people, "img-n1", jitter(rng, 5))
+        second = photo_face(people, "img-n2", jitter(rng, 5))
+        alice_face = photo_face(people, "img-a3", axis(0), "alice")
+        stranger = keyframe_face(people, "frame-x", near(6, 0.9))
+
+        created, _ = cluster_util_face_clusters_sync()
+
+        new_id = cluster_of(people, first)
+        assert created == 2
+        assert new_id is not None
+        assert new_id not in ("alice", "bob")
+        assert cluster_of(people, second) == new_id
+        # Existing people and the keyframe pass are untouched.
+        assert cluster_of(people, alice_face) == "alice"
+        assert cluster_of(people, stranger) is None
 
 
 class TestReclusteringNeededBootstrap:
