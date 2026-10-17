@@ -3,8 +3,23 @@ on:
   pull_request:
     paths:
       - "frontend/**"
-  
-    
+      - ".github/workflows/pr-check-build.yml"
+  # Pushes and the weekly run save the Rust cache in branch scopes that PRs can read.
+  push:
+    branches:
+      - dev
+      - main
+    paths:
+      - "frontend/src-tauri/**"
+      - ".github/workflows/pr-check-build.yml"
+  # Re-seeds the cache after Rust stable bumps (rustc is part of the key) and before 7-day eviction.
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   tauri-build-check:
@@ -27,11 +42,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      # Restores compiled dependencies so only the picto_py crate rebuilds.
+      - name: cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./frontend/src-tauri -> target"
 
       - name: install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-22.04'
@@ -42,18 +65,7 @@ jobs:
       - name: install frontend dependencies
         run: |
           cd frontend
-          npm install
-
-      # - name: cache cargo registry and build
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: |
-      #       frontend/src-tauri/target
-      #       ~/.cargo/registry
-      #       ~/.cargo/git
-      #     key: ${{ runner.os }}-cargo-${{ hashFiles('frontend/src-tauri/Cargo.lock') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-cargo-
+          npm ci
 
       - uses: tauri-apps/tauri-action@v0
         env:
