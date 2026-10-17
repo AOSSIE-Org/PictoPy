@@ -75,4 +75,5 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: abcd
         with:
           projectPath: ./frontend
-          args: ${{ matrix.args }}
+          # Skips LLVM optimisation of picto_py only (~2.5 min -> ~20s); cached deps stay optimised, release builds are unaffected.
+          args: ${{ matrix.args }} -- --config profile.release.package.picto_py.opt-level=0
