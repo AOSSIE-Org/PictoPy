@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { ImageCard } from '@/components/Media/ImageCard';
@@ -29,6 +29,8 @@ import { RootState } from '@/app/store';
 export const FaceSearchResults = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [failedThumbnail, setFailedThumbnail] = useState<string | null>(null);
   const queryImage = useSelector((state: RootState) => state.search.queryImage);
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
   const displayImages = useSelector(selectImages);
@@ -80,6 +82,16 @@ export const FaceSearchResults = () => {
       : convertFileSrc(queryImage)
     : undefined;
 
+  // 'default' is the first entry of the history stack, so there is nothing to
+  // go back to (e.g. the app was opened straight on this page).
+  const handleBack = () => {
+    if (location.key === 'default') {
+      navigate(`/${ROUTES.HOME}`, { replace: true });
+    } else {
+      navigate(-1);
+    }
+  };
+
   const searchError = isError
     ? getErrorMessage(error, errorMessage) ||
       'There was an error while searching for faces.'
@@ -90,7 +102,7 @@ export const FaceSearchResults = () => {
       <div className="my-6 flex items-center justify-between">
         <Button
           variant="outline"
-          onClick={() => navigate(-1)}
+          onClick={handleBack}
           className="flex cursor-pointer items-center gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -99,10 +111,11 @@ export const FaceSearchResults = () => {
       </div>
       <h1 className="mb-6 flex items-center gap-3 text-2xl font-bold">
         Results for
-        {thumbnailSrc && (
+        {thumbnailSrc && failedThumbnail !== thumbnailSrc && (
           <img
             src={thumbnailSrc}
             alt="Searched face"
+            onError={() => setFailedThumbnail(thumbnailSrc)}
             className="h-10 w-10 rounded-full object-cover"
           />
         )}

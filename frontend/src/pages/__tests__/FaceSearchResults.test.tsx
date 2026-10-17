@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router';
+import { fireEvent } from '@testing-library/react';
 import { render, screen, waitFor } from '@/test-utils';
 import { FaceSearchResults } from '../FaceSearchResults/FaceSearchResults';
 import {
@@ -20,14 +21,14 @@ const IMAGES = [
   { id: '2', path: '/img2.jpg', thumbnailPath: '/thumb2.jpg', tags: [] },
 ];
 
-const renderPage = (queryImage?: string) =>
+const renderPage = (queryImage?: string, initialRoutes = ['/face-search']) =>
   render(
     <Routes>
       <Route path="/face-search" element={<FaceSearchResults />} />
       <Route path="/home" element={<div>Home Page</div>} />
     </Routes>,
     {
-      initialRoutes: ['/face-search'],
+      initialRoutes,
       preloadedState: {
         search: { active: !!queryImage, queryImage },
       },
@@ -137,5 +138,44 @@ describe('FaceSearchResults Page', () => {
       expect(screen.getByText('Home Page')).toBeInTheDocument(),
     );
     expect(fetchSearchedFaces).not.toHaveBeenCalled();
+  });
+
+  test('Back goes Home when there is no earlier history entry', async () => {
+    (fetchSearchedFaces as jest.Mock).mockResolvedValue({
+      success: true,
+      data: IMAGES,
+    });
+
+    renderPage('/photos/me.jpg');
+
+    fireEvent.click(await screen.findByRole('button', { name: /Back/i }));
+
+    expect(await screen.findByText('Home Page')).toBeInTheDocument();
+  });
+
+  test('Back returns to the previous page when there is history', async () => {
+    (fetchSearchedFaces as jest.Mock).mockResolvedValue({
+      success: true,
+      data: IMAGES,
+    });
+
+    renderPage('/photos/me.jpg', ['/home', '/face-search']);
+
+    fireEvent.click(await screen.findByRole('button', { name: /Back/i }));
+
+    expect(await screen.findByText('Home Page')).toBeInTheDocument();
+  });
+
+  test('hides the query thumbnail if it fails to load', async () => {
+    (fetchSearchedFaces as jest.Mock).mockResolvedValue({
+      success: true,
+      data: IMAGES,
+    });
+
+    renderPage('/photos/missing.jpg');
+
+    fireEvent.error(await screen.findByAltText('Searched face'));
+
+    expect(screen.queryByAltText('Searched face')).not.toBeInTheDocument();
   });
 });
