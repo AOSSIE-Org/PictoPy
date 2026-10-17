@@ -7,7 +7,7 @@ import sqlite3
 from datetime import datetime
 from sklearn.cluster import DBSCAN
 from sklearn.neighbors import NearestNeighbors
-from sklearn.metrics.pairwise import cosine_distances
+from sklearn import config_context
 from sklearn.metrics.pairwise import cosine_similarity
 
 
@@ -43,6 +43,10 @@ from app.logging.setup_logging import get_logger
 
 # Initialize logger
 logger = get_logger(__name__)
+
+# Neighbour search working-set cap, in MiB. sklearn defaults to 1 GiB, which
+# dominates peak RSS on large libraries; 64 MiB costs ~0.3 s per 10k faces.
+_KNN_WORKING_MEMORY_MB = 64
 
 
 class ClusterResult:
@@ -318,26 +322,35 @@ def cluster_util_cluster_all_face_embeddings(
 
     logger.info(f"Total valid faces to cluster: {len(face_ids)}")
 
-    # Convert to numpy array for DBSCAN
-    embeddings_array = np.array(embeddings)
+    # float32 halves every buffer; embeddings only need enough precision to
+    # rank nearby faces apart.
+    embeddings_array = np.asarray(embeddings, dtype=np.float32)
 
-    # Calculate pairwise distances with similarity threshold
-    distances = cosine_distances(embeddings_array)
-
-    # Guard against NaN distances (shouldn't happen after validation, but double-check)
-    if not np.isfinite(distances).all():
-        logger.error(
-            "NaN or infinite values detected in distance matrix after validation"
-        )
-        # Replace NaN/inf with max distance (1.0)
-        distances = np.nan_to_num(distances, nan=1.0, posinf=1.0, neginf=1.0)
-
-    # Apply similarity threshold - mark dissimilar faces as completely different
+    # Only pairs within max_distance can ever be DBSCAN neighbours (the old
+    # dense path marked everything further out as distance 1.0), so a sparse
+    # radius graph is equivalent. It avoids the N x N float64 matrix: 800 MB
+    # at 10k faces, 20 GB at 50k. DBSCAN accepts the CSR directly.
+    # shortcut: a gallery where most faces sit within max_distance of each
+    # other still grows toward N x N edges; switch to a fixed-k graph if that
+    # shows up.
     max_distance = 1 - similarity_threshold  # Convert similarity to distance
-    distances[distances > max_distance] = 1.0  # Mark as completely different
     logger.info(
         f"Applied similarity threshold: {similarity_threshold} (max_distance: {max_distance:.3f})"
     )
+    neighbours = NearestNeighbors(metric="cosine", n_jobs=-1)
+    neighbours.fit(embeddings_array)
+    with config_context(working_memory=_KNN_WORKING_MEMORY_MB):
+        distances = neighbours.radius_neighbors_graph(
+            embeddings_array, radius=max_distance, mode="distance"
+        )
+
+    # Guard against NaN distances (shouldn't happen after validation, but double-check)
+    if not np.isfinite(distances.data).all():
+        logger.error(
+            "NaN or infinite values detected in distance graph after validation"
+        )
+        # Replace NaN/inf with max distance (1.0)
+        distances.data = np.nan_to_num(distances.data, nan=1.0, posinf=1.0, neginf=1.0)
 
     estimated_eps = estimate_eps(embeddings_array, k=min_samples)
     if estimated_eps is not None:
