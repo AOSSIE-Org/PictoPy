@@ -41,9 +41,11 @@ people apart, and unrelated faces start to look like the same person.
 
 Now, here's where it gets interesting:
 
-We use something called DBSCAN to group similar faces together. A full recluster runs when the last one is more than
-24 hours old, or when more than 100 faces are waiting for a cluster. In between, each new face is assigned to the
-cluster whose mean embedding it is most similar to, provided the similarity is at least 0.8.
+We use something called DBSCAN to group similar faces together. A full recluster rebuilds every cluster, so it only
+runs once, to build the first ones. After that each new face is assigned to the cluster whose mean embedding it is most
+similar to, provided the similarity is at least 0.8, and the faces that match nobody are clustered among themselves
+into new people. A full rebuild on a schedule is what used to exhaust memory on large libraries, so it no longer runs
+automatically.
 
 DBSCAN compares faces by distance, and that used to mean a distance for every pair: the matrix alone ran to hundreds
 of megabytes at 10,000 faces and would exhaust a typical machine well before 50,000. PictoPy now builds a sparse

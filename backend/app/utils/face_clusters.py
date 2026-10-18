@@ -84,45 +84,27 @@ class ClusterResult:
 
 def cluster_util_is_reclustering_needed(metadata) -> bool:
     """
-    Check if reclustering is needed based on:
-    1. Time since last clustering (24 hours)
-    2. Number of faces without cluster ID (> 100)
-    3. No clusters existing yet while faces are waiting to be assigned
+    A full pass rebuilds every cluster, so it is only worth it as a bootstrap:
+    with no clusters yet the incremental path has no means to match against and
+    no way to create the first one. Every later face is assigned -- and new
+    people formed -- incrementally, so a growing library never forces the
+    rebuild that used to OOM.
 
     Returns:
-        bool: True if reclustering is needed, False otherwise
+        bool: True if a full pass is needed, False otherwise
     """
     if not metadata:
-        return True  # No metadata means we need to recluster
+        return True  # Never clustered: rebuild from scratch
 
-    last_reclustering_time = metadata.get("reclustering_time")
-
-    # Check if more than 24 hours have passed since last reclustering
-    if last_reclustering_time:
-        try:
-            last_time = datetime.fromtimestamp(float(last_reclustering_time))
-            time_since_last_reclustering = (datetime.now() - last_time).total_seconds()
-            if time_since_last_reclustering > 86400:  # 24 hours in seconds
-                return True
-        except (ValueError, TypeError):
-            # If we can't parse the time, assume we need to recluster
-            return True
-
-    # Check if number of faces without cluster ID is greater than 100. Keyframe
-    # faces are left out: many never match a photo cluster, and they can't form
-    # one, so counting them would force a full recluster on every sync.
+    # Keyframe faces are left out: many never match a photo cluster, and they
+    # can't form one, so counting them would bootstrap on keyframes alone.
     unassigned_faces = [
         face for face in db_get_faces_unassigned_clusters() if not face.get("frame_id")
     ]
-    if len(unassigned_faces) > 100:
-        return True
 
-    # Incremental assignment matches faces against the means of existing clusters, so
-    # it can never create the first one. Bootstrap that case with a full pass.
-    if unassigned_faces and db_get_clusters_count() == 0:
-        return True
-
-    return False
+    # Incremental assignment matches faces against the means of existing
+    # clusters, so it can never create the first one. Bootstrap that case.
+    return bool(unassigned_faces) and db_get_clusters_count() == 0
 
 
 def _peak_rss_mb() -> str:
@@ -193,10 +175,13 @@ def _generate_cluster_face_images(cluster_list: List[Dict]) -> None:
 def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
     """
     Smart face clustering with transaction safety.
-    Decides between full reclustering or incremental assignment based on 24-hour rule and face count.
+
+    A full recluster rebuilds every cluster from scratch, so it only runs to
+    bootstrap (or when forced). Otherwise the incremental pass assigns new faces
+    and forms new people. Rebuilding on a schedule is what used to OOM.
 
     Args:
-        force_full_reclustering: If True, forces full reclustering regardless of 24-hour rule
+        force_full_reclustering: If True, always do the full rebuild
     """
     started = time.perf_counter()
     metadata = db_get_metadata()

@@ -1,4 +1,5 @@
 import sqlite3
+import time
 from contextlib import closing
 
 import pytest
@@ -1049,6 +1050,29 @@ class TestReclusteringNeededBootstrap:
             bbox={"x": 0, "y": 0, "width": 10, "height": 10},
             cluster_id=None,
         )
+
+        assert cluster_util_is_reclustering_needed({"user_preferences": {}}) is False
+
+    @patch("app.utils.face_clusters.db_get_clusters_count")
+    @patch("app.utils.face_clusters.db_get_faces_unassigned_clusters")
+    def test_old_metadata_does_not_force_a_rebuild(self, mock_unassigned, mock_count):
+        """A periodic rebuild is what OOMed, so age alone must not trigger one."""
+        mock_unassigned.return_value = [{"face_id": i} for i in range(50)]
+        mock_count.return_value = 3
+
+        stale = {"user_preferences": {}, "reclustering_time": time.time() - 3 * 86400}
+
+        assert cluster_util_is_reclustering_needed(stale) is False
+
+    @patch("app.utils.face_clusters.db_get_clusters_count")
+    @patch("app.utils.face_clusters.db_get_faces_unassigned_clusters")
+    def test_a_backlog_of_faces_does_not_force_a_rebuild(
+        self, mock_unassigned, mock_count
+    ):
+        """A pile of unassigned faces is clustered incrementally now, so the old
+        ">100 unassigned" trigger must be gone."""
+        mock_unassigned.return_value = [{"face_id": i} for i in range(5000)]
+        mock_count.return_value = 3
 
         assert cluster_util_is_reclustering_needed({"user_preferences": {}}) is False
 
