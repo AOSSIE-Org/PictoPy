@@ -193,8 +193,18 @@ def _run_child(mode: str, size: int, args) -> dict:
         "--seed",
         str(args.seed),
     ]
-    completed = subprocess.run(command, capture_output=True, text=True, check=True)
-    return json.loads(completed.stdout.strip().splitlines()[-1])
+    completed = subprocess.run(command, capture_output=True, text=True)
+    if completed.returncode != 0:
+        # A child killed by the OOM reaper is the failure this script exists to show,
+        # so report what it managed to say.
+        raise SystemExit(
+            f"{mode} n={size} benchmark child failed: "
+            f"{completed.stderr.strip() or completed.stdout.strip()}"
+        )
+    try:
+        return json.loads(completed.stdout.strip().splitlines()[-1])
+    except (IndexError, json.JSONDecodeError) as e:
+        raise SystemExit(f"{mode} n={size} benchmark child returned no valid JSON: {e}")
 
 
 def _print_table(rows: list[dict]) -> None:

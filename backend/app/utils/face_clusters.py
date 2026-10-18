@@ -168,7 +168,17 @@ def _generate_cluster_face_images(cluster_list: List[Dict]) -> None:
     with get_db_connection() as conn:
         cursor = conn.cursor()
         for cluster_id, face_image_base64 in face_images.items():
-            if not _update_cluster_face_image(cluster_id, face_image_base64, cursor):
+            try:
+                updated = _update_cluster_face_image(
+                    cluster_id, face_image_base64, cursor
+                )
+            except sqlite3.Error as e:
+                # Thumbnails are cosmetic: keep updating the remaining clusters.
+                logger.warning(
+                    f"Failed to update face image for cluster {cluster_id}: {e}"
+                )
+                continue
+            if not updated:
                 logger.warning(f"Failed to update face image for cluster {cluster_id}")
 
 
@@ -312,19 +322,21 @@ def estimate_eps(
     if len(embeddings) <= k:
         return None
 
-    # A sample gives a stable 90th-percentile k-distance; running kNN over every
-    # face is the second O(N^2) cost this path removes. Seeded for repeatability.
+    # Sample the query rows, never the population: fitting the sample would measure
+    # k-distances inside the subsample, where a k-th neighbour is usually a
+    # different person once the library holds more people than the sample holds
+    # rows. Seeded for repeatability.
     if len(embeddings) > sample_size:
         rng = np.random.default_rng(0)
-        embeddings = embeddings[
+        queries = embeddings[
             rng.choice(len(embeddings), size=sample_size, replace=False)
         ]
-    if len(embeddings) <= k:
-        return None
+    else:
+        queries = embeddings
 
     nn = NearestNeighbors(n_neighbors=k + 1, metric="cosine")
     nn.fit(embeddings)
-    distances, _ = nn.kneighbors(embeddings)
+    distances, _ = nn.kneighbors(queries)
 
     kth_distances = distances[:, -1]
     kth_distances.sort()

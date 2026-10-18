@@ -617,6 +617,21 @@ class TestFaceClusteringAlgo:
         # 2 elements
         assert estimate_eps(np.random.randn(2, 512), k=2) is None
 
+    def test_estimate_eps_sample_matches_the_full_set(self):
+        """Sampled eps tracks the full-set estimate on many tight groups"""
+        rng = np.random.default_rng(0)
+        centers = rng.normal(size=(400, 8))
+        embeddings = np.vstack(
+            [center + 0.02 * rng.normal(size=(6, 8)) for center in centers]
+        )
+
+        full = estimate_eps(embeddings, k=3, sample_size=len(embeddings))
+        sampled = estimate_eps(embeddings, k=3, sample_size=200)
+
+        # Fitting the sample instead of querying it measures k-distances inside the
+        # subsample, where the k-th neighbour is another person: orders of magnitude off.
+        assert abs(sampled - full) < 0.1 * full
+
     @patch("app.utils.face_clusters.db_get_all_faces_with_cluster_names")
     def test_adaptive_eps_clamping_regression(self, mock_db_get):
         """Test 4: Adaptive eps clamping under sparse datasets with singletons"""
