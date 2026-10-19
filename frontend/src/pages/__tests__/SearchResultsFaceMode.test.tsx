@@ -1,7 +1,7 @@
 import { Routes, Route } from 'react-router';
 import { fireEvent } from '@testing-library/react';
 import { render, screen, waitFor } from '@/test-utils';
-import { FaceSearchResults } from '../FaceSearchResults/FaceSearchResults';
+import { SearchResults } from '../SearchResults/SearchResults';
 import {
   fetchSearchedFaces,
   fetchSearchedFacesBase64,
@@ -10,6 +10,16 @@ import {
 jest.mock('@/api/api-functions', () => ({
   fetchSearchedFaces: jest.fn(),
   fetchSearchedFacesBase64: jest.fn(),
+  searchImagesByTag: jest.fn(),
+  semanticSearchImages: jest.fn(),
+  searchVideosByTag: jest.fn(),
+  semanticSearchVideos: jest.fn(),
+  fetchModelStatus: jest.fn().mockResolvedValue({ success: true, data: {} }),
+  fetchAllClusters: jest.fn().mockResolvedValue({
+    success: true,
+    data: { clusters: [] },
+  }),
+  fetchMultiPersonSearch: jest.fn(),
 }));
 
 jest.mock('@tauri-apps/api/core', () => ({
@@ -21,10 +31,13 @@ const IMAGES = [
   { id: '2', path: '/img2.jpg', thumbnailPath: '/thumb2.jpg', tags: [] },
 ];
 
-const renderPage = (queryImage?: string, initialRoutes = ['/face-search']) =>
+const renderPage = (
+  queryImage?: string,
+  initialRoutes = ['/search?mode=face'],
+) =>
   render(
     <Routes>
-      <Route path="/face-search" element={<FaceSearchResults />} />
+      <Route path="/search" element={<SearchResults />} />
       <Route path="/home" element={<div>Home Page</div>} />
     </Routes>,
     {
@@ -35,7 +48,7 @@ const renderPage = (queryImage?: string, initialRoutes = ['/face-search']) =>
     },
   );
 
-describe('FaceSearchResults Page', () => {
+describe('SearchResults face mode', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -159,7 +172,7 @@ describe('FaceSearchResults Page', () => {
       data: IMAGES,
     });
 
-    renderPage('/photos/me.jpg', ['/home', '/face-search']);
+    renderPage('/photos/me.jpg', ['/home', '/search?mode=face']);
 
     fireEvent.click(await screen.findByRole('button', { name: /Back/i }));
 

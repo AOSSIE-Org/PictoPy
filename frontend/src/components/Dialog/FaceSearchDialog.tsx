@@ -14,7 +14,7 @@ import { useFile } from '@/hooks/selectFile';
 import { startSearch } from '@/features/searchSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useLocation, useNavigate } from 'react-router';
-import { ROUTES } from '@/constants/routes';
+import { FACE_SEARCH_PATH, isFaceSearchLocation } from '@/utils/faceSearch';
 import WebcamComponent from '../WebCam/WebCamComponent';
 
 export function FaceSearchDialog() {
@@ -48,8 +48,8 @@ export function FaceSearchDialog() {
       setIsDialogOpen(false);
       // The results page runs the search for the photo stored here.
       dispatch(startSearch(filePath));
-      navigate(`/${ROUTES.FACE_SEARCH}`, {
-        replace: location.pathname === `/${ROUTES.FACE_SEARCH}`,
+      navigate(FACE_SEARCH_PATH, {
+        replace: isFaceSearchLocation(location),
       });
     }
   };

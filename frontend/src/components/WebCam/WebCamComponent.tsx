@@ -19,7 +19,7 @@ import { useDispatch } from 'react-redux';
 import { startSearch } from '@/features/searchSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useLocation, useNavigate } from 'react-router';
-import { ROUTES } from '@/constants/routes';
+import { FACE_SEARCH_PATH, isFaceSearchLocation } from '@/utils/faceSearch';
 
 interface WebcamComponentProps {
   isOpen: boolean;
@@ -121,8 +121,8 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
     if (capturedImageUrl) {
       // The results page runs the search for the captured photo (a data URL).
       dispatch(startSearch(capturedImageUrl));
-      navigate(`/${ROUTES.FACE_SEARCH}`, {
-        replace: location.pathname === `/${ROUTES.FACE_SEARCH}`,
+      navigate(FACE_SEARCH_PATH, {
+        replace: isFaceSearchLocation(location),
       });
       // Reset the captured photo too, so the next open shows the live camera.
       handleClose();
