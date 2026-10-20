@@ -50,6 +50,7 @@ from app.utils.folders import (
     folder_util_add_multiple_folder_trees,
     folder_util_delete_obsolete_folders,
     folder_util_get_filesystem_direct_child_folders,
+    folder_util_relocate_moved_folders,
 )
 from app.utils.images import (
     image_util_process_folder_images,
@@ -518,6 +519,16 @@ def sync_folder(request: SyncFolderRequest, app_state: State = Depends(get_state
         # Step 2: Compare and identify differences
         filesystem_folder_set = set(filesystem_folders)
         db_folder_paths = {folder_path for folder_id, folder_path in db_child_folders}
+
+        # Renamed or moved folders keep their rows, and with them their albums,
+        # favourites and faces, instead of being deleted and added again
+        if folder_util_relocate_moved_folders(
+            filesystem_folder_set - db_folder_paths, request.folder_id
+        ):
+            db_child_folders = db_get_direct_child_folders(request.folder_id)
+            db_folder_paths = {
+                folder_path for folder_id, folder_path in db_child_folders
+            }
 
         folders_to_delete = db_folder_paths - filesystem_folder_set
         folders_to_add = filesystem_folder_set - db_folder_paths

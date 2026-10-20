@@ -15,6 +15,7 @@ from typing import (
     List,
     Mapping,
     Optional,
+    Set,
     Tuple,
     TypedDict,
 )
@@ -32,6 +33,8 @@ from app.database.videos import (
     db_get_video_index_by_folder_ids,
     db_get_videos_by_folder_ids,
     db_delete_videos_by_ids,
+    db_get_videos_by_file_keys,
+    db_relocate_videos,
 )
 from app.utils.extract_location_metadata import (
     DATE_SOURCE_CONTAINER,
@@ -44,6 +47,7 @@ from app.schemas.videos import VideoData
 from app.utils.takeout_sidecar import takeout_sidecar_read
 from app.utils.video_capture_date import video_capture_date_candidates
 from app.utils.images import (
+    image_util_files_identical,
     image_util_find_folder_id_for_image,
     image_util_parse_metadata,
 )
@@ -104,6 +108,7 @@ def video_util_process_folder_videos(folder_data: List[Tuple[str, str, bool]]) -
         all_video_records: List[VideoRecord] = []
         all_folder_ids = []
         superseded_thumbnails: List[str] = []
+        indexed_paths: Set[str] = set()
 
         for folder_path, folder_id, recursive in folder_data:
             try:
@@ -124,6 +129,7 @@ def video_util_process_folder_videos(folder_data: List[Tuple[str, str, bool]]) -
                         db_get_video_index_by_folder_ids([folder_id])
                     )
                 }
+                indexed_paths.update(already_indexed)
 
                 folder_video_records = video_util_prepare_video_records(
                     video_files, folder_path_to_id, already_indexed
@@ -138,6 +144,12 @@ def video_util_process_folder_videos(folder_data: List[Tuple[str, str, bool]]) -
             except Exception as e:
                 logger.error(f"Error processing folder {folder_path}: {e}")
                 continue
+
+        # Renamed or moved videos keep their rows, so the cleanup below must not
+        # see them as obsolete
+        all_video_records = video_util_relocate_moved_videos(
+            all_video_records, indexed_paths
+        )
 
         if all_folder_ids:
             video_util_remove_obsolete_videos(all_folder_ids)
@@ -468,6 +480,54 @@ def video_util_extract_metadata(
             cap.release()
 
     return metadata
+
+
+def video_util_relocate_moved_videos(
+    video_records: List[VideoRecord], indexed_paths: Set[str]
+) -> List[VideoRecord]:
+    """
+    Move the existing rows of renamed or moved videos to their new paths.
+
+    A new record matches a row whose file no longer exists when they are the only
+    pair with that file size and mtime and their thumbnails are identical.
+
+    Returns:
+        The records that still need inserting
+    """
+    new_records: Dict[Tuple[int, str], List[VideoRecord]] = {}
+    for record in video_records:
+        # Known paths are updated in place by the insert
+        if record["path"] in indexed_paths:
+            continue
+        metadata = image_util_parse_metadata(record["metadata"])
+        size, modified = metadata.get("file_size"), metadata.get("file_modified")
+        if size and modified:
+            new_records.setdefault((size, modified), []).append(record)
+
+    missing_videos: Dict[Tuple[int, str], List[Tuple[str, Optional[str]]]] = {}
+    for video_id, video_path, thumbnail_path, key in db_get_videos_by_file_keys(
+        set(new_records)
+    ):
+        if not os.path.exists(video_path):
+            missing_videos.setdefault(key, []).append((video_id, thumbnail_path))
+
+    relocated_records: List[VideoRecord] = []
+    for key, missing in missing_videos.items():
+        if len(missing) != 1 or len(new_records[key]) != 1:
+            continue
+        (video_id, thumbnail_path), record = missing[0], new_records[key][0]
+        if image_util_files_identical(thumbnail_path, record["thumbnailPath"]):
+            relocated_records.append({**record, "id": video_id})
+
+    if not relocated_records or not db_relocate_videos(relocated_records):
+        return video_records
+
+    # The rows keep their own thumbnails
+    video_util_remove_thumbnail_files(
+        record["thumbnailPath"] for record in relocated_records
+    )
+    relocated_paths = {record["path"] for record in relocated_records}
+    return [record for record in video_records if record["path"] not in relocated_paths]
 
 
 def video_util_remove_obsolete_videos(folder_id_list: List[str]) -> int:
