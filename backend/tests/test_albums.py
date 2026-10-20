@@ -571,6 +571,89 @@ class TestAlbumImageManagement:
             mock_get_album.assert_called_once_with(album_id)
             mock_add_images.assert_called_once_with(album_id, request_body["image_ids"])
 
+    def test_add_images_to_album_album_not_found(self):
+        """
+        Test adding images to a non-existent album returns HTTP 404 NOT FOUND.
+        """
+        album_id = "non-existent-album-id"
+        request_body = {
+            "image_ids": [
+                "71abff29-27b4-43a4-9e76-b78504bea325",
+            ]
+        }
+
+        with patch("app.routes.albums.db_get_album") as mock_get_album:
+            mock_get_album.return_value = None
+
+            response = client.post(f"/albums/{album_id}/images", json=request_body)
+            assert response.status_code == 404
+
+            json_response = response.json()
+            assert json_response["detail"]["success"] is False
+            assert json_response["detail"]["error"] == "Album Not Found"
+            mock_get_album.assert_called_once_with(album_id)
+
+    def test_add_images_to_album_invalid_ids_returns_404(self, mock_db_album):
+        """
+        Test adding invalid/non-existent image IDs returns HTTP 404 NOT FOUND.
+        """
+        album_id = mock_db_album["album_id"]
+        request_body = {
+            "image_ids": [
+                "71abff29-27b4-43a4-9e76-b78504bea325",
+            ]
+        }
+
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_add_images_to_album"
+        ) as mock_add_images:
+            mock_get_album.return_value = album_row(mock_db_album)
+            mock_add_images.side_effect = ValueError(
+                "None of the provided image IDs exist in the database."
+            )
+
+            response = client.post(f"/albums/{album_id}/images", json=request_body)
+            assert response.status_code == 404
+
+            json_response = response.json()
+            assert json_response["detail"]["success"] is False
+            assert json_response["detail"]["error"] == "Image Not Found"
+            assert (
+                "None of the provided image IDs exist in the database."
+                in json_response["detail"]["message"]
+            )
+
+            mock_get_album.assert_called_once_with(album_id)
+            mock_add_images.assert_called_once_with(album_id, request_body["image_ids"])
+
+    def test_add_images_to_album_db_error_returns_500(self, mock_db_album):
+        """
+        Test unexpected database exception when adding images returns HTTP 500.
+        """
+        album_id = mock_db_album["album_id"]
+        request_body = {
+            "image_ids": [
+                "71abff29-27b4-43a4-9e76-b78504bea325",
+            ]
+        }
+
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_add_images_to_album"
+        ) as mock_add_images:
+            mock_get_album.return_value = album_row(mock_db_album)
+            mock_add_images.side_effect = Exception("Database connection failed")
+
+            response = client.post(f"/albums/{album_id}/images", json=request_body)
+            assert response.status_code == 500
+
+            json_response = response.json()
+            assert json_response["detail"]["success"] is False
+            assert json_response["detail"]["error"] == "Failed to Add Images"
+            assert "Database connection failed" in json_response["detail"]["message"]
+
+            mock_get_album.assert_called_once_with(album_id)
+            mock_add_images.assert_called_once_with(album_id, request_body["image_ids"])
+
     def test_get_album_images_success(self, mock_db_album):
         """
         Test retrieving image IDs from an existing album.
