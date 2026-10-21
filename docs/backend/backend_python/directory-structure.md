@@ -40,9 +40,11 @@ created.
 | `faces.py`            | Manages face-related data, including storing and retrieving face embeddings for facial recognition.                                                 |
 | `folders.py`          | Handles operations to create, insert, update, retrieve, and delete folder records, while handling folder hierarchies and AI tagging status.         |
 | `image_embeddings.py` | Stores/retrieves SigLIP2 image embeddings as float32 BLOBs, filtered by `model_version`; see [Semantic Search](semantic-search.md).                 |
+| `image_export.py`     | Reads everything metadata export writes for a batch of images, leaving out locked albums; see [Metadata Export](metadata-export.md).                |
 | `images.py`           | Deals with image-related operations, such as storing image metadata, managing image IDs, and handling image classifications.                        |
 | `metadata.py`         | Manages the metadata and provides functions to create the table, retrieve stored metadata as a dictionary, and update the metadata with new values. |
 | `semantic_labels.py`  | Creates the (currently dormant) `semantic_labels`/`image_semantic_labels` tables reserved for a future curated-label browsing feature.              |
+| `xmp_export_state.py` | The `image_xmp_state` table and the triggers that mark images needing a metadata export; see [Metadata Export](metadata-export.md).                 |
 | `yolo_mapping.py`     | Creates and manages mappings for YOLO object detection classes.                                                                                     |
 
 ## models
@@ -70,6 +72,7 @@ This directory contains API route definitions for different functionalities of t
 | `folders.py`          | Add, sync, update AI tagging, delete, and list folders, managing folder hierarchy and image processing asynchronously. Triggers the SigLIP2 embedding pass last, after YOLO/face processing (see [Semantic Search](semantic-search.md)). |
 | `images.py`           | Deals with image-related operations (adding, deleting, retrieving images and their metadata), plus `GET /images/semantic-search` (see [Semantic Search](semantic-search.md)).                                                            |
 | `memories.py`         | Provides endpoints to generate photo memories grouped by location and time, retrieve a timeline, and fetch on-this-day recollections.                                                                                                    |
+| `metadata_export.py`  | Starts a library-wide metadata export and reports its status; see [Metadata Export](metadata-export.md).                                                                                                                                 |
 | `models.py`           | Installs/uninstalls model tiers (including the `semantic` SigLIP2 bundle), reports install status, tracks SSE download progress, and exposes routes to get hardware recommendations.                                                     |
 | `shutdown.py`         | Provides a single endpoint to gracefully terminate the PictoPy backend process on all platforms.                                                                                                                                         |
 | `user_preferences.py` | Get and update user preferences stored in the metadata database.                                                                                                                                                                         |
@@ -85,6 +88,7 @@ This directory contains Pydantic models defining the structure and validation of
 | `facetagging.py`      | Face matching, clustering, related images, and error responses. |
 | `folders.py`          | Folder-related API requests, responses, and data structures     |
 | `images.py`           | Image management requests and responses, including deletions.   |
+| `metadata_export.py`  | Error response for the metadata export routes.                  |
 | `test.py`             | Tests image detection requests, responses, and error handling.  |
 | `user_preferences.py` | User preferences API requests, responses, and error handling.   |
 
@@ -104,6 +108,7 @@ This directory contains utility functions and helper modules used across the app
 | `microservice.py`   | Starts sync microservice with virtual environment or bundled executable.                                                                                              |
 | `ONNX.py`           | Returns ONNX execution providers list based on GPU acceleration preference.                                                                                           |
 | `SigLIP.py`         | Preprocesses images for SigLIP2, tokenizes search queries (with a thread-safe tokenizer cache), and caches the text-tower session across `/semantic-search` requests. |
+| `xmp/`              | Metadata export: the metadata model, XMP codec, PNG container, export pass and edit debouncer; see [Metadata Export](metadata-export.md).                             |
 | `YOLO.py`           | YOLO utilities for NMS, drawing, and model path from preferences.                                                                                                     |
 
 ## scripts

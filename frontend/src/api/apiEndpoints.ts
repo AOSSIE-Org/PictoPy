@@ -1,6 +1,7 @@
 export const imagesEndpoints = {
   getAllImages: '/images/',
   setFavourite: '/images/toggle-favourite',
+  deleteImages: '/images/delete-images',
   searchByTag: (tag: string) => `/images/search?tag=${encodeURIComponent(tag)}`,
   semanticSearch: (query: string) =>
     `/images/semantic-search?query=${encodeURIComponent(query)}`,
@@ -15,6 +16,11 @@ export const videosEndpoints = {
   purgeFrameCache: '/videos/purge-frame-cache',
   scanFaces: '/videos/scan-faces',
   faceScanStatus: '/videos/face-scan-status',
+};
+
+export const metadataExportEndpoints = {
+  run: '/metadata-export/run',
+  status: '/metadata-export/status',
 };
 
 export const faceClustersEndpoints = {

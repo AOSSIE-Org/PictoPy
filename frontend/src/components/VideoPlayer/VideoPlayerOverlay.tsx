@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
+import { invoke } from '@tauri-apps/api/core';
 import { Video } from '@/types/Media';
 import NetflixStylePlayer from './NetflixStylePlayer';
 import { VideoViewerControls } from './VideoViewerControls';
@@ -58,6 +59,15 @@ export function VideoPlayerOverlay({ videos }: VideoPlayerOverlayProps) {
     }
   }, [currentVideo]);
 
+  const handleOpenOriginal = useCallback(async () => {
+    if (!currentVideo?.path) return;
+    try {
+      await invoke<void>('open_image_file', { path: currentVideo.path });
+    } catch (err) {
+      console.error('Failed to open file:', err);
+    }
+  }, [currentVideo]);
+
   const handleToggleFavourite = useCallback(() => {
     if (currentVideo?.id) {
       toggleFavourite(currentVideo.id);
@@ -95,6 +105,7 @@ export function VideoPlayerOverlay({ videos }: VideoPlayerOverlayProps) {
         video={currentVideo}
         currentIndex={currentIndex}
         totalVideos={videos.length}
+        onOpenOriginal={handleOpenOriginal}
       />
 
       <div className="relative flex flex-1 items-center justify-center overflow-hidden px-6 pt-20 pb-6">

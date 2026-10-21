@@ -2805,6 +2805,90 @@
           }
         }
       }
+    },
+    "/config/supported-extensions": {
+      "get": {
+        "tags": [
+          "Config"
+        ],
+        "summary": "Get Supported Extensions",
+        "description": "Return the file extensions the app can index and open, without the dot.",
+        "operationId": "get_supported_extensions_config_supported_extensions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metadata-export/run": {
+      "post": {
+        "tags": [
+          "Metadata Export"
+        ],
+        "summary": "Run Metadata Export",
+        "description": "Export the whole library now, whatever the automatic setting says.\n\nAlso rechecks images already exported whose files changed since.",
+        "operationId": "run_metadata_export_metadata_export_run_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataExportStatusResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__metadata_export__ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metadata-export/status": {
+      "get": {
+        "tags": [
+          "Metadata Export"
+        ],
+        "summary": "Get Metadata Export Status",
+        "description": "How much of the library holds up-to-date metadata, for a poller.",
+        "operationId": "get_metadata_export_status_metadata_export_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataExportStatusResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__metadata_export__ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3323,6 +3407,44 @@
         ],
         "title": "ErrorResponseEnvelope",
         "description": "How an ErrorResponse actually reaches the client.\n\nHTTPException nests whatever it is given under `detail`, so documenting\nErrorResponse alone would describe a shape no client ever receives."
+      },
+      "ExportRunSummary": {
+        "properties": {
+          "checked": {
+            "type": "integer",
+            "title": "Checked"
+          },
+          "written": {
+            "type": "integer",
+            "title": "Written"
+          },
+          "unchanged": {
+            "type": "integer",
+            "title": "Unchanged"
+          },
+          "skipped": {
+            "type": "integer",
+            "title": "Skipped"
+          },
+          "left_alone": {
+            "type": "integer",
+            "title": "Left Alone"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "checked",
+          "written",
+          "unchanged",
+          "skipped",
+          "left_alone",
+          "failed"
+        ],
+        "title": "ExportRunSummary"
       },
       "FaceScanStatusData": {
         "properties": {
@@ -5303,6 +5425,76 @@
         "title": "MemoryVideoItem",
         "description": "A short clip curated into a memory, sharing the images' sort_order."
       },
+      "MetadataExportStatusData": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "pending": {
+            "type": "integer",
+            "title": "Pending"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "left_alone": {
+            "type": "integer",
+            "title": "Left Alone"
+          },
+          "running": {
+            "type": "boolean",
+            "title": "Running",
+            "default": false
+          },
+          "run_failed": {
+            "type": "boolean",
+            "title": "Run Failed",
+            "default": false
+          },
+          "last_run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExportRunSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "pending",
+          "failed",
+          "left_alone"
+        ],
+        "title": "MetadataExportStatusData"
+      },
+      "MetadataExportStatusResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/MetadataExportStatusData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "MetadataExportStatusResponse"
+      },
       "MetadataModel": {
         "properties": {
           "name": {
@@ -6451,6 +6643,17 @@
             ],
             "title": "Video Face Detection"
           },
+          "Metadata_Export": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata Export"
+          },
           "memories": {
             "anyOf": [
               {
@@ -6516,6 +6719,11 @@
           "Video_Face_Detection": {
             "type": "boolean",
             "title": "Video Face Detection",
+            "default": false
+          },
+          "Metadata_Export": {
+            "type": "boolean",
+            "title": "Metadata Export",
             "default": false
           },
           "memories": {
@@ -6948,6 +7156,29 @@
         ],
         "title": "ErrorResponse",
         "description": "Error response model"
+      },
+      "app__schemas__metadata_export__ErrorResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": false
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "error"
+        ],
+        "title": "ErrorResponse"
       },
       "app__schemas__share__ErrorResponse": {
         "properties": {

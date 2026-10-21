@@ -92,6 +92,22 @@ def _curate_memories(trigger: str) -> None:
         logger.error(f"Memory curation failed after {trigger}: {e}")
 
 
+def _export_metadata(trigger: str) -> None:
+    """
+    Write fresh tags, faces and embeddings into the photos, if enabled.
+
+    Runs once after every photo stage, so an image is written at most once per
+    sequence. Swallowed on failure: exporting is an extra copy of what the
+    database already holds and must never fail the processing before it.
+    """
+    try:
+        from app.utils.xmp.exporter import xmp_export_if_enabled
+
+        xmp_export_if_enabled()
+    except Exception as e:
+        logger.error(f"Metadata export failed after {trigger}: {e}")
+
+
 def _queue_post_index_tagging_sweep(index_future: Future, app_state: State) -> None:
     """
     Runs after folder indexing completes to trigger a follow-up tagging sweep.
@@ -170,6 +186,7 @@ def post_AI_tagging_enabled_sequence():
         # Curate before the video pass: semantic labels are written by now,
         # and the video pass can run for minutes.
         _curate_memories("ai_tagging")
+        _export_metadata("ai_tagging")
         # Videos last: photos are the primary surface, so they finish first.
         video_util_process_untagged_videos()
         # Catches up videos tagged before finding people in videos was on.
@@ -190,7 +207,7 @@ def post_AI_tagging_enabled_sequence():
 
 
 def post_sync_folder_sequence(
-    folder_path: str, folder_id: int, added_folders: list[tuple[str, str]]
+    folder_path: str, folder_id: str, added_folders: list[tuple[str, str]]
 ):
     """
     Post-sync sequence for a folder.
@@ -216,6 +233,7 @@ def post_sync_folder_sequence(
         image_util_process_unembedded_images()
         semantic_util_score_images()
         _curate_memories("sync_folder")
+        _export_metadata("sync_folder")
         video_util_process_untagged_videos()
         video_util_backfill_video_faces()
         cluster_util_attach_keyframe_faces()
