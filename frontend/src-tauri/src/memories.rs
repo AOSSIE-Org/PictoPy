@@ -63,6 +63,12 @@ impl MemoryTaskState {
             *last = Some((Instant::now(), Local::now().date_naive()));
         }
     }
+
+    fn clear_checked(&self) {
+        if let Ok(mut last) = self.last_check.lock() {
+            *last = None;
+        }
+    }
 }
 
 /// `{success, message, data}` — the envelope every backend route returns.
@@ -139,47 +145,53 @@ fn start(app: AppHandle, throttled: bool) {
     state.mark_checked();
 
     tauri::async_runtime::spawn(async move {
-        run(&app).await;
+        let reached_surface = run(&app).await;
         if let Some(state) = app.try_state::<MemoryTaskState>() {
+            // Otherwise the throttle would hold off the periodic retry for up
+            // to RESUME_INTERVAL, e.g. after a first index longer than 30 min.
+            if !reached_surface {
+                state.clear_checked();
+            }
             state.running.store(false, Ordering::SeqCst);
         }
     });
 }
 
-async fn run(app: &AppHandle) {
+/// Returns whether the run got as far as surfacing today's memory.
+async fn run(app: &AppHandle) -> bool {
     let client = match reqwest::Client::builder().timeout(REQUEST_TIMEOUT).build() {
         Ok(client) => client,
         Err(e) => {
             eprintln!("[MEMORIES] Could not build an HTTP client: {e}");
-            return;
+            return false;
         }
     };
 
     if !wait_for_backend(&client).await {
         println!("[MEMORIES] Backend never came up; skipping curation");
-        return;
+        return false;
     }
 
     let status = match get_status(&client).await {
         Some(status) => status,
-        None => return,
+        None => return false,
     };
     if !status.memories_enabled {
-        return;
+        return false;
     }
 
     let status = match wait_while_indexing(&client, status).await {
         Some(status) => status,
         None => {
             println!("[MEMORIES] Library still indexing; skipping curation");
-            return;
+            return false;
         }
     };
 
     let previous_run = status.run_started_at.clone();
     let queued = match generate(&client).await {
         Some(queued) => queued,
-        None => return,
+        None => return false,
     };
 
     // Nothing was queued when today's run is already complete or already in
@@ -195,10 +207,11 @@ async fn run(app: &AppHandle) {
 
     let status = match status {
         Some(status) => status,
-        None => return,
+        None => return false,
     };
 
     surface(app, &client, &status).await;
+    true
 }
 
 /// Announce the memory, once, through the card and the notification centre.
