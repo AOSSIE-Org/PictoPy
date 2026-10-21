@@ -32,6 +32,8 @@ const RESUME_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
 /// How often the timer offers a throttled check, so a new day is noticed
 /// without a focus event.
 const PERIODIC_CHECK: Duration = Duration::from_secs(15 * 60);
+const MARK_ATTEMPTS: u32 = 3;
+const MARK_RETRY: Duration = Duration::from_secs(1);
 
 /// Guards against overlapping runs and throttles the resume check.
 #[derive(Default)]
@@ -397,13 +399,32 @@ async fn generate(client: &reqwest::Client) -> Option<GenerateData> {
         .data
 }
 
+/// Retried because a lost write lets the next check announce the memory again.
 async fn mark_notified(client: &reqwest::Client, memory_id: &str) {
-    if let Err(e) = client
-        .patch(format!("{BACKEND_URL}/memories/{memory_id}"))
-        .json(&json!({ "notified": true }))
-        .send()
-        .await
-    {
-        eprintln!("[MEMORIES] Could not record the notification: {e}");
+    for attempt in 1..=MARK_ATTEMPTS {
+        let error = match client
+            .patch(format!("{BACKEND_URL}/memories/{memory_id}"))
+            .json(&json!({ "notified": true }))
+            .send()
+            .await
+        {
+            Ok(response) if response.status().is_success() => return,
+            // A 4xx, such as a memory deleted meanwhile, will not change on retry.
+            Ok(response) if !response.status().is_server_error() => {
+                eprintln!(
+                    "[MEMORIES] Could not record the notification: {}",
+                    response.status()
+                );
+                return;
+            }
+            Ok(response) => response.status().to_string(),
+            Err(e) => e.to_string(),
+        };
+        eprintln!(
+            "[MEMORIES] Could not record the notification (attempt {attempt}/{MARK_ATTEMPTS}): {error}"
+        );
+        if attempt < MARK_ATTEMPTS {
+            sleep(MARK_RETRY).await;
+        }
     }
 }
