@@ -141,6 +141,32 @@ describe('MemoryNotificationListener', () => {
     expect(store.getState().memories.activeMemoryId).toBeNull();
   });
 
+  // navigate changes identity on every route change. Resubscribing would
+  // collect the announcement Rust still holds and revive a dismissed card.
+  it('keeps one subscription across navigation', async () => {
+    mockInvoke.mockImplementation((command: string) =>
+      Promise.resolve(command === 'take_pending_memory' ? pending : null),
+    );
+    renderListener();
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Dismiss memory notification',
+      }),
+    );
+
+    emit('memory:open', { memory_id: 'mem-9' });
+    await act(async () => {});
+
+    expect(screen.getByTestId('path')).toHaveTextContent('/memories');
+    expect(screen.queryByText('Your Daily Memory is Ready')).toBeNull();
+    expect(mockUnlisten).not.toHaveBeenCalled();
+    expect(
+      mockInvoke.mock.calls.filter(
+        ([command]) => command === 'take_pending_memory',
+      ),
+    ).toHaveLength(1);
+  });
+
   it('unsubscribes both listeners on unmount', async () => {
     const { unmount } = renderListener();
     unmount();

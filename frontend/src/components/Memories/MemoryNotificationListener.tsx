@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Sparkles, X } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -57,6 +57,10 @@ export const MemoryNotificationListener: React.FC = () => {
     },
     [dispatch, navigate, queryClient],
   );
+  // navigate changes identity on every route change. Subscribing through a ref
+  // keeps that from re-running take_pending_memory and reviving a dismissed card.
+  const showRef = useRef(show);
+  showRef.current = show;
 
   useEffect(() => {
     let cancelled = false;
@@ -66,7 +70,7 @@ export const MemoryNotificationListener: React.FC = () => {
         setPending(event.payload),
       ),
       listen<{ memory_id: string }>('memory:open', (event) =>
-        show(event.payload.memory_id),
+        showRef.current(event.payload.memory_id),
       ),
     ];
 
@@ -84,7 +88,7 @@ export const MemoryNotificationListener: React.FC = () => {
         void subscription.then((unlisten) => unlisten()).catch(() => {});
       });
     };
-  }, [show]);
+  }, []);
 
   // Routed through Rust so the window is focused first and every entry point
   // lands on the same event. Falls back to routing here if the command is
