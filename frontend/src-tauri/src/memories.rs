@@ -2,12 +2,14 @@
 //!
 //! The backend only curates when something asks it to, so nothing would ever
 //! surface on a day with no import. This task asks once per launch (and again
-//! on resume), then reports the result through the OS notification centre.
+//! on resume or a new day), then reports the result through the OS
+//! notification centre.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
+use chrono::{Local, NaiveDate};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use tauri::{AppHandle, Emitter, Manager};
@@ -27,12 +29,17 @@ const RUN_POLL: Duration = Duration::from_secs(5);
 const RUN_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 /// How long the app must have gone unchecked before a focus re-runs the task.
 const RESUME_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
+/// How often the timer offers a throttled check, so a new day is noticed
+/// without a focus event.
+const PERIODIC_CHECK: Duration = Duration::from_secs(15 * 60);
 
 /// Guards against overlapping runs and throttles the resume check.
 #[derive(Default)]
 pub struct MemoryTaskState {
     running: AtomicBool,
-    last_check: Mutex<Option<Instant>>,
+    /// The local date matches the backend's `date.today()`, so a new day is
+    /// due at once rather than up to `RESUME_INTERVAL` later.
+    last_check: Mutex<Option<(Instant, NaiveDate)>>,
     /// The last announcement, held until the frontend collects it. An event
     /// with nobody listening is simply lost, and the listener mounts after
     /// this task can already have emitted.
@@ -42,14 +49,16 @@ pub struct MemoryTaskState {
 impl MemoryTaskState {
     fn is_due(&self) -> bool {
         match self.last_check.lock() {
-            Ok(last) => last.is_none_or(|at| at.elapsed() >= RESUME_INTERVAL),
+            Ok(last) => last.is_none_or(|(at, day)| {
+                at.elapsed() >= RESUME_INTERVAL || day != Local::now().date_naive()
+            }),
             Err(_) => false,
         }
     }
 
     fn mark_checked(&self) {
         if let Ok(mut last) = self.last_check.lock() {
-            *last = Some(Instant::now());
+            *last = Some((Instant::now(), Local::now().date_naive()));
         }
     }
 }
@@ -96,10 +105,21 @@ pub fn spawn_memory_task(app: AppHandle) {
     start(app, false);
 }
 
-/// Run the check on window focus, at most once per `RESUME_INTERVAL`. Covers
-/// the app being left open across midnight.
+/// Run the check on window focus, if it is a new day or `RESUME_INTERVAL` has
+/// passed.
 pub fn check_on_resume(app: AppHandle) {
     start(app, true);
+}
+
+/// Offer the throttled check on a timer. A window left focused, or hidden in
+/// the tray since boot, never raises the focus event across midnight.
+pub fn spawn_periodic_check(app: AppHandle) {
+    tauri::async_runtime::spawn(async move {
+        loop {
+            sleep(PERIODIC_CHECK).await;
+            start(app.clone(), true);
+        }
+    });
 }
 
 fn start(app: AppHandle, throttled: bool) {

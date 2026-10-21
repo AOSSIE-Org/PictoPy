@@ -54,8 +54,8 @@ fn is_process_alive() -> bool {
 }
 
 fn on_window_event(window: &Window, event: &WindowEvent) {
-    // Covers the app being left open across midnight, and coming back from the
-    // tray. Throttled inside.
+    // Covers coming back from the tray; the periodic check covers a window
+    // that never loses focus. Throttled inside.
     if matches!(event, WindowEvent::Focused(true)) && window.label() == "main" {
         memories::check_on_resume(window.app_handle().clone());
         return;
@@ -307,6 +307,7 @@ fn main() {
 
             app.manage(memories::MemoryTaskState::default());
             memories::spawn_memory_task(app.handle().clone());
+            memories::spawn_periodic_check(app.handle().clone());
 
             // When auto-started at boot (--minimized flag), keep the window hidden
             if std::env::args().any(|a| a == "--minimized") {
