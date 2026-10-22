@@ -93,7 +93,7 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
 
   const filteredImages = allImages.filter((image) => {
     const searchLower = searchQuery.toLowerCase();
-    const fileName = image.path.split('/').pop()?.toLowerCase() || '';
+    const fileName = image.path.split(/[/\\]/).pop()?.toLowerCase() || '';
     return fileName.includes(searchLower);
   });
 
