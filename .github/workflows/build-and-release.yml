@@ -388,3 +388,12 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+
+  publish-stable-downloads:
+    needs: publish-tauri
+    permissions:
+      contents: write
+    uses: ./.github/workflows/publish-stable-downloads.yml
+    with:
+      release-tag: ${{ github.event.release.tag_name || github.event.inputs.tag }}
+
