@@ -9,93 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.3.0-beta] - 2026-10-22
 
-<!-- Auto-generated draft. Review and edit before merging. -->
-
 ### Added
-- feat: skip optimising picto_py in PR build check (#1621) by @rohan-pandeyy
-- feat: cache Rust dependencies in PR Check Build (#1620) by @rohan-pandeyy
-- feat: export PictoPy metadata into PNG files as XMP (#1604) by @rohan-pandeyy
-- Feat: find people in videos (#1559) by @rohan-pandeyy
-- CI: add changed-file MyPy checks (#1551) by @rohan-pandeyy
-- Deletion Implementation in Image Viewer (#1547) by @Takitxt
-- feat: add support for WebP, BMP, TIFF, and GIF image formats (#1532) by @JIturiDashami
-- Consolidate PR Labeling Workflows & Fix and Improve Duplicate Issue Detection (#1530) by @rohan-pandeyy
-- Feat: Unify images and videos into a sortable Favorites gallery (#1527) by @rohan-pandeyy
-- fix(albums): align album detail header with AI Tagging page layout (#1517) by @akshajtiwari
-- feat: share an album from the desktop app (#1473) by @rohan-pandeyy
-- feat: protect a shared album with a password (#1471) by @rohan-pandeyy
-- Cropped Image-fix in addImagesCropDialog (#1466) by @Takitxt
-- Indexing works in parallel instead of series. (#1464) by @Takitxt
-- feat(ui): Prevent Face Collection from Pushing Tagged Images Below the Fold (#1457) by @akshajtiwari
-- fix: improve Model Manager window sizing and card layout (#1449) by @Akshit-Tyagi-05
-- feat(search): text-based multi-person face search (#1446) by @rohan-pandeyy
-- Folder management Loading state cleanup (#1443) by @Takitxt
-- Announce a new memory with a native desktop notification (#1440) by @rohan-pandeyy
-- Move memory settings into the settings page (#1438) by @rohan-pandeyy
-- fix(frontend): make viewer nav arrows visible in dark theme and disable at edges (#1432) by @sanskar-singh-2403
-- Feat/themed-scrollbar-and-tag-toggle (#1431) by @yellstales
-- Smart Memories - persisted, scored photo collections with a story viewer (#1430) by @rohan-pandeyy
-- fix: visibiliity of video player controls for bright video  (#1423) by @akshajtiwari
-- feat: extend AI tagging to video files via YouTube-style keyframe sampling (#1413) by @rohan-pandeyy
-- Implement Videos Page with Video Support (#1402) by @rohan-pandeyy
-- fix(face-clusters): remove stale clusters after folder deletion (#1023) (#1392) by @VanshajPoonia
-- Predefined Semantic Vocabulary layer with Cached AI Tags (#1389) by @rohan-pandeyy
-- Fix: Exclude CoreML provider for SigLIP2 sessions on macOS (#1386) by @rohan-pandeyy
-- Feat: Introduce SigLIP2 Embedding Infrastructure for Semantic Search (#1377) by @rohan-pandeyy
-- feat: add auto-start and minimize to tray feature (#1301) by @g-k-s-03
-- feat: implement albums feature with create, edit, delete, and image management UI (#610) by @SiddharthJiyani
+
+- Find people in videos: faces in video keyframes are matched to the people already in your library, so videos show up in face search. Turn it on in Settings, which can also scan videos you already have (#1559)
+- Save PictoPy's AI tags, faces, favourites, and album membership into your PNG files as XMP metadata, automatically or on demand from Settings (#1604)
+- Delete a photo from the Image Viewer, either from PictoPy only or from your computer as well (#1547)
+- Support for WebP, BMP, TIFF, and GIF images (#1532)
+- Get a native desktop notification when a new memory is ready (#1440)
 
 ### Fixed
-- fix: return 409 when renaming album to existing name (#1612) (#1613) by @Prakhar1808
-- fix: search every stored face in a photo, not just the first (#1590) by @rohan-pandeyy
-- fix: remove stale merge conflict labels when PR is reopened (#1575) by @nishtha-agarwal-211
-- fix(backend): return HTTP 404 when image is not in album  (#1561) by @vjkumar2756
-- Consolidate PR Labeling Workflows & Fix and Improve Duplicate Issue Detection (#1530) by @rohan-pandeyy
--    fix: open original file using plugin-opener instead of deprecated plugin-shell (#1507) by @JIturiDashami
-- Memories Cards still remains after the deletion of all the folders. (#1501) by @Takitxt
-- fix(frontend): reset scroll position to top on new search (#1461) (#1472) by @sanskar-singh-2403
-- Cropped Image-fix in addImagesCropDialog (#1466) by @Takitxt
-- Infinite "Searching by meaning..." loading state on back navigation and sequential searches fix (#1447) by @Takitxt
-- fix(models): serialize inference on shared SigLIP ONNX sessions (#1445) by @rohan-pandeyy
-- fix(backend): keep GPS coordinates of 0 during metadata extraction (#1425) by @prawnsgupta
-- Enhance Adaptive Face Clustering and Improve Face Collection Showcase (#1394) by @rohan-pandeyy
-- fix(face-clusters): remove stale clusters after folder deletion (#1023) (#1392) by @VanshajPoonia
-- fix: navbar disappears on scroll past one frame size window, only returns at top Issue#1383 (#1387) by @Takitxt
-- Fix: Exclude CoreML provider for SigLIP2 sessions on macOS (#1386) by @rohan-pandeyy
-- Automatically backfill semantic embeddings after model installation (#1382) by @rohan-pandeyy
-- Folder Appears Empty If AI Tagging Is Enabled Before Indexing Completes (#1380) by @Takitxt
-- fix(backend): resolve correct database path in reset_database.py (#1378) by @AbiramiR-27
-- fix(video-player): accessibility & controls-visibility UX for NetflixStylePlayer (#1333) (#1374) by @VanshajPoonia
 
-### Changed
-- docs: clarify backend prerequisites for frontend manual testing (#1567) (#1610) by @Prakhar1808
-- docs: add backend API documentation (#1494) by @Yashu-svg
-- Documentation: Issue:1257 fix: download section alignment and remove link underlines in README (#1384) by @Takitxt
-- DOC: Update backend routes directory structure documentation (#1367) by @Dotify71
+- Face search now checks every face in a photo, not just the first, and results scroll back to the top on a new search (#1472, #1590)
+- Open original files through a safer opener limited to your library folders, replacing the deprecated shell plugin (#1507)
+- Memory cards no longer linger after all folders are removed (#1501)
+- Albums return clear errors when renamed to an existing name or when removing a photo that isn't in the album (#1561, #1613)
 
 ### Other
-- chore: update references from main to dev in configuration and docume… (#1546) by @rohan-pandeyy
-- chore: release 1.3.0-alpha (#1542) by @app/github-actions
-- fix: skip unchanged files when rescanning a folder (#1481) by @rohan-pandeyy
-- feat: share an album beyond the local network (#1478) by @rohan-pandeyy
-- feat: share an album over the local network (#1469) by @rohan-pandeyy
-- Convert a memory into an album, plus album sorting and grid updates (#1456) by @rohan-pandeyy
-- Fix review findings in the agent instructions (#1454) by @rohan-pandeyy
-- Albums: bug fixes and improvements (#1453) by @rohan-pandeyy
-- fix(ci): run lint on pull_request so fork PRs are actually linted (#1448) by @rohan-pandeyy
-- ci(lint): run lint checks without requiring maintainer approval (#1441) (#1442) by @VanshajPoonia
-- fix: normalize whitespace in search queries (#1437) by @Prince-ES
-- fix: show error dialog for duplicate folder addition (#1427) by @Prince-ES
-- Implementation of PFP uploads. (#1424) by @Takitxt
-- feat: add light theme support for Image Viewer and Video Viewer (#1421) by @sanskar-singh-2403
-- test(backend): add images DB coverage + lift videos/model tests to 100% (#1410) by @rohan-pandeyy
-- Add Agent Instructions to Codebase (#1408) by @rohan-pandeyy
-- test: add coverage for Model API endpoints (#1362) by @akshajtiwari
-- test: add database metadata and YOLO mapping coverage (#1343) by @priyanshunitr
--  add database tests for albums and faces (#1238) (#1342) by @Mansi2007275
-- add test (#1341) by @NancyWei123
-- perf: add lazy loading and dynamic alt text to ImageCard (#1336) by @Dotify71
 
+- Development now happens on the `dev` branch; `main` only moves with releases (#1546)
+- Faster PR build checks with Rust dependency caching, and MyPy type checks on changed Python files (#1551, #1620, #1621)
+
+**Contributors:** @JIturiDashami, @Prakhar1808, @Takitxt, @nishtha-agarwal-211, @rohan-pandeyy, @sanskar-singh-2403, @vjkumar2756
+
+---
 
 ## [1.3.0-alpha] - 2026-09-16
 
