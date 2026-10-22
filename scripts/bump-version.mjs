@@ -19,14 +19,17 @@ const cargoTomlPath = path.join(
 // Parse and validate CLI arguments
 const newVersion = process.argv[2];
 if (!newVersion) {
-  console.error("Error: Please provide a version number (e.g., X.Y.Z).");
+  console.error(
+    "Error: Please provide a version number (e.g., X.Y.Z or X.Y.Z-beta).",
+  );
   process.exit(1);
 }
 
-const semverRegex = /^\d+\.\d+\.\d+$/;
+// Optional pre-release suffix (e.g. 1.3.0-beta, 1.3.0-rc.1) so beta builds can go through Release Prep.
+const semverRegex = /^\d+\.\d+\.\d+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$/;
 if (!semverRegex.test(newVersion)) {
   console.error(
-    "Error: Version must be in X.Y.Z format (digits only, no v prefix).",
+    "Error: Version must be X.Y.Z with an optional pre-release suffix like -beta (no v prefix).",
   );
   process.exit(1);
 }
