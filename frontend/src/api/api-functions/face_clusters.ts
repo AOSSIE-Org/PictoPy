@@ -1,5 +1,5 @@
 import { faceClustersEndpoints } from '../apiEndpoints';
-import { apiClient } from '../axiosConfig';
+import { apiClient, LONG_REQUEST_TIMEOUT_MS } from '../axiosConfig';
 import { APIResponse } from '@/types/API';
 import { BackendRes } from '@/hooks/useQueryExtension';
 import type { Image, ImageMetadata, Video } from '@/types/Media';
@@ -90,6 +90,7 @@ export const fetchSearchedFaces = async (
   const response = await apiClient.post<FaceSearchResponse>(
     faceClustersEndpoints.searchForFaces,
     request,
+    { timeout: LONG_REQUEST_TIMEOUT_MS },
   );
   return response.data;
 };
@@ -100,20 +101,39 @@ export const fetchSearchedFacesBase64 = async (
   const response = await apiClient.post<FaceSearchResponse>(
     faceClustersEndpoints.searchForFacesBase64,
     request,
+    { timeout: LONG_REQUEST_TIMEOUT_MS },
   );
   return response.data;
 };
 
-export interface GlobalReclusterData {
+export interface GlobalReclusterStartData {
+  task_id: string;
+}
+
+export interface GlobalReclusterStatusData {
+  status: 'running' | 'complete' | 'error';
   clusters_created: number | null;
   faces_skipped: number | null;
 }
 
-export const triggerGlobalReclustering = async (): Promise<
-  BackendRes<GlobalReclusterData>
+// Reclustering scans every embedding and can exceed any HTTP timeout, so the
+// backend runs it as a background job; this kicks it off and returns a task_id.
+export const startGlobalReclustering = async (): Promise<
+  BackendRes<GlobalReclusterStartData>
 > => {
-  const response = await apiClient.post<BackendRes<GlobalReclusterData>>(
+  const response = await apiClient.post<BackendRes<GlobalReclusterStartData>>(
     faceClustersEndpoints.globalRecluster,
+  );
+  return response.data;
+};
+
+// Poll this with the task_id returned by startGlobalReclustering until
+// status is 'complete' or 'error'.
+export const getGlobalReclusterStatus = async (
+  taskId: string,
+): Promise<BackendRes<GlobalReclusterStatusData>> => {
+  const response = await apiClient.get<BackendRes<GlobalReclusterStatusData>>(
+    faceClustersEndpoints.globalReclusterStatus(taskId),
   );
   return response.data;
 };
@@ -129,6 +149,7 @@ export const fetchMultiPersonSearch = async (
   const response = await apiClient.post<BackendRes<MultiPersonSearchData>>(
     faceClustersEndpoints.multiPersonSearch,
     request,
+    { timeout: LONG_REQUEST_TIMEOUT_MS },
   );
   return response.data;
 };

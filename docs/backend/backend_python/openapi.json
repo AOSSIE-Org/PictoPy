@@ -1741,15 +1741,15 @@
           "Face Clusters"
         ],
         "summary": "Trigger Global Reclustering",
-        "description": "Manually trigger global face reclustering.\nThis forces full reclustering regardless of the 24-hour rule.",
+        "description": "Start a global face reclustering job in the background.\nThis forces full reclustering regardless of the 24-hour rule.\n\nReturns immediately with a task_id; poll\nGET /face-clusters/global-recluster/{task_id} for the result, since\nreclustering runs over every face embedding and can take a long time\non large libraries.\n\nIf a reclustering job is already running, its task_id is returned instead\nof starting a second (concurrent runs would race on the cluster tables).",
         "operationId": "trigger_global_reclustering_face_clusters_global_recluster_post",
         "responses": {
-          "200": {
+          "202": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GlobalReclusterResponse"
+                  "$ref": "#/components/schemas/GlobalReclusterStartResponse"
                 }
               }
             }
@@ -1760,6 +1760,69 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/face-clusters/global-recluster/{task_id}": {
+      "get": {
+        "tags": [
+          "Face Clusters"
+        ],
+        "summary": "Get Global Recluster Status",
+        "description": "Poll the status of a previously started global reclustering job.",
+        "operationId": "get_global_recluster_status_face_clusters_global_recluster__task_id__get",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalReclusterStatusResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -4207,35 +4270,20 @@
         "title": "GetUserPreferencesResponse",
         "description": "Response model for getting user preferences"
       },
-      "GlobalReclusterData": {
+      "GlobalReclusterStartData": {
         "properties": {
-          "clusters_created": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Clusters Created"
-          },
-          "faces_skipped": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Faces Skipped"
+          "task_id": {
+            "type": "string",
+            "title": "Task Id"
           }
         },
         "type": "object",
-        "title": "GlobalReclusterData"
+        "required": [
+          "task_id"
+        ],
+        "title": "GlobalReclusterStartData"
       },
-      "GlobalReclusterResponse": {
+      "GlobalReclusterStartResponse": {
         "properties": {
           "success": {
             "type": "boolean",
@@ -4266,7 +4314,7 @@
           "data": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/GlobalReclusterData"
+                "$ref": "#/components/schemas/GlobalReclusterStartData"
               },
               {
                 "type": "null"
@@ -4278,7 +4326,94 @@
         "required": [
           "success"
         ],
-        "title": "GlobalReclusterResponse"
+        "title": "GlobalReclusterStartResponse",
+        "description": "Returned immediately when a global reclustering job is started."
+      },
+      "GlobalReclusterStatusData": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "complete",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "clusters_created": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clusters Created"
+          },
+          "faces_skipped": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Faces Skipped"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "GlobalReclusterStatusData"
+      },
+      "GlobalReclusterStatusResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GlobalReclusterStatusData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "GlobalReclusterStatusResponse",
+        "description": "Polled to check on the progress of a global reclustering job."
       },
       "HTTPValidationError": {
         "properties": {
