@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { convertFileSrc } from '@tauri-apps/api/core';
 import { useDispatch, useSelector } from 'react-redux';
 import { AxiosError } from 'axios';
 import { ImageCard } from '@/components/Media/ImageCard';
@@ -24,13 +25,18 @@ import {
   fetchModelStatus,
   fetchAllClusters,
   fetchMultiPersonSearch,
+  fetchSearchedFaces,
+  fetchSearchedFacesBase64,
+  FaceSearchResponse,
   SemanticSearchAPIResponse,
   SemanticSearchVideosAPIResponse,
 } from '@/api/api-functions';
 import { APIResponse } from '@/types/API';
 import { getErrorMessage } from '@/lib/utils';
 import { isSemanticSearchAvailable } from '@/types/models';
-import { useNavigate, useSearchParams } from 'react-router';
+import { useLocation, useNavigate, useSearchParams } from 'react-router';
+import { RootState } from '@/app/store';
+import { FACE_SEARCH_MODE } from '@/utils/faceSearch';
 import { ROUTES } from '@/constants/routes';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -70,9 +76,16 @@ const getHttpStatus = (error: unknown): number | undefined => {
 export const SearchResults = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const query = searchParams.get('value') || '';
   const mode = searchParams.get('mode') || 'auto';
+  // Face search: the photo to search for lives in the search slice.
+  const isFaceMode = mode === FACE_SEARCH_MODE;
+  const faceQueryImage = useSelector(
+    (state: RootState) => state.search.queryImage,
+  );
+  const [failedThumbnail, setFailedThumbnail] = useState<string | null>(null);
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
   const displayImages = useSelector(selectImages);
   const isVideoViewOpen = useSelector(selectIsVideoViewOpen);
@@ -279,6 +292,81 @@ export const SearchResults = () => {
 
   const effectiveMode = data?.resultType || mode;
 
+  const {
+    data: faceData,
+    isLoading: isFaceLoading,
+    isSuccess: isFaceSuccess,
+    isError: isFaceError,
+    error: faceError,
+    errorMessage: faceErrorMessage,
+  } = usePictoQuery({
+    queryKey: ['face-search', faceQueryImage],
+    queryFn: async (): Promise<FaceSearchResponse> => {
+      // Webcam captures arrive as a data URL, uploaded files as a path.
+      if (faceQueryImage!.startsWith('data:')) {
+        return fetchSearchedFacesBase64({ base64_data: faceQueryImage! });
+      }
+      return fetchSearchedFaces({ path: faceQueryImage! });
+    },
+    enabled: isFaceMode && !!faceQueryImage,
+    retry: false,
+    gcTime: 0,
+  });
+
+  // Nothing to search for (the photo was cleared, or the app was reloaded on
+  // this URL), so there is nothing to show here.
+  useEffect(() => {
+    if (isFaceMode && !faceQueryImage) {
+      navigate(`/${ROUTES.HOME}`, { replace: true });
+    }
+  }, [isFaceMode, faceQueryImage, navigate]);
+
+  useEffect(() => {
+    if (!isFaceMode) return;
+
+    if (isFaceLoading) {
+      dispatch(showLoader('Searching faces...'));
+    } else if (isFaceSuccess && faceData) {
+      dispatch(setImages(faceData.data ?? []));
+      dispatch(setVideos(faceData.videos ?? []));
+      dispatch(hideLoader());
+    } else if (isFaceError) {
+      dispatch(hideLoader());
+    }
+
+    return () => {
+      dispatch(hideLoader());
+    };
+  }, [
+    isFaceMode,
+    faceData,
+    isFaceLoading,
+    isFaceSuccess,
+    isFaceError,
+    dispatch,
+  ]);
+
+  const faceSearchError = isFaceError
+    ? getErrorMessage(faceError, faceErrorMessage) ||
+      'There was an error while searching for faces.'
+    : null;
+
+  const thumbnailSrc = faceQueryImage
+    ? faceQueryImage.startsWith('data:')
+      ? faceQueryImage
+      : convertFileSrc(faceQueryImage)
+    : undefined;
+
+  // 'default' is the first entry of the history stack, so there is nothing to
+  // go back to (e.g. the app was opened straight on this page).
+  const handleBack = () => {
+    if (location.key === 'default') {
+      navigate(`/${ROUTES.HOME}`, { replace: true });
+    } else {
+      navigate(-1);
+    }
+  };
+
   useEffect(() => {
     if (!isPeopleQuery) return;
 
@@ -382,14 +470,28 @@ export const SearchResults = () => {
       <div className="my-6 flex items-center justify-between">
         <Button
           variant="outline"
-          onClick={() => navigate(-1)}
+          onClick={handleBack}
           className="flex cursor-pointer items-center gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
           Back
         </Button>
       </div>
-      <h1 className="mb-6 text-2xl font-bold">Results for "{query}"</h1>
+      {isFaceMode ? (
+        <h1 className="mb-6 flex items-center gap-3 text-2xl font-bold">
+          Results for
+          {thumbnailSrc && failedThumbnail !== thumbnailSrc && (
+            <img
+              src={thumbnailSrc}
+              alt="Searched face"
+              onError={() => setFailedThumbnail(thumbnailSrc)}
+              className="h-10 w-10 rounded-full object-cover"
+            />
+          )}
+        </h1>
+      ) : (
+        <h1 className="mb-6 text-2xl font-bold">Results for "{query}"</h1>
+      )}
 
       {peopleQuery && (
         <div className="border-primary/20 bg-primary/5 mb-4 rounded-lg border px-4 py-2.5">
@@ -457,7 +559,42 @@ export const SearchResults = () => {
         )
       )}
 
-      {!query ? (
+      {isFaceMode ? (
+        faceSearchError ? (
+          <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
+            <AlertCircle className="text-destructive mb-4 h-12 w-12" />
+            <h3 className="text-destructive mb-2 text-xl font-medium">
+              Search Failed
+            </h3>
+            <p>{faceSearchError}</p>
+          </div>
+        ) : (
+          isFaceSuccess &&
+          (displayImages.length > 0 || displayVideos.length > 0 ? (
+            <>
+              {displayImages.length > 0 && (
+                <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                  {displayImages.map((image, index) => (
+                    <div key={image.id} className="group relative">
+                      <ImageCard
+                        image={image}
+                        imageIndex={index}
+                        className="w-full transition-transform duration-200 group-hover:scale-105"
+                        onClick={() => dispatch(setCurrentViewIndex(index))}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {videoSection}
+            </>
+          ) : (
+            <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
+              <p>No matching faces found in your gallery for this photo.</p>
+            </div>
+          ))
+        )
+      ) : !query ? (
         <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
           <p>Please enter a search term to find photos and videos.</p>
         </div>
