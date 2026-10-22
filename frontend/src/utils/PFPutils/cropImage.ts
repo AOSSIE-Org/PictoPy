@@ -14,11 +14,8 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-/**
- * Draws the selected crop area onto a fixed-size square canvas and returns
- * it as a JPEG data URL, so every saved avatar is small and uniform
- * regardless of the source photo's resolution.
- */
+// Fixed output size so an avatar stays small and uniform whatever the source
+// photo's resolution.
 export async function getCroppedImg(
   imageSrc: string,
   pixelCrop: PixelCrop,

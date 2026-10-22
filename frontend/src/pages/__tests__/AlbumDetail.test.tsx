@@ -12,7 +12,6 @@ import {
   fetchAllImages,
 } from '@/api/api-functions';
 
-// Mock Tauri convertFileSrc API
 jest.mock('@tauri-apps/api/core', () => ({
   invoke: jest.fn().mockResolvedValue(null),
   convertFileSrc: (path: string) => `tauri-converted://${path}`,

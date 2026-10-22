@@ -27,11 +27,8 @@ interface MemoryCardProps {
   onConvertToAlbum: (memoryId: string) => void;
 }
 
-/**
- * Grid tile for one memory. The cover scales and the caption lifts on hover;
- * the tile opens the story viewer, and the actions menu sits beside it rather
- * than inside it - a button cannot contain another button.
- */
+// The actions menu sits beside the tile rather than inside it: a button cannot
+// contain another button.
 export const MemoryCard: React.FC<MemoryCardProps> = ({
   memory,
   onOpen,

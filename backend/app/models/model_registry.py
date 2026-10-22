@@ -107,33 +107,33 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
     ),
     "siglip2_large_vision": ModelSpec(
         filename="SigLIP2_Large_Vision.onnx",
-        url="PLACEHOLDER_URL",  # TODO
-        sha256="PLACEHOLDER_SHA256",  # TODO
-        size_mb=0,  # TODO
+        url="PLACEHOLDER_URL",
+        sha256="PLACEHOLDER_SHA256",
+        size_mb=0,
         feature="semantic_vision",
         tier="medium",
     ),
     "siglip2_large_text": ModelSpec(
         filename="SigLIP2_Large_Text.onnx",
-        url="PLACEHOLDER_URL",  # TODO
-        sha256="PLACEHOLDER_SHA256",  # TODO
-        size_mb=0,  # TODO
+        url="PLACEHOLDER_URL",
+        sha256="PLACEHOLDER_SHA256",
+        size_mb=0,
         feature="semantic_text",
         tier="medium",
     ),
     "siglip2_so400m_vision": ModelSpec(
         filename="SigLIP2_SO400M_Vision.onnx",
-        url="PLACEHOLDER_URL",  # TODO
-        sha256="PLACEHOLDER_SHA256",  # TODO
-        size_mb=0,  # TODO
+        url="PLACEHOLDER_URL",
+        sha256="PLACEHOLDER_SHA256",
+        size_mb=0,
         feature="semantic_vision",
         tier="manual",
     ),
     "siglip2_so400m_text": ModelSpec(
         filename="SigLIP2_SO400M_Text.onnx",
-        url="PLACEHOLDER_URL",  # TODO
-        sha256="PLACEHOLDER_SHA256",  # TODO
-        size_mb=0,  # TODO
+        url="PLACEHOLDER_URL",
+        sha256="PLACEHOLDER_SHA256",
+        size_mb=0,
         feature="semantic_text",
         tier="manual",
     ),

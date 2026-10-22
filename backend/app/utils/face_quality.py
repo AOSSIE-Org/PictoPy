@@ -14,17 +14,15 @@ def face_passes_quality_gate(
     Evaluates a detected face against quality thresholds before it proceeds
     to embedding. All checks must pass for the face to be considered valid.
     """
-    # 1. Completeness check (Confidence)
     if conf_score < conf_threshold:
         return False
 
-    # 2. Size check
     x1, y1, x2, y2 = bbox
     area = (x2 - x1) * (y2 - y1)
     if area < min_face_size:
         return False
 
-    # 3. Blur check
+    # Blur: a soft crop has low Laplacian variance.
     if face_crop.size == 0:
         return False
 

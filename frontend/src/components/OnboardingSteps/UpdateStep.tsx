@@ -29,7 +29,6 @@ export const UpdateStep: React.FC<UpdateStepProps> = ({ stepIndex }) => {
       const hasUpdate = await checkForUpdates();
       dispatch(hideLoader());
 
-      // If no update, mark onboarding step complete
       if (!hasUpdate) {
         dispatch(markCompleted(stepIndex));
       }
@@ -37,7 +36,6 @@ export const UpdateStep: React.FC<UpdateStepProps> = ({ stepIndex }) => {
     check();
   }, []);
 
-  // Show update dialog only if update is available
   if (updateAvailable) {
     return (
       <UpdateDialog

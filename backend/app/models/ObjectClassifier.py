@@ -22,7 +22,6 @@ class ObjectClassifier:
 
         _, _, class_ids = self.yolo_classifier(img)
         logger.debug(f"Class IDs detected: {class_ids}")
-        # convert class_ids to a list of integers from numpy array
         class_ids = [int(class_id) for class_id in class_ids]
         return class_ids
 

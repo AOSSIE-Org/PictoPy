@@ -7,7 +7,6 @@ import { store } from './app/store';
 import { Provider } from 'react-redux';
 
 const Main = () => {
-  // Show browser warning if not running in Tauri environment
   if (!isTauriEnvironment()) {
     return <BrowserWarning />;
   }
