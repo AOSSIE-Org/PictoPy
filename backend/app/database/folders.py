@@ -64,9 +64,28 @@ def db_insert_folders_batch(folders_data: List[FolderData]) -> None:
     cursor = conn.cursor()
 
     try:
+        # INSERT OR IGNORE's dedup is the folder_path UNIQUE constraint, which
+        # is a byte-exact (binary-collation) comparison -- it does not catch a
+        # path that is already registered under different case for a drive
+        # letter or component (Windows is case-insensitive but os.walk/the
+        # file picker can report it inconsistently between scans), so the
+        # same real directory would be inserted again as a second row under a
+        # fresh folder_id. Pre-filter case-insensitively instead, against both
+        # what's already stored and what's earlier in this same batch.
+        cursor.execute("SELECT folder_path FROM folders")
+        seen = {os.path.normcase(row[0]) for row in cursor.fetchall()}
+
+        deduped = []
+        for row in folders_data:
+            normalized = os.path.normcase(row[1])
+            if normalized in seen:
+                continue
+            seen.add(normalized)
+            deduped.append(row)
+
         cursor.executemany(
             """INSERT OR IGNORE INTO folders (folder_id, folder_path, parent_folder_id, last_modified_time, AI_Tagging, taggingCompleted) VALUES (?, ?, ?, ?, ?, ?)""",
-            folders_data,
+            deduped,
         )
         conn.commit()
     except sqlite3.Error as e:
