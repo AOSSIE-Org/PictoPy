@@ -6,18 +6,26 @@ from app.logging.setup_logging import get_logger
 
 logger = get_logger(__name__)
 
+# Seconds that sqlite3.connect() waits for a write-lock before raising
+# OperationalError.  The default (5 s) is too short when background
+# indexing holds the lock for an extended write batch.
+DB_TIMEOUT = 30
+
 
 @contextmanager
 def get_db_connection() -> Generator[sqlite3.Connection, None, None]:
     """
     SQLite connection context manager with all integrity constraints enforced.
 
+    - Enables WAL journal mode for better concurrent read/write performance
     - Enables all major relational integrity PRAGMAs
     - Works for both single and multi-step transactions
     - Automatically commits on success or rolls back on failure
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=DB_TIMEOUT)
 
+    # --- WAL mode: allows readers to proceed while a writer holds the lock ---
+    conn.execute("PRAGMA journal_mode=WAL;")
     # --- Strict enforcement of all relational and logical rules ---
     conn.execute("PRAGMA foreign_keys = ON;")  # Enforce FK constraints
     conn.execute("PRAGMA ignore_check_constraints = OFF;")  # Enforce CHECK constraints
