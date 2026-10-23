@@ -141,7 +141,7 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
 
         <CardContent className="flex-1 space-y-5 overflow-y-auto p-1 px-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {/* Avatar + Name row */}
-          <div className="flex items-end gap-3 rounded-lg border bg-neutral-900 p-3">
+          <div className="flex items-start gap-3 rounded-lg border bg-neutral-900 p-3">  
             <button
               type="button"
               onClick={handleUploadClick}
@@ -152,7 +152,7 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
                 <img
                   src={selectedAvatar}
                   alt="Current avatar"
-                  className="h-14 w-14 rounded-full object-cover ring-2 ring-blue-500"
+                  className="group relative mt-1 inline-flex h-14 w-14 rounded-full object-cover ring-2 ring-blue-500"
                 />
               ) : (
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-neutral-800 ring-2 ring-blue-500">
