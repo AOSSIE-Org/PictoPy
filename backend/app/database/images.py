@@ -745,7 +745,7 @@ def db_get_excluded_image_paths() -> Set[ImagePath]:
 
 
 def db_toggle_image_favourite_status(image_id: str) -> bool:
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
     try:
         cursor.execute("SELECT id FROM images WHERE id = ?", (image_id,))
