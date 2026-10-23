@@ -111,14 +111,17 @@ def watcher_util_find_closest_parent_folder(
         # Normalize the folder path
         folder_path = os.path.abspath(folder_path)
 
+        # A drive root ("D:\") already ends in a separator, so indexing one past
+        # it lands on the first name character instead. Build the prefix once so
+        # both shapes compare the same way, without matching a sibling.
+        prefix = folder_path if folder_path.endswith(os.sep) else folder_path + os.sep
+
         # Check if this folder is a parent of the file
-        if file_path.startswith(folder_path):
-            # Ensure it's a proper parent (not just a prefix)
-            if file_path == folder_path or file_path[len(folder_path)] == os.sep:
-                # Choose the longest matching path (closest parent)
-                if len(folder_path) > longest_match_length:
-                    longest_match_length = len(folder_path)
-                    best_match = (folder_id, folder_path)
+        if file_path == folder_path or file_path.startswith(prefix):
+            # Choose the longest matching path (closest parent)
+            if len(folder_path) > longest_match_length:
+                longest_match_length = len(folder_path)
+                best_match = (folder_id, folder_path)
 
     return best_match
 
