@@ -50,6 +50,7 @@ from app.utils.folders import (
     folder_util_add_multiple_folder_trees,
     folder_util_delete_obsolete_folders,
     folder_util_get_filesystem_direct_child_folders,
+    folder_util_cleanup_thumbnails,
 )
 from app.utils.images import (
     image_util_process_folder_images,
@@ -454,6 +455,7 @@ def delete_folders(
         if not request.folder_ids:
             raise ValueError("No folder IDs provided")
 
+        folder_util_cleanup_thumbnails(request.folder_ids)
         deleted_count = db_delete_folders_batch(request.folder_ids)
 
         # Synchronous so the response can't race the frontend's next
