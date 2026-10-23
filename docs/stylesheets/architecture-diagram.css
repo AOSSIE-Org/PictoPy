@@ -1,0 +1,259 @@
+/* Architecture page — interactive Mermaid diagram */
+
+.architecture-diagram-section {
+  --arch-frontend-fill: #dbeafe;
+  --arch-frontend-stroke: #2563eb;
+  --arch-frontend-text: #1e3a8a;
+  --arch-rust-fill: #dcfce7;
+  --arch-rust-stroke: #16a34a;
+  --arch-rust-text: #14532d;
+  --arch-python-fill: #ccfbf1;
+  --arch-python-stroke: #0d9488;
+  --arch-python-text: #134e4a;
+  --arch-sync-fill: #ffedd5;
+  --arch-sync-stroke: #ea580c;
+  --arch-sync-text: #7c2d12;
+  --arch-arrow: #94a3b8;
+  --arch-legend-bg: #f8fafc;
+  --arch-legend-border: #e2e8f0;
+
+  margin: 1.5rem 0 2rem;
+}
+
+[data-md-color-scheme="slate"] .architecture-diagram-section {
+  --arch-frontend-fill: #1e3a8f;
+  --arch-frontend-stroke: #60a5fa;
+  --arch-frontend-text: #dbeafe;
+  --arch-rust-fill: #14532d;
+  --arch-rust-stroke: #4ade80;
+  --arch-rust-text: #dcfce7;
+  --arch-python-fill: #134e4a;
+  --arch-python-stroke: #2dd4bf;
+  --arch-python-text: #ccfbf1;
+  --arch-sync-fill: #7c2d12;
+  --arch-sync-stroke: #fb923c;
+  --arch-sync-text: #ffedd5;
+  --arch-arrow: #64748b;
+  --arch-legend-bg: #1e293b;
+  --arch-legend-border: #334155;
+}
+
+.architecture-diagram-section .mermaid {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0.5rem 0 1rem;
+  max-width: 100%;
+}
+
+.architecture-diagram-section .mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Layer colors */
+.architecture-diagram-section .node.frontend rect,
+.architecture-diagram-section .node.frontend polygon {
+  fill: var(--arch-frontend-fill) !important;
+  stroke: var(--arch-frontend-stroke) !important;
+  stroke-width: 2px !important;
+}
+
+.architecture-diagram-section .node.rust rect,
+.architecture-diagram-section .node.rust polygon {
+  fill: var(--arch-rust-fill) !important;
+  stroke: var(--arch-rust-stroke) !important;
+  stroke-width: 2px !important;
+}
+
+.architecture-diagram-section .node.python rect,
+.architecture-diagram-section .node.python polygon {
+  fill: var(--arch-python-fill) !important;
+  stroke: var(--arch-python-stroke) !important;
+  stroke-width: 2px !important;
+}
+
+.architecture-diagram-section .node.sync rect,
+.architecture-diagram-section .node.sync polygon {
+  fill: var(--arch-sync-fill) !important;
+  stroke: var(--arch-sync-stroke) !important;
+  stroke-width: 2px !important;
+}
+
+.architecture-diagram-section .node.frontend .label,
+.architecture-diagram-section .node.frontend .label * {
+  color: var(--arch-frontend-text) !important;
+  fill: var(--arch-frontend-text) !important;
+}
+
+.architecture-diagram-section .node.rust .label,
+.architecture-diagram-section .node.rust .label * {
+  color: var(--arch-rust-text) !important;
+  fill: var(--arch-rust-text) !important;
+}
+
+.architecture-diagram-section .node.python .label,
+.architecture-diagram-section .node.python .label * {
+  color: var(--arch-python-text) !important;
+  fill: var(--arch-python-text) !important;
+}
+
+.architecture-diagram-section .node.sync .label,
+.architecture-diagram-section .node.sync .label * {
+  color: var(--arch-sync-text) !important;
+  fill: var(--arch-sync-text) !important;
+}
+
+/* Clickable affordance — no underline, pointer + hover lift */
+.architecture-diagram-section .node.clickable {
+  cursor: pointer;
+}
+
+.architecture-diagram-section .node.clickable .label a,
+.architecture-diagram-section .node.clickable .label foreignObject a {
+  text-decoration: none !important;
+  color: inherit !important;
+  cursor: pointer;
+}
+
+.architecture-diagram-section .node.clickable rect,
+.architecture-diagram-section .node.clickable polygon {
+  transition: transform 0.2s ease, filter 0.2s ease;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.architecture-diagram-section .node.clickable:hover rect,
+.architecture-diagram-section .node.clickable:hover polygon {
+  transform: scale(1.03);
+  filter: drop-shadow(0 6px 14px rgba(15, 23, 42, 0.18));
+}
+
+[data-md-color-scheme="slate"] .architecture-diagram-section .node.clickable:hover rect,
+[data-md-color-scheme="slate"] .architecture-diagram-section .node.clickable:hover polygon {
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.45));
+}
+
+/* Animated directional flow on arrows */
+.architecture-diagram-section .flowchart-link {
+  stroke: var(--arch-arrow) !important;
+  stroke-width: 2px;
+  stroke-dasharray: 8 6;
+  animation: arch-diagram-flow 1.25s linear infinite;
+}
+
+@keyframes arch-diagram-flow {
+  from {
+    stroke-dashoffset: 0;
+  }
+
+  to {
+    stroke-dashoffset: -14;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .architecture-diagram-section .flowchart-link {
+    animation: none;
+    stroke-dasharray: none;
+  }
+
+  .architecture-diagram-section .node.clickable rect,
+  .architecture-diagram-section .node.clickable polygon {
+    transition: none;
+  }
+
+  .architecture-diagram-section .node.clickable:hover rect,
+  .architecture-diagram-section .node.clickable:hover polygon {
+    transform: none;
+  }
+}
+
+/* Node label layout (htmlLabels) */
+.architecture-diagram-section .arch-node-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: 0.9rem;
+  line-height: 1.25;
+  text-align: center;
+  padding: 0.15rem 0.35rem;
+}
+
+.architecture-diagram-section .arch-node-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.architecture-diagram-section .arch-node-title {
+  font-weight: 600;
+}
+
+.architecture-diagram-section .arch-node-subtitle {
+  font-size: 0.78rem;
+  opacity: 0.9;
+}
+
+/* Color-coded legend */
+.arch-diagram-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1.25rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--arch-legend-border);
+  border-radius: 0.5rem;
+  background: var(--arch-legend-bg);
+  font-size: 0.85rem;
+}
+
+.arch-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--md-default-fg-color);
+}
+
+.legend-swatch {
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 0.2rem;
+  border: 2px solid transparent;
+  flex-shrink: 0;
+}
+
+.legend-frontend {
+  background: var(--arch-frontend-fill);
+  border-color: var(--arch-frontend-stroke);
+}
+
+.legend-rust {
+  background: var(--arch-rust-fill);
+  border-color: var(--arch-rust-stroke);
+}
+
+.legend-python {
+  background: var(--arch-python-fill);
+  border-color: var(--arch-python-stroke);
+}
+
+.legend-sync {
+  background: var(--arch-sync-fill);
+  border-color: var(--arch-sync-stroke);
+}
+
+/* Mobile: horizontal scroll instead of overlap */
+@media (max-width: 768px) {
+  .architecture-diagram-section .mermaid svg {
+    min-width: 34rem;
+  }
+
+  .arch-diagram-legend {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
