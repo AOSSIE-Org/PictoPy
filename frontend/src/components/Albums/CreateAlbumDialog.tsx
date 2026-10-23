@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -16,6 +16,7 @@ import { CreateAlbumDialogProps } from '@/types/Album';
 import { usePictoMutation } from '@/hooks/useQueryExtension';
 import { createAlbum } from '@/api/api-functions';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
+import { Eye, EyeOff } from 'lucide-react';
 
 export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
   isOpen,
@@ -27,11 +28,33 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
     description: '',
     is_locked: false,
     password: '',
+    confirmPassword: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      description: '',
+      is_locked: false,
+      password: '',
+      confirmPassword: '',
+    });
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+    setErrors({});
+  };
+
+  useEffect(() => {
+    if (!isOpen) {
+      resetForm();
+    }
+  }, [isOpen]);
+
   const createAlbumMutation = usePictoMutation({
-    mutationFn: createAlbum,
+    mutationFn: (data: Parameters<typeof createAlbum>[0]) => createAlbum(data),
   });
 
   useMutationFeedback(createAlbumMutation, {
@@ -55,8 +78,15 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
       newErrors.name = 'Album name is required';
     }
 
-    if (formData.is_locked && !formData.password.trim()) {
-      newErrors.password = 'Password is required for locked albums';
+    if (formData.is_locked) {
+      if (!formData.password.trim()) {
+        newErrors.password = 'Password is required for locked albums';
+      }
+      if (!formData.confirmPassword.trim()) {
+        newErrors.confirmPassword = 'Confirm password is required';
+      } else if (formData.password !== formData.confirmPassword) {
+        newErrors.confirmPassword = 'Passwords do not match';
+      }
     }
 
     setErrors(newErrors);
@@ -83,18 +113,12 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
   };
 
   const handleClose = () => {
-    setFormData({
-      name: '',
-      description: '',
-      is_locked: false,
-      password: '',
-    });
-    setErrors({});
+    resetForm();
     onClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-[500px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
@@ -117,10 +141,18 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
+                aria-invalid={!!errors.name}
+                aria-describedby={errors.name ? 'name-error' : undefined}
                 className={errors.name ? 'border-destructive' : ''}
               />
               {errors.name && (
-                <p className="text-destructive text-sm">{errors.name}</p>
+                <p
+                  id="name-error"
+                  className="text-destructive text-sm"
+                  role="alert"
+                >
+                  {errors.name}
+                </p>
               )}
             </div>
 
@@ -153,32 +185,136 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
               <Switch
                 id="locked"
                 checked={formData.is_locked}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, is_locked: checked })
-                }
+                onCheckedChange={(checked) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    is_locked: checked,
+                    ...(checked ? {} : { password: '', confirmPassword: '' }),
+                  }));
+                  if (!checked) {
+                    setShowPassword(false);
+                    setShowConfirmPassword(false);
+                    setErrors((prev) => {
+                      const updated = { ...prev };
+                      delete updated.password;
+                      delete updated.confirmPassword;
+                      return updated;
+                    });
+                  }
+                }}
               />
             </div>
 
             {/* Password Field (shown only if locked) */}
             {formData.is_locked && (
-              <div className="grid gap-2">
-                <Label htmlFor="password">
-                  Password <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter a password"
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                  className={errors.password ? 'border-destructive' : ''}
-                />
-                {errors.password && (
-                  <p className="text-destructive text-sm">{errors.password}</p>
-                )}
-              </div>
+              <>
+                <div className="grid gap-2">
+                  <Label htmlFor="password">
+                    Password <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Enter a password"
+                      value={formData.password}
+                      onChange={(e) =>
+                        setFormData({ ...formData, password: e.target.value })
+                      }
+                      aria-invalid={!!errors.password}
+                      aria-describedby={
+                        errors.password ? 'password-error' : undefined
+                      }
+                      className={
+                        errors.password ? 'border-destructive pr-10' : 'pr-10'
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground absolute top-0 right-0 flex h-full items-center px-3"
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={
+                        showPassword ? 'Hide password' : 'Show password'
+                      }
+                      aria-controls="password"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p
+                      id="password-error"
+                      className="text-destructive text-sm"
+                      role="alert"
+                    >
+                      {errors.password}
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="confirm-password">
+                    Confirm Password <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="confirm-password"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      placeholder="Confirm your password"
+                      value={formData.confirmPassword}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          confirmPassword: e.target.value,
+                        })
+                      }
+                      aria-invalid={!!errors.confirmPassword}
+                      aria-describedby={
+                        errors.confirmPassword
+                          ? 'confirm-password-error'
+                          : undefined
+                      }
+                      className={
+                        errors.confirmPassword
+                          ? 'border-destructive pr-10'
+                          : 'pr-10'
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground absolute top-0 right-0 flex h-full items-center px-3"
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                      aria-label={
+                        showConfirmPassword
+                          ? 'Hide confirm password'
+                          : 'Show confirm password'
+                      }
+                      aria-controls="confirm-password"
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                  {errors.confirmPassword && (
+                    <p
+                      id="confirm-password-error"
+                      className="text-destructive text-sm"
+                      role="alert"
+                    >
+                      {errors.confirmPassword}
+                    </p>
+                  )}
+                </div>
+              </>
             )}
           </div>
 
