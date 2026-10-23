@@ -141,12 +141,12 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
 
         <CardContent className="flex-1 space-y-5 overflow-y-auto p-1 px-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {/* Avatar + Name row */}
-          <div className="flex items-end gap-3 rounded-lg border bg-neutral-900 p-3">
+          <div className="flex items-start gap-3 rounded-lg border bg-neutral-900 p-3">  
             <button
               type="button"
               onClick={handleUploadClick}
               aria-label="Change profile avatar"
-              className="group relative inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full"
+              className="group relative mt-5 inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full"
             >
               {selectedAvatar ? (
                 <img
