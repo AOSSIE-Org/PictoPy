@@ -48,6 +48,12 @@ const clustersKeyCalls = (spy: jest.SpyInstance) =>
   );
 
 describe('useFolderOperations - multiple folder deletion cache invalidation', () => {
+const memoriesKeyCalls = (spy: jest.SpyInstance) =>
+  spy.mock.calls.filter(
+    ([arg]) => JSON.stringify(arg?.queryKey) === JSON.stringify(['memories']),
+  );
+
+describe('useFolderOperations - delete folder cache invalidation', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -67,6 +73,20 @@ describe('useFolderOperations - multiple folder deletion cache invalidation', ()
   });
 
   it('calls deleteFolders API with multiple folder IDs and does not invalidate clusters query when deletion fails', async () => {
+  it('invalidates the memories query when folder deletion succeeds', async () => {
+    // Invalidates the 5-minute frontend cache so the UI immediately reflects synchronous
+    // backend deletions without requiring the user to manually regenerate.
+    deleteFolders.mockResolvedValueOnce({ success: true, data: {} });
+    const { result, invalidateSpy } = renderUseFolderOperations();
+
+    result.current.deleteFolder('folder-1');
+
+    await waitFor(() => {
+      expect(memoriesKeyCalls(invalidateSpy).length).toBeGreaterThan(0);
+    });
+  });
+
+  it('does not invalidate the clusters query when folder deletion fails', async () => {
     // usePictoMutation hardcodes retry: 2, so every attempt (not just the
     // first) must reject -- otherwise the retry falls through to the mock's
     // default undefined return, which resolves as a false success.
@@ -95,5 +115,6 @@ describe('useFolderOperations - multiple folder deletion cache invalidation', ()
       folder_ids: ['folder-1', 'folder-2'],
     });
     expect(clustersKeyCalls(invalidateSpy)).toHaveLength(0);
+    expect(memoriesKeyCalls(invalidateSpy)).toHaveLength(0);
   });
 });

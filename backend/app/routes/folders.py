@@ -41,7 +41,10 @@ from app.schemas.folders import (
     UpdateAITaggingResponse,
 )
 from app.utils.API import API_util_restart_sync_microservice_watcher
-from app.utils.face_clusters import cluster_util_face_clusters_sync
+from app.utils.face_clusters import (
+    cluster_util_attach_keyframe_faces,
+    cluster_util_face_clusters_sync,
+)
 from app.utils.folders import (
     folder_util_add_folder_tree,
     folder_util_add_multiple_folder_trees,
@@ -59,6 +62,7 @@ from app.utils.semantic_labels import (
     semantic_util_score_videos,
 )
 from app.utils.videos import (
+    video_util_backfill_video_faces,
     video_util_process_folder_videos,
     video_util_process_unembedded_frames,
     video_util_process_untagged_videos,
@@ -86,6 +90,22 @@ def _curate_memories(trigger: str) -> None:
         memory_curator_run(trigger=trigger)
     except Exception as e:
         logger.error(f"Memory curation failed after {trigger}: {e}")
+
+
+def _export_metadata(trigger: str) -> None:
+    """
+    Write fresh tags, faces and embeddings into the photos, if enabled.
+
+    Runs once after every photo stage, so an image is written at most once per
+    sequence. Swallowed on failure: exporting is an extra copy of what the
+    database already holds and must never fail the processing before it.
+    """
+    try:
+        from app.utils.xmp.exporter import xmp_export_if_enabled
+
+        xmp_export_if_enabled()
+    except Exception as e:
+        logger.error(f"Metadata export failed after {trigger}: {e}")
 
 
 def _queue_post_index_tagging_sweep(index_future: Future, app_state: State) -> None:
@@ -166,8 +186,14 @@ def post_AI_tagging_enabled_sequence():
         # Curate before the video pass: semantic labels are written by now,
         # and the video pass can run for minutes.
         _curate_memories("ai_tagging")
+        _export_metadata("ai_tagging")
         # Videos last: photos are the primary surface, so they finish first.
         video_util_process_untagged_videos()
+        # Catches up videos tagged before finding people in videos was on.
+        video_util_backfill_video_faces()
+        # Keyframe faces only exist from here; join them to the clusters built
+        # above now rather than on the next sync.
+        cluster_util_attach_keyframe_faces()
         video_util_process_unembedded_frames()
         semantic_util_score_videos()
     except Exception as e:
@@ -181,7 +207,7 @@ def post_AI_tagging_enabled_sequence():
 
 
 def post_sync_folder_sequence(
-    folder_path: str, folder_id: int, added_folders: list[tuple[str, str]]
+    folder_path: str, folder_id: str, added_folders: list[tuple[str, str]]
 ):
     """
     Post-sync sequence for a folder.
@@ -207,7 +233,10 @@ def post_sync_folder_sequence(
         image_util_process_unembedded_images()
         semantic_util_score_images()
         _curate_memories("sync_folder")
+        _export_metadata("sync_folder")
         video_util_process_untagged_videos()
+        video_util_backfill_video_faces()
+        cluster_util_attach_keyframe_faces()
         video_util_process_unembedded_frames()
         semantic_util_score_videos()
 
@@ -417,13 +446,32 @@ def disable_ai_tagging(request: UpdateAITaggingRequest):
     response_model=DeleteFoldersResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
-def delete_folders(request: DeleteFoldersRequest):
+def delete_folders(
+    request: DeleteFoldersRequest, app_state: State = Depends(get_state)
+):
     """Delete multiple folders by their IDs."""
     try:
         if not request.folder_ids:
             raise ValueError("No folder IDs provided")
 
         deleted_count = db_delete_folders_batch(request.folder_ids)
+
+        # Synchronous so the response can't race the frontend's next
+        # Memories fetch; imported late, like _curate_memories below.
+        try:
+            from app.utils.memory_curator import memory_curator_prune_empty
+
+            memory_curator_prune_empty()
+        except Exception:
+            logger.exception("Failed to prune empty memories after folder delete")
+
+        # New memories from what's left can still be found in the
+        # background -- best-effort, a dropped submit just delays it.
+        executor: ProcessPoolExecutor = app_state.executor
+        try:
+            executor.submit(_curate_memories, "folder_delete")
+        except Exception:
+            logger.exception("Failed to queue memory curation after folder delete")
 
         return DeleteFoldersResponse(
             data=DeleteFoldersData(

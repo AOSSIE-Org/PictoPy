@@ -5,6 +5,7 @@ const cluster = (id: string, name: string): Cluster => ({
   cluster_id: id,
   cluster_name: name,
   face_count: 3,
+  video_count: 0,
 });
 
 const CLUSTERS: Cluster[] = [
@@ -13,7 +14,7 @@ const CLUSTERS: Cluster[] = [
   cluster('c3', 'Person C'),
   cluster('c4', 'Mary Jane'),
   cluster('c5', 'Alexander'),
-  { cluster_id: 'abcd1234', cluster_name: '', face_count: 1 },
+  { cluster_id: 'abcd1234', cluster_name: '', face_count: 1, video_count: 0 },
 ];
 
 describe('parsePeopleQuery', () => {

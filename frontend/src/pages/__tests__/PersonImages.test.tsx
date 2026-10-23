@@ -2,7 +2,7 @@ import { useLayoutEffect } from 'react';
 import { fireEvent, render, screen, waitFor } from '@/test-utils';
 import { Routes, Route, useNavigate } from 'react-router';
 import { PersonImages } from '@/pages/PersonImages/PersonImages';
-import type { Image } from '@/types/Media';
+import type { Image, Video } from '@/types/Media';
 import * as apiFunctions from '@/api/api-functions';
 
 jest.mock('@tauri-apps/api/core', () => ({
@@ -162,5 +162,61 @@ describe('PersonImages (issue #1315: no flash of the previous page)', () => {
     await waitFor(() => {
       expect(hasPersonB(container)).toBe(true);
     });
+  });
+});
+
+describe('PersonImages videos', () => {
+  const personAVideos: Video[] = [
+    {
+      id: 'v1',
+      path: '/personA/clip.mp4',
+      thumbnailPath: '/personA/clip.jpg',
+      folder_id: 'folder',
+      isFavourite: false,
+      tags: [],
+      metadata: {
+        name: 'clip.mp4',
+        date_created: null,
+        width: 1920,
+        height: 1080,
+        duration: 12,
+        file_location: '/personA/clip.mp4',
+        file_size: 1024,
+        item_type: 'video/mp4',
+      },
+    },
+  ];
+
+  const respondWith = (videos: Video[]) =>
+    fetchClusterImages.mockImplementation(async () => ({
+      success: true,
+      data: { images: personAImages, videos, cluster_name: 'Alice' },
+    }));
+
+  test('lists the videos the person appears in and plays one', async () => {
+    respondWith(personAVideos);
+
+    const { container } = renderPerson('A');
+
+    expect(
+      await screen.findByRole('heading', { name: 'Videos' }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Play clip.mp4' }));
+
+    await waitFor(() => {
+      expect(container.querySelector('video')).toBeInTheDocument();
+    });
+  });
+
+  test('no videos section for someone who is only in photos', async () => {
+    respondWith([]);
+
+    renderPerson('A');
+
+    expect(await screen.findByText('Alice')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Videos' }),
+    ).not.toBeInTheDocument();
   });
 });

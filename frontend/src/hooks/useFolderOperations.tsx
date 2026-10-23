@@ -13,6 +13,7 @@ import { setFolders, setTaggingStatus } from '@/features/folderSlice';
 import { FolderDetails, isIndexingPending } from '@/types/Folder';
 import { useMutationFeedback } from './useMutationFeedback';
 import { getFoldersTaggingStatus } from '@/api/api-functions/folders';
+import { MEMORIES_QUERY_KEY } from '@/hooks/useMemories';
 
 /**
  * Custom hook for folder operations
@@ -140,8 +141,11 @@ export const useFolderOperations = () => {
     // them is now stale. This has to be a separate call: autoInvalidateTags is passed
     // through as a single queryKey and matches by prefix, so ['folders', 'clusters']
     // would match neither query.
+    // Clusters and memories become stale on folder deletion. They require separate invalidation calls
+    // because autoInvalidateTags uses prefix matching, meaning a combined queryKey wouldn't match either.
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clusters'] });
+      queryClient.invalidateQueries({ queryKey: MEMORIES_QUERY_KEY });
     },
   });
 
