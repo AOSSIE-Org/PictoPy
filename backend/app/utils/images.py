@@ -5,7 +5,6 @@ import uuid
 import datetime
 from typing import Iterable, List, Optional, Tuple, Dict, Any, Mapping
 import json
-import logging
 import sqlite3
 
 from PIL import Image, ExifTags
@@ -47,7 +46,6 @@ logger = get_logger(__name__)
 # GPS EXIF tag constant
 GPS_INFO_TAG = 34853
 
-logger = logging.getLogger(__name__)
 
 
 def image_util_process_folder_images(
