@@ -13,6 +13,7 @@ from concurrent.futures import Future, ProcessPoolExecutor
 
 
 from app.routes.folders import router as folders_router
+from app.routes.folders import _curate_memories
 
 from app.database.folders import (
     db_create_folders_table,
@@ -617,6 +618,83 @@ class TestFoldersAPI:
         assert data["data"]["folder_ids"] == ["folder-1", "folder-2", "folder-3"]
 
         mock_delete_batch.assert_called_once_with(["folder-1", "folder-2", "folder-3"])
+
+    @patch("app.utils.memory_curator.memory_curator_prune_empty")
+    @patch("app.routes.folders.db_delete_folders_batch")
+    def test_delete_folders_background_processing_called(
+        self, mock_delete_batch: MagicMock, mock_prune: MagicMock, client: TestClient
+    ) -> None:
+        """Pruning and re-curation are both triggered after deleting folders."""
+        mock_delete_batch.return_value = 3
+
+        response = client.request(
+            "DELETE",
+            "/folders/delete-folders",
+            content='{"folder_ids": ["folder-1", "folder-2", "folder-3"]}',
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 200
+
+        # Empty memories are pruned synchronously, before the response returns.
+        mock_prune.assert_called_once_with()
+
+        # The heavier curation pass still runs in the background.
+        app_state = client.app.state
+        app_state.executor.submit.assert_called_once_with(
+            _curate_memories, "folder_delete"
+        )
+
+    @patch("app.utils.memory_curator.memory_curator_prune_empty")
+    @patch("app.routes.folders.db_delete_folders_batch")
+    def test_delete_folders_survives_curation_submission_failure(
+        self, mock_delete_batch: MagicMock, mock_prune: MagicMock, client: TestClient
+    ) -> None:
+        """
+        A broken/shutdown executor must not turn an already-successful
+        delete into a failure response -- the background curation pass is
+        best-effort on top of a delete that already happened.
+        """
+        mock_delete_batch.return_value = 3
+        client.app.state.executor.submit.side_effect = RuntimeError(
+            "cannot schedule new futures after shutdown"
+        )
+
+        response = client.request(
+            "DELETE",
+            "/folders/delete-folders",
+            content='{"folder_ids": ["folder-1", "folder-2", "folder-3"]}',
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["data"]["deleted_count"] == 3
+
+        # The synchronous prune is unaffected by the background submit
+        # failing -- the two are independent try/excepts.
+        mock_prune.assert_called_once_with()
+        client.app.state.executor.submit.assert_called_once()
+
+    @patch("app.utils.memory_curator.memory_curator_prune_empty")
+    @patch("app.routes.folders.db_delete_folders_batch")
+    def test_delete_folders_survives_pruning_failure(
+        self, mock_delete_batch: MagicMock, mock_prune: MagicMock, client: TestClient
+    ) -> None:
+        """Mirror of the submit-failure test -- prune failing doesn't block it either."""
+        mock_delete_batch.return_value = 3
+        mock_prune.side_effect = RuntimeError("prune failed")
+
+        response = client.request(
+            "DELETE",
+            "/folders/delete-folders",
+            content='{"folder_ids": ["folder-1"]}',
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 200
+        client.app.state.executor.submit.assert_called_once_with(
+            _curate_memories, "folder_delete"
+        )
 
     @patch("app.routes.folders.db_delete_folders_batch")
     def test_delete_folders_single_folder(self, mock_delete_batch, client):

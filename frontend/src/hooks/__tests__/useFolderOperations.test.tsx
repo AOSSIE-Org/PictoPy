@@ -47,6 +47,11 @@ const clustersKeyCalls = (spy: jest.SpyInstance) =>
     ([arg]) => JSON.stringify(arg?.queryKey) === JSON.stringify(['clusters']),
   );
 
+const memoriesKeyCalls = (spy: jest.SpyInstance) =>
+  spy.mock.calls.filter(
+    ([arg]) => JSON.stringify(arg?.queryKey) === JSON.stringify(['memories']),
+  );
+
 describe('useFolderOperations - delete folder cache invalidation', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -60,6 +65,19 @@ describe('useFolderOperations - delete folder cache invalidation', () => {
 
     await waitFor(() => {
       expect(clustersKeyCalls(invalidateSpy).length).toBeGreaterThan(0);
+    });
+  });
+
+  it('invalidates the memories query when folder deletion succeeds', async () => {
+    // Invalidates the 5-minute frontend cache so the UI immediately reflects synchronous
+    // backend deletions without requiring the user to manually regenerate.
+    deleteFolders.mockResolvedValueOnce({ success: true, data: {} });
+    const { result, invalidateSpy } = renderUseFolderOperations();
+
+    result.current.deleteFolder('folder-1');
+
+    await waitFor(() => {
+      expect(memoriesKeyCalls(invalidateSpy).length).toBeGreaterThan(0);
     });
   });
 
@@ -89,5 +107,6 @@ describe('useFolderOperations - delete folder cache invalidation', () => {
     );
 
     expect(clustersKeyCalls(invalidateSpy)).toHaveLength(0);
+    expect(memoriesKeyCalls(invalidateSpy)).toHaveLength(0);
   });
 });

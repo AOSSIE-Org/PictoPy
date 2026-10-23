@@ -35,9 +35,8 @@ them before writing a new resource.
 
 ## Types and reuse
 
-- Annotate function signatures and return types, as the existing modules do. There is no
-  mypy gate in CI, so annotations exist for the reader and the next agent — that makes them
-  more important to get right, not less.
+- Annotate function signatures and return types. CI type-checks Python files changed in a
+  pull request; complete annotations remain a project convention.
 - Table rows are `TypedDict` classes (`VideoRecord`), never bare dicts passed around.
 - Before writing a helper, check `app/utils/` — it already has 19 modules covering image
   metadata, face clustering, hardware detection, model bootstrap, and more.
@@ -73,5 +72,5 @@ No virtualenv is committed. Create your own and
 Verify from the repository root, like every other command in these files:
 
 ```bash
-pre-commit run --config .pre-commit-config.yaml --all-files
+SKIP=mypy-backend,mypy-sync-microservice pre-commit run --config .pre-commit-config.yaml --all-files
 ```

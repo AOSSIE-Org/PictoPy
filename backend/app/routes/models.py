@@ -3,7 +3,7 @@ import json
 import uuid
 import asyncio
 from concurrent.futures import ProcessPoolExecutor
-from typing import Dict, List
+from typing import Any, Dict, List
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -17,6 +17,7 @@ from app.models.session_registry import (
     _registry_lock,
 )
 from app.routes.dependencies import get_state
+from app.utils.xmp.exporter import xmp_export_if_enabled
 from app.utils.hardware_detect import get_hardware_info
 from app.utils.images import image_util_process_unembedded_images
 from app.utils.semantic_labels import (
@@ -53,6 +54,8 @@ def submit_embedding_backfill_if_semantic(
         executor.submit(semantic_util_build_label_embeddings)
         executor.submit(image_util_process_unembedded_images)
         executor.submit(semantic_util_score_images)
+        # New embeddings and semantic tags belong in the photos too.
+        executor.submit(xmp_export_if_enabled)
 
 
 # Global dict to track download tasks
@@ -236,7 +239,7 @@ async def setup_models(request: SetupRequest, app_state: State = Depends(get_sta
     )
 
     task_id = str(uuid.uuid4())
-    queue = asyncio.Queue()
+    queue: asyncio.Queue[Dict[str, Any]] = asyncio.Queue()
 
     async def background_setup():
         try:
@@ -300,7 +303,7 @@ async def start_download_model(model_key: str, app_state: State = Depends(get_st
         )
 
     task_id = str(uuid.uuid4())
-    queue = asyncio.Queue()
+    queue: asyncio.Queue[Dict[str, Any]] = asyncio.Queue()
 
     async def background_download():
         try:

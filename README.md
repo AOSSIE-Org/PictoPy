@@ -68,6 +68,7 @@ Find out more at [https://pictopy.aossie.org/](https://pictopy.aossie.org/).
 ### Privacy & performance
 
 * Privacy-focused design with fully offline functionality
+* Optional export of tags, faces and embeddings into your PNG files, so they travel with your photos
 * Efficient data handling and parallel processing
 
 ## Demonstration

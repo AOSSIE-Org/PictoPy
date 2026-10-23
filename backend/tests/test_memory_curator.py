@@ -1009,6 +1009,30 @@ class TestVideoCuration:
         assert sorted(orders) == list(range(len(orders)))
 
 
+class TestPruneEmpty:
+    def test_uses_the_supplied_min_images_without_a_fetch(self) -> None:
+        with (
+            patch.object(
+                memory_curator, "db_prune_empty_memories", return_value=2
+            ) as prune,
+            patch.object(memory_curator, "memory_curator_get_preferences") as get_prefs,
+        ):
+            result = memory_curator.memory_curator_prune_empty(7)
+
+        prune.assert_called_once_with(7)
+        get_prefs.assert_not_called()
+        assert result == 2
+
+    def test_fetches_preferences_when_none_supplied(self) -> None:
+        # stub_preferences (autouse) returns min_images=3.
+        with patch.object(
+            memory_curator, "db_prune_empty_memories", return_value=0
+        ) as prune:
+            memory_curator.memory_curator_prune_empty()
+
+        prune.assert_called_once_with(3)
+
+
 class TestRunOrchestration:
     def test_returns_the_number_of_memories_written(self):
         with patch.object(memory_curator, "db_finish_memory_run") as finish:
@@ -1060,6 +1084,22 @@ class TestRunOrchestration:
     def test_a_failing_prune_does_not_stop_the_run(self):
         with patch.object(
             memory_curator, "db_delete_stale_memories", side_effect=Exception("locked")
+        ):
+            upserts = run_curator(anniversary=make_anniversary_images(2024, 5))
+        assert len(of_type(upserts, "anniversary")) == 1
+
+    def test_empty_memories_are_pruned_with_the_configured_min_images(self):
+        """
+        Images deleted out from under a memory (a folder removal, say) leave
+        it with nothing to show; this is what makes it stop surfacing.
+        """
+        with patch.object(memory_curator, "db_prune_empty_memories") as prune:
+            run_curator(anniversary=make_anniversary_images(2024, 5))
+        prune.assert_called_once_with(3)  # stub_preferences sets min_images=3
+
+    def test_a_failing_empty_prune_does_not_stop_the_run(self):
+        with patch.object(
+            memory_curator, "db_prune_empty_memories", side_effect=Exception("locked")
         ):
             upserts = run_curator(anniversary=make_anniversary_images(2024, 5))
         assert len(of_type(upserts, "anniversary")) == 1

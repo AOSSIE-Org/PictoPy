@@ -1,6 +1,6 @@
 import math
 import sqlite3
-from typing import Optional, List, Dict, TypedDict, Union
+from typing import Optional, List, Dict, Tuple, TypedDict, Union
 from app.config.settings import DATABASE_PATH
 from app.logging.setup_logging import get_logger
 
@@ -20,6 +20,13 @@ class ClusterData(TypedDict):
 
 
 ClusterMap = Dict[ClusterId, ClusterData]
+
+
+def _connect() -> sqlite3.Connection:
+    conn = sqlite3.connect(DATABASE_PATH)
+    # Ensure ON DELETE CASCADE and other FKs are enforced
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
 
 
 def db_create_clusters_table() -> None:
@@ -190,16 +197,17 @@ def db_get_all_clusters() -> List[ClusterData]:
 
 def db_get_clusters_count() -> int:
     """
-    Count the clusters that still have at least one face attached.
+    Count the clusters that still have at least one photo face attached.
 
     Rows whose faces are all gone (e.g. after their folder was deleted) are
     excluded, matching the INNER JOIN used by the cluster listing. Callers ask
     this to decide whether any *usable* cluster exists: an orphan row cannot
     seed incremental assignment, because that matches faces against cluster
-    means derived from the faces table.
+    means derived from the faces table. Those means come from photo faces only,
+    so a cluster left holding just keyframe faces cannot seed it either.
 
     Returns:
-        Number of clusters with one or more faces
+        Number of clusters with one or more photo faces
     """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
@@ -209,7 +217,8 @@ def db_get_clusters_count() -> int:
             """
             SELECT COUNT(DISTINCT fc.cluster_id)
             FROM face_clusters fc
-            INNER JOIN faces f ON fc.cluster_id = f.cluster_id
+            INNER JOIN faces f
+                ON fc.cluster_id = f.cluster_id AND f.image_id IS NOT NULL
             """
         )
         return cursor.fetchone()[0]
@@ -275,8 +284,13 @@ def db_get_all_clusters_with_face_counts() -> (
     so frequently-photographed people (likely the device owner) rank first
     without letting large low-quality clusters outrank clean ones.
 
+    face_count and the ranking are photo-only: the UI labels the number "N photos",
+    and keyframe faces attach to a cluster without defining it. Videos are counted
+    separately.
+
     Returns:
-        List of dictionaries containing cluster_id, cluster_name, face_count, and face_image_base64
+        List of dictionaries containing cluster_id, cluster_name, face_count,
+        video_count, and face_image_base64
     """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
@@ -287,12 +301,17 @@ def db_get_all_clusters_with_face_counts() -> (
             SELECT
                 fc.cluster_id,
                 fc.cluster_name,
-                COUNT(f.face_id) as face_count,
+                COUNT(f.image_id) as face_count,
                 fc.face_image_base64,
-                COALESCE(AVG(f.confidence), 0) as avg_confidence
+                COALESCE(AVG(CASE WHEN f.image_id IS NOT NULL THEN f.confidence END), 0)
+                    as avg_confidence,
+                COUNT(DISTINCT vf.video_id) as video_count
             FROM face_clusters fc
             INNER JOIN faces f ON fc.cluster_id = f.cluster_id
+            LEFT JOIN video_frames vf ON f.frame_id = vf.id
             GROUP BY fc.cluster_id, fc.cluster_name, fc.face_image_base64
+            -- Keyframe faces alone don't define a person; see db_get_clusters_count
+            HAVING COUNT(f.image_id) > 0
             """
         )
 
@@ -300,12 +319,20 @@ def db_get_all_clusters_with_face_counts() -> (
 
         clusters = []
         for row in rows:
-            cluster_id, cluster_name, face_count, face_image_base64, avg_conf = row
+            (
+                cluster_id,
+                cluster_name,
+                face_count,
+                face_image_base64,
+                avg_conf,
+                video_count,
+            ) = row
             clusters.append(
                 {
                     "cluster_id": cluster_id,
                     "cluster_name": cluster_name,
                     "face_count": face_count,
+                    "video_count": video_count,
                     "face_image_base64": face_image_base64,
                     "_score": avg_conf * math.log2(1 + face_count),
                 }
@@ -398,6 +425,31 @@ def db_get_images_by_cluster_id(
         conn.close()
 
 
+def db_get_video_ids_by_cluster_id(cluster_id: ClusterId) -> List[str]:
+    """
+    Videos in which this cluster's person was found, best match first.
+
+    One row per video however many keyframes they appear in; the caller turns
+    these into full records with db_get_videos_by_ids.
+    """
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            """
+            SELECT vf.video_id
+            FROM faces f
+            INNER JOIN video_frames vf ON f.frame_id = vf.id
+            WHERE f.cluster_id = ?
+            GROUP BY vf.video_id
+            ORDER BY MAX(f.confidence) DESC
+            """,
+            (cluster_id,),
+        ).fetchall()
+        return [row[0] for row in rows]
+    finally:
+        conn.close()
+
+
 def db_get_images_by_face_clusters(
     cluster_ids: List[str],  # TEXT UUIDs — NOT integers
     match_mode: str = "match_any",  # "match_any" | "match_all"
@@ -456,5 +508,43 @@ def db_get_images_by_face_clusters(
                 }
             )
         return results
+    finally:
+        conn.close()
+
+
+def db_get_video_matches_by_face_clusters(
+    cluster_ids: List[str],
+    match_mode: str = "match_any",
+) -> List[Tuple[str, int]]:
+    """
+    (video_id, match_count) for videos the requested identities were found in,
+    ranked like db_get_images_by_face_clusters. The caller turns the ids into
+    full records with db_get_videos_by_ids.
+    """
+    if not cluster_ids:
+        return []
+
+    placeholders = ", ".join("?" * len(cluster_ids))
+    params: list = list(cluster_ids)
+    having = ""
+    if match_mode == "match_all":
+        having = "HAVING COUNT(DISTINCT f.cluster_id) = ?"
+        params.append(len(cluster_ids))
+
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT vf.video_id, COUNT(DISTINCT f.cluster_id) AS match_count
+            FROM faces f
+            INNER JOIN video_frames vf ON f.frame_id = vf.id
+            WHERE f.cluster_id IN ({placeholders})
+            GROUP BY vf.video_id
+            {having}
+            ORDER BY match_count DESC
+            """,
+            params,
+        ).fetchall()
+        return [(row[0], row[1]) for row in rows]
     finally:
         conn.close()

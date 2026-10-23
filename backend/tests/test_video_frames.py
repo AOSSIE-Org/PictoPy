@@ -2,7 +2,10 @@ import json
 import os
 import sqlite3
 import tempfile
+import time
 import shutil
+from concurrent.futures import Future, ThreadPoolExecutor
+from unittest.mock import MagicMock, patch
 
 import cv2
 import numpy as np
@@ -13,22 +16,30 @@ from fastapi.testclient import TestClient
 from app.database.video_frames import (
     db_bulk_insert_video_frames,
     db_clear_frame_paths,
+    db_count_video_face_scan_progress,
     db_create_video_frames_tables,
     db_get_all_frame_embeddings,
     db_get_frame_embeddings_for_video,
+    db_get_frames_for_video,
     db_get_unembedded_video_frames,
     db_get_untagged_videos,
     db_get_video_ids_by_tag,
     db_get_video_tags,
+    db_get_videos_needing_face_scan,
     db_get_videos_needing_scoring,
     db_mark_video_frames_embedded,
+    db_mark_videos_faces_scanned,
     db_mark_videos_tagged,
+    db_set_video_frame_paths,
     db_upsert_video_frame_embeddings,
     db_write_video_classes,
     db_write_video_semantic_scores,
 )
 from app.database.videos import db_bulk_insert_videos, db_create_videos_table
-from app.routes.videos import router as videos_router
+from app.routes.videos import (
+    post_video_face_scan_sequence,
+    router as videos_router,
+)
 from app.utils.videos import (
     video_util_aggregate_frame_classes,
     video_util_extract_video_frames,
@@ -361,6 +372,79 @@ class TestVideoFrameDatabase:
 
 
 # ##############################
+# Finding videos that still need a face scan
+# ##############################
+
+
+class TestFaceScanQueries:
+    def test_only_tagged_unscanned_videos_are_picked(self, video_id):
+        # Untagged videos belong to the normal pass, which detects faces as
+        # part of tagging them.
+        assert db_get_videos_needing_face_scan() == []
+
+        db_mark_videos_tagged([video_id])
+        assert [v["id"] for v in db_get_videos_needing_face_scan()] == [video_id]
+
+        db_mark_videos_faces_scanned([video_id])
+        assert db_get_videos_needing_face_scan() == []
+
+    def test_metadata_comes_along_for_the_resolution_check(self, video_id):
+        db_mark_videos_tagged([video_id])
+
+        metadata = json.loads(db_get_videos_needing_face_scan()[0]["metadata"])
+        assert (metadata["width"], metadata["height"]) == (1920, 1080)
+
+    def test_videos_outside_ai_tagging_folders_are_left_alone(self, video_id, test_db):
+        db_mark_videos_tagged([video_id])
+        conn = sqlite3.connect(test_db)
+        conn.execute(
+            "INSERT INTO folders (folder_id, folder_path, last_modified_time, "
+            "AI_Tagging) VALUES ('folder-ai-off', '/off', 0, 0)"
+        )
+        conn.execute(
+            "INSERT INTO videos (id, path, folder_id, isTagged) "
+            "VALUES ('vid-off', '/off/clip.mp4', 'folder-ai-off', 1)"
+        )
+        conn.commit()
+        conn.close()
+
+        assert [v["id"] for v in db_get_videos_needing_face_scan()] == [video_id]
+
+    def test_progress_counts_the_videos_the_scan_works_through(self, video_id):
+        # Untagged videos aren't the scan's to do, so they'd hold it below 100%
+        assert db_count_video_face_scan_progress() == (0, 0)
+
+        db_mark_videos_tagged([video_id])
+        assert db_count_video_face_scan_progress() == (1, 0)
+
+        db_mark_videos_faces_scanned([video_id])
+        assert db_count_video_face_scan_progress() == (1, 1)
+
+    def test_progress_of_an_empty_library_is_zero_not_none(self, test_db):
+        # SUM over no rows is NULL, which would crash the response model.
+        assert db_count_video_face_scan_progress() == (0, 0)
+
+    def test_frames_come_back_in_index_order(self, video_id):
+        insert_frames(video_id, 3)
+
+        frames = db_get_frames_for_video(video_id)
+        assert [f["frame_index"] for f in frames] == [0, 1, 2]
+        assert [f["timestamp_sec"] for f in frames] == [0.0, 1.0, 2.0]
+        assert frames[0]["video_id"] == video_id
+
+    def test_purged_frame_paths_can_be_pointed_back_at_disk(self, video_id):
+        frames = insert_frames(video_id, 2)
+        db_clear_frame_paths()
+        assert db_get_frames_for_video(video_id)[0]["frame_path"] is None
+
+        db_set_video_frame_paths([(frames[0]["id"], "/frames/restored.jpg")])
+
+        restored = db_get_frames_for_video(video_id)
+        assert restored[0]["frame_path"] == "/frames/restored.jpg"
+        assert restored[1]["frame_path"] is None
+
+
+# ##############################
 # Purging the frame cache
 # ##############################
 
@@ -446,3 +530,139 @@ class TestVideoTagRoutes:
 
         assert response.status_code == 200
         assert response.json()["bytes_reclaimed"] > 0
+
+
+# ##############################
+# Starting and watching a face scan
+# ##############################
+
+
+@pytest.fixture
+def scan_client(test_db):
+    """A client with an executor, since starting a scan hands it off to one."""
+    app = FastAPI()
+    app.include_router(videos_router, prefix="/videos")
+    app.state.executor = MagicMock()
+    # A real, never-finished Future: the scan reads as running until a test
+    # settles it
+    app.state.executor.submit.return_value = Future()
+    return TestClient(app)
+
+
+class TestFaceScanRoutes:
+    def test_starting_a_scan_reports_what_is_left(self, scan_client, video_id):
+        db_mark_videos_tagged([video_id])
+
+        with patch("app.config.settings.VIDEO_FACE_DETECTION", True):
+            response = scan_client.post("/videos/scan-faces")
+
+        assert response.status_code == 200
+        assert response.json()["data"] == {
+            "total": 1,
+            "scanned": 0,
+            "pending": 1,
+            "running": True,
+            "failed": False,
+        }
+        # Handed off rather than run inline: a full library takes over an hour.
+        submitted = scan_client.app.state.executor.submit.call_args.args[0]
+        assert submitted is post_video_face_scan_sequence
+
+    def test_scanning_is_refused_while_the_setting_is_off(self, scan_client, video_id):
+        with patch("app.config.settings.VIDEO_FACE_DETECTION", False):
+            response = scan_client.post("/videos/scan-faces")
+
+        assert response.status_code == 400
+        assert "Find People in Videos" in response.json()["detail"]["message"]
+        scan_client.app.state.executor.submit.assert_not_called()
+
+    def test_a_second_start_does_not_queue_another_scan(self, scan_client, video_id):
+        db_mark_videos_tagged([video_id])
+
+        with patch("app.config.settings.VIDEO_FACE_DETECTION", True):
+            scan_client.post("/videos/scan-faces")
+            scan_client.post("/videos/scan-faces")
+
+        assert scan_client.app.state.executor.submit.call_count == 1
+
+    def test_concurrent_starts_queue_only_one_scan(self, scan_client, video_id):
+        # A slow submit widens the gap between the running check and the
+        # assignment, where two unlocked requests would both get through.
+        def slow_submit(fn):
+            time.sleep(0.2)
+            return Future()
+
+        db_mark_videos_tagged([video_id])
+        scan_client.app.state.executor.submit.side_effect = slow_submit
+        with (
+            patch("app.config.settings.VIDEO_FACE_DETECTION", True),
+            ThreadPoolExecutor(max_workers=2) as pool,
+        ):
+            responses = list(
+                pool.map(lambda _: scan_client.post("/videos/scan-faces"), range(2))
+            )
+
+        assert [r.status_code for r in responses] == [200, 200]
+        assert scan_client.app.state.executor.submit.call_count == 1
+
+    def test_status_counts_scanned_against_the_whole_library(
+        self, scan_client, video_id
+    ):
+        db_mark_videos_tagged([video_id])
+        db_mark_videos_faces_scanned([video_id])
+
+        response = scan_client.get("/videos/face-scan-status")
+
+        assert response.status_code == 200
+        assert response.json()["data"] == {
+            "total": 1,
+            "scanned": 1,
+            "pending": 0,
+            "running": False,
+            "failed": False,
+        }
+
+    def test_status_of_an_empty_library_is_not_an_error(self, scan_client):
+        response = scan_client.get("/videos/face-scan-status")
+
+        assert response.status_code == 200
+        assert response.json()["data"] == {
+            "total": 0,
+            "scanned": 0,
+            "pending": 0,
+            "running": False,
+            "failed": False,
+        }
+
+    @pytest.mark.parametrize(
+        "settle, failed",
+        [
+            (lambda future: future.set_result(True), False),
+            (lambda future: future.set_result(False), True),
+            (lambda future: future.set_exception(RuntimeError("worker died")), True),
+        ],
+        ids=["succeeded", "returned-false", "raised"],
+    )
+    def test_status_reports_how_the_scan_ended(
+        self, scan_client, video_id, settle, failed
+    ):
+        """A dead worker must not read as a scan still running, or the UI
+        polls forever with its retry button disabled."""
+        db_mark_videos_tagged([video_id])
+        with patch("app.config.settings.VIDEO_FACE_DETECTION", True):
+            scan_client.post("/videos/scan-faces")
+
+        settle(scan_client.app.state.video_face_scan)
+        data = scan_client.get("/videos/face-scan-status").json()["data"]
+
+        assert data["running"] is False
+        assert data["failed"] is failed
+
+    def test_a_failed_scan_can_be_retried(self, scan_client, video_id):
+        db_mark_videos_tagged([video_id])
+        with patch("app.config.settings.VIDEO_FACE_DETECTION", True):
+            scan_client.post("/videos/scan-faces")
+            scan_client.app.state.video_face_scan.set_exception(RuntimeError())
+            scan_client.post("/videos/scan-faces")
+
+        assert scan_client.app.state.executor.submit.call_count == 2
