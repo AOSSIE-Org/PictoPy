@@ -132,11 +132,15 @@ export const useFolderOperations = () => {
     errorMessage: 'Failed to disable AI tagging. Please try again.',
   });
 
-  // Delete folder mutation
+  // Delete folders mutation
   const deleteFolderMutation = usePictoMutation({
-    mutationFn: async (folder_id: string) =>
-      deleteFolders({ folder_ids: [folder_id] }),
+    mutationFn: async (folderIds: string[]) =>
+      deleteFolders({ folder_ids: folderIds }),
     autoInvalidateTags: ['folders'],
+    // Deleting folders cascades to their images and faces, so any cluster built from
+    // them is now stale. This has to be a separate call: autoInvalidateTags is passed
+    // through as a single queryKey and matches by prefix, so ['folders', 'clusters']
+    // would match neither query.
     // Clusters and memories become stale on folder deletion. They require separate invalidation calls
     // because autoInvalidateTags uses prefix matching, meaning a combined queryKey wouldn't match either.
     onSuccess: () => {
@@ -145,15 +149,15 @@ export const useFolderOperations = () => {
     },
   });
 
-  // Apply feedback to the delete folder mutation
+  // Apply feedback to the delete folders mutation
   useMutationFeedback(deleteFolderMutation, {
     showLoading: true,
-    loadingMessage: 'Deleting folder',
-    successTitle: 'Folder Deleted',
+    loadingMessage: 'Removing folder(s)',
+    successTitle: 'Folder(s) Removed',
     successMessage:
-      'The folder has been successfully removed from your library.',
-    errorTitle: 'Delete Error',
-    errorMessage: 'Failed to delete the folder. Please try again.',
+      'The selected folder(s) have been successfully removed from your library.',
+    errorTitle: 'Removal Error',
+    errorMessage: 'Failed to remove the folder(s). Please try again.',
   });
 
   /**
@@ -168,10 +172,10 @@ export const useFolderOperations = () => {
   };
 
   /**
-   * Delete a folder
+   * Delete multiple folders
    */
-  const deleteFolder = (folderId: string) => {
-    deleteFolderMutation.mutate(folderId);
+  const deleteMultipleFolders = (folderIds: string[]) => {
+    deleteFolderMutation.mutate(folderIds);
   };
 
   return {
@@ -181,7 +185,7 @@ export const useFolderOperations = () => {
 
     // Operations
     toggleAITagging,
-    deleteFolder,
+    deleteMultipleFolders,
 
     // Mutation states (for use in UI, e.g., disabling buttons)
     enableAITaggingPending: enableAITaggingMutation.isPending,
