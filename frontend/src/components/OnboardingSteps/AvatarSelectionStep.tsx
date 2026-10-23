@@ -146,13 +146,13 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
               type="button"
               onClick={handleUploadClick}
               aria-label="Change profile avatar"
-              className="group relative inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full"
+              className="group relative mt-1 inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full"
             >
               {selectedAvatar ? (
                 <img
                   src={selectedAvatar}
                   alt="Current avatar"
-                  className="group relative mt-1 inline-flex h-14 w-14 rounded-full object-cover ring-2 ring-blue-500"
+                  className="h-14 w-14 rounded-full object-cover ring-2 ring-blue-500"
                 />
               ) : (
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-neutral-800 ring-2 ring-blue-500">
