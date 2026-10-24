@@ -333,7 +333,7 @@ class ToggleFavouriteRequest(BaseModel):
 )
 def toggle_favourite(
     req: ToggleFavouriteRequest, app_state: State = Depends(get_state)
-):
+) -> ToggleFavouriteResponse:
     """
     Toggle the favorite status of an image.
     """
@@ -361,11 +361,11 @@ def toggle_favourite(
                     message=f"Image '{image_id}' disappeared after toggling",
                 ).model_dump(),
             )
-        return {
-            "success": True,
-            "image_id": image_id,
-            "isFavourite": image.get("isFavourite", False),
-        }
+        return ToggleFavouriteResponse(
+            success=True,
+            image_id=image_id,
+            isFavourite=bool(image.get("isFavourite", False)),
+        )
     except HTTPException:
         raise  # Re-raise HTTPExceptions to preserve status codes
     except Exception as e:
