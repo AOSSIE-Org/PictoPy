@@ -19,7 +19,7 @@ The code for the application mainly lies in the `app/` directory the hierarchy o
 
 We will discuss what each of these directories do and the relevant files they contain
 
-## config
+\## config
 
 Related to variables used across the application.
 
