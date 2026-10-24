@@ -598,8 +598,11 @@ class TestFoldersAPI:
     # DELETE /folders/delete-folders - Delete Folders Tests
     # ============================================================================
 
+    @patch("app.routes.folders.API_util_restart_sync_microservice_watcher")
     @patch("app.routes.folders.db_delete_folders_batch")
-    def test_delete_folders_success(self, mock_delete_batch, client):
+    def test_delete_folders_success(
+        self, mock_delete_batch, mock_restart_watcher, client
+    ):
         """Test successfully deleting multiple folders."""
         mock_delete_batch.return_value = 3
 
@@ -618,11 +621,17 @@ class TestFoldersAPI:
         assert data["data"]["folder_ids"] == ["folder-1", "folder-2", "folder-3"]
 
         mock_delete_batch.assert_called_once_with(["folder-1", "folder-2", "folder-3"])
+        mock_restart_watcher.assert_called_once()
 
+    @patch("app.routes.folders.API_util_restart_sync_microservice_watcher")
     @patch("app.utils.memory_curator.memory_curator_prune_empty")
     @patch("app.routes.folders.db_delete_folders_batch")
     def test_delete_folders_background_processing_called(
-        self, mock_delete_batch: MagicMock, mock_prune: MagicMock, client: TestClient
+        self,
+        mock_delete_batch: MagicMock,
+        mock_prune: MagicMock,
+        mock_restart_watcher: MagicMock,
+        client: TestClient,
     ) -> None:
         """Pruning and re-curation are both triggered after deleting folders."""
         mock_delete_batch.return_value = 3
@@ -645,10 +654,15 @@ class TestFoldersAPI:
             _curate_memories, "folder_delete"
         )
 
+    @patch("app.routes.folders.API_util_restart_sync_microservice_watcher")
     @patch("app.utils.memory_curator.memory_curator_prune_empty")
     @patch("app.routes.folders.db_delete_folders_batch")
     def test_delete_folders_survives_curation_submission_failure(
-        self, mock_delete_batch: MagicMock, mock_prune: MagicMock, client: TestClient
+        self,
+        mock_delete_batch: MagicMock,
+        mock_prune: MagicMock,
+        mock_restart_watcher: MagicMock,
+        client: TestClient,
     ) -> None:
         """
         A broken/shutdown executor must not turn an already-successful
@@ -675,10 +689,15 @@ class TestFoldersAPI:
         mock_prune.assert_called_once_with()
         client.app.state.executor.submit.assert_called_once()
 
+    @patch("app.routes.folders.API_util_restart_sync_microservice_watcher")
     @patch("app.utils.memory_curator.memory_curator_prune_empty")
     @patch("app.routes.folders.db_delete_folders_batch")
     def test_delete_folders_survives_pruning_failure(
-        self, mock_delete_batch: MagicMock, mock_prune: MagicMock, client: TestClient
+        self,
+        mock_delete_batch: MagicMock,
+        mock_prune: MagicMock,
+        mock_restart_watcher: MagicMock,
+        client: TestClient,
     ) -> None:
         """Mirror of the submit-failure test -- prune failing doesn't block it either."""
         mock_delete_batch.return_value = 3
@@ -696,8 +715,11 @@ class TestFoldersAPI:
             _curate_memories, "folder_delete"
         )
 
+    @patch("app.routes.folders.API_util_restart_sync_microservice_watcher")
     @patch("app.routes.folders.db_delete_folders_batch")
-    def test_delete_folders_single_folder(self, mock_delete_batch, client):
+    def test_delete_folders_single_folder(
+        self, mock_delete_batch, mock_restart_watcher, client
+    ):
         """Test deleting a single folder."""
         mock_delete_batch.return_value = 1
 
@@ -712,6 +734,28 @@ class TestFoldersAPI:
         data = response.json()
         assert data["success"] is True
         assert data["data"]["deleted_count"] == 1
+        mock_restart_watcher.assert_called_once()
+
+    @patch("app.routes.folders.API_util_restart_sync_microservice_watcher")
+    @patch("app.routes.folders.db_delete_folders_batch")
+    def test_delete_folders_none_deleted(
+        self, mock_delete_batch, mock_restart_watcher, client
+    ):
+        """Test deleting folders when no folders were found to delete."""
+        mock_delete_batch.return_value = 0
+
+        response = client.request(
+            "DELETE",
+            "/folders/delete-folders",
+            content='{"folder_ids": ["non-existent-folder"]}',
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["data"]["deleted_count"] == 0
+        mock_restart_watcher.assert_not_called()
 
     def test_delete_folders_empty_list(self, client):
         """Test deleting folders with empty folder_ids list."""
@@ -728,8 +772,11 @@ class TestFoldersAPI:
         assert data["detail"]["error"] == "Validation Error"
         assert "No folder IDs provided" in data["detail"]["message"]
 
+    @patch("app.routes.folders.API_util_restart_sync_microservice_watcher")
     @patch("app.routes.folders.db_delete_folders_batch")
-    def test_delete_folders_database_error(self, mock_delete_batch, client):
+    def test_delete_folders_database_error(
+        self, mock_delete_batch, mock_restart_watcher, client
+    ):
         """Test handling database errors during folder deletion."""
         mock_delete_batch.side_effect = Exception("Database connection failed")
 
@@ -744,6 +791,7 @@ class TestFoldersAPI:
         data = response.json()
         assert data["detail"]["success"] is False
         assert data["detail"]["error"] == "Internal server error"
+        mock_restart_watcher.assert_not_called()
 
     # ============================================================================
     # GET /folders/all-folders - Get All Folders Tests
@@ -1443,10 +1491,11 @@ class TestFoldersIntegration:
 
         assert mock_find_parent.call_count >= 1
 
+    @patch("app.routes.folders.API_util_restart_sync_microservice_watcher")
     @patch("app.routes.folders.db_delete_folders_batch")
     @patch("app.routes.folders.db_enable_ai_tagging_batch")
     def test_complete_folder_lifecycle(
-        self, mock_enable_batch, mock_delete_batch, client
+        self, mock_enable_batch, mock_delete_batch, mock_restart_watcher, client
     ):
         """Test complete folder lifecycle: enable AI -> delete."""
         folder_ids = ["folder-1", "folder-2"]
@@ -1470,3 +1519,4 @@ class TestFoldersIntegration:
 
         mock_enable_batch.assert_called_once_with(folder_ids)
         mock_delete_batch.assert_called_once_with(folder_ids)
+        mock_restart_watcher.assert_called_once()
