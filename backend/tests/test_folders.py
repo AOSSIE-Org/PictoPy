@@ -623,10 +623,15 @@ class TestFoldersAPI:
         mock_delete_batch.assert_called_once_with(["folder-1", "folder-2", "folder-3"])
         mock_restart_watcher.assert_called_once()
 
+    @patch("app.routes.folders.API_util_restart_sync_microservice_watcher")
     @patch("app.utils.memory_curator.memory_curator_prune_empty")
     @patch("app.routes.folders.db_delete_folders_batch")
     def test_delete_folders_background_processing_called(
-        self, mock_delete_batch: MagicMock, mock_prune: MagicMock, client: TestClient
+        self,
+        mock_delete_batch: MagicMock,
+        mock_prune: MagicMock,
+        mock_restart_watcher: MagicMock,
+        client: TestClient,
     ) -> None:
         """Pruning and re-curation are both triggered after deleting folders."""
         mock_delete_batch.return_value = 3
@@ -649,10 +654,15 @@ class TestFoldersAPI:
             _curate_memories, "folder_delete"
         )
 
+    @patch("app.routes.folders.API_util_restart_sync_microservice_watcher")
     @patch("app.utils.memory_curator.memory_curator_prune_empty")
     @patch("app.routes.folders.db_delete_folders_batch")
     def test_delete_folders_survives_curation_submission_failure(
-        self, mock_delete_batch: MagicMock, mock_prune: MagicMock, client: TestClient
+        self,
+        mock_delete_batch: MagicMock,
+        mock_prune: MagicMock,
+        mock_restart_watcher: MagicMock,
+        client: TestClient,
     ) -> None:
         """
         A broken/shutdown executor must not turn an already-successful
@@ -679,10 +689,15 @@ class TestFoldersAPI:
         mock_prune.assert_called_once_with()
         client.app.state.executor.submit.assert_called_once()
 
+    @patch("app.routes.folders.API_util_restart_sync_microservice_watcher")
     @patch("app.utils.memory_curator.memory_curator_prune_empty")
     @patch("app.routes.folders.db_delete_folders_batch")
     def test_delete_folders_survives_pruning_failure(
-        self, mock_delete_batch: MagicMock, mock_prune: MagicMock, client: TestClient
+        self,
+        mock_delete_batch: MagicMock,
+        mock_prune: MagicMock,
+        mock_restart_watcher: MagicMock,
+        client: TestClient,
     ) -> None:
         """Mirror of the submit-failure test -- prune failing doesn't block it either."""
         mock_delete_batch.return_value = 3
