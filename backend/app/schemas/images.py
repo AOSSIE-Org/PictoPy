@@ -134,3 +134,9 @@ class DeleteThumbnailsResponse(BaseModel):
 class GetThumbnailPathResponse(BaseModel):
     success: bool
     thumbnailPath: str
+
+
+class ToggleFavouriteResponse(BaseModel):
+    success: bool
+    image_id: str
+    isFavourite: bool
