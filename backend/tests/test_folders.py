@@ -448,7 +448,7 @@ class TestFoldersAPI:
 
     def test_enable_ai_tagging_empty_list(self, client):
         """Test enabling AI tagging with empty folder_ids list."""
-        request_data = {"folder_ids": []}
+        request_data: dict[str, list[str]] = {"folder_ids": []}
 
         response = client.post("/folders/enable-ai-tagging", json=request_data)
 
@@ -460,7 +460,7 @@ class TestFoldersAPI:
 
     def test_enable_ai_tagging_missing_field(self, client):
         """Test enabling AI tagging without folder_ids field."""
-        request_data = {}
+        request_data: dict[str, list[str]] = {}
 
         response = client.post("/folders/enable-ai-tagging", json=request_data)
 
@@ -545,7 +545,7 @@ class TestFoldersAPI:
 
     def test_disable_ai_tagging_empty_list(self, client):
         """Test disabling AI tagging with empty folder_ids list."""
-        request_data = {"folder_ids": []}
+        request_data: dict[str, list[str]] = {"folder_ids": []}
 
         response = client.post("/folders/disable-ai-tagging", json=request_data)
 
@@ -557,7 +557,7 @@ class TestFoldersAPI:
 
     def test_disable_ai_tagging_missing_field(self, client):
         """Test disabling AI tagging without folder_ids field."""
-        request_data = {}
+        request_data: dict[str, list[str]] = {}
 
         response = client.post("/folders/disable-ai-tagging", json=request_data)
 
@@ -901,6 +901,68 @@ class TestFoldersAPI:
         data = response.json()
         assert data["success"] is True
         assert data["data"]["updated_count"] == 0
+
+    # ============================================================================
+    # POST /folders/sync-folder - Sync Folder Tests
+    # ============================================================================
+
+    def test_sync_folder_missing_filesystem_folder_returns_404(
+        self, client: TestClient
+    ) -> None:
+        """Test syncing a folder that does not exist on the filesystem returns 404."""
+        request_data = {
+            "folder_id": "dummy-folder-id",
+            "folder_path": "/non/existent/path/for/picto_py_test_123",
+        }
+
+        response = client.post("/folders/sync-folder", json=request_data)
+
+        assert response.status_code == 404
+        data = response.json()
+        assert data["detail"]["success"] is False
+        assert data["detail"]["error"] == "Folder not found"
+        assert "does not exist on filesystem" in data["detail"]["message"]
+
+    @patch("app.utils.folders.os.listdir")
+    def test_sync_folder_permission_denied_returns_401(
+        self, mock_listdir: MagicMock, client: TestClient
+    ) -> None:
+        """Test syncing a folder with PermissionError returns 401."""
+        mock_listdir.side_effect = PermissionError("Permission denied")
+
+        request_data = {
+            "folder_id": "dummy-folder-id",
+            "folder_path": "/restricted/folder/path",
+        }
+
+        response = client.post("/folders/sync-folder", json=request_data)
+
+        assert response.status_code == 401
+        data = response.json()
+        assert data["detail"]["success"] is False
+        assert data["detail"]["error"] == "Permission denied"
+
+    @patch("app.routes.folders.post_sync_folder_sequence")
+    def test_sync_folder_success(
+        self, mock_post_sync: MagicMock, client: TestClient
+    ) -> None:
+        """Test successfully syncing an existing folder."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            subfolder = os.path.join(tmpdir, "subfolder1")
+            os.makedirs(subfolder)
+
+            request_data = {
+                "folder_id": "test-sync-id",
+                "folder_path": tmpdir,
+            }
+
+            response = client.post("/folders/sync-folder", json=request_data)
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["success"] is True
+            assert data["data"]["folder_id"] == "test-sync-id"
+            assert data["data"]["folder_path"] == tmpdir
 
     # ============================================================================
     # Unit Tests
