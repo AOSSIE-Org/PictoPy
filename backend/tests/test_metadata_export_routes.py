@@ -80,6 +80,15 @@ def _wait_until_idle(client: TestClient) -> dict:
     raise AssertionError("export never finished")
 
 
+def _wait_for_recluster(client: TestClient, task_id: str) -> str:
+    for _ in range(200):
+        data = client.get(f"/face-clusters/global-recluster/{task_id}").json()["data"]
+        if data["status"] != "running":
+            return data["status"]
+        time.sleep(0.02)
+    raise AssertionError("recluster never finished")
+
+
 class TestExportEndpoints:
     def test_status_counts_png_images(self, client, library):
         _photo(library, "a")
@@ -225,7 +234,11 @@ class TestEditsScheduleAnExport:
             "app.routes.face_clusters.cluster_util_face_clusters_sync",
             lambda force_full_reclustering=False: (0, 0),
         )
-        self._expect(client, "POST", "/face-clusters/global-recluster", 1)
+        before = self._notified(client)
+        r = client.post("/face-clusters/global-recluster")
+        # Reclustering runs as a background job and requests the export when done.
+        assert _wait_for_recluster(client, r.json()["data"]["task_id"]) == "complete"
+        assert self._notified(client) - before == 1
 
     def test_turning_the_toggle_on_catches_up_the_library(self, client, library):
         self._expect(
