@@ -3,8 +3,6 @@ import { ThemeSelector } from '@/components/ThemeToggle';
 import { Search, Heart, ArrowRight } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectAvatar, selectName } from '@/features/onboardingSelectors';
-import { clearSearch } from '@/features/searchSlice';
-import { convertFileSrc } from '@tauri-apps/api/core';
 import { FaceSearchDialog } from '@/components/Dialog/FaceSearchDialog';
 import { Link, useNavigate } from 'react-router';
 import { useState, useRef, useEffect } from 'react';
@@ -21,10 +19,6 @@ import { Cluster } from '@/types/Media';
 export function Navbar() {
   const userName = useSelector(selectName);
   const userAvatar = useSelector(selectAvatar);
-
-  const searchState = useSelector((state: any) => state.search);
-  const isSearchActive = searchState.active;
-  const queryImage = searchState.queryImage;
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -120,31 +114,6 @@ export function Navbar() {
           ref={wrapperRef}
           className="dark:bg-muted/50 relative flex w-full items-center gap-1 rounded-md bg-neutral-100 px-1 py-1"
         >
-          {/* Query Image */}
-          {queryImage && (
-            <div className="relative mr-2 ml-2">
-              <img
-                src={
-                  queryImage?.startsWith('data:')
-                    ? queryImage
-                    : convertFileSrc(queryImage)
-                }
-                alt="Query"
-                className="h-7 w-7 rounded object-cover"
-              />
-              {isSearchActive && (
-                <button
-                  onClick={() => dispatch(clearSearch())}
-                  className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-600 text-[10px] leading-none text-white"
-                  title="Close"
-                  aria-label="Close"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          )}
-
           {/* Input */}
           <Input
             type="search"
