@@ -19,7 +19,19 @@ export const useFile = (
         filters: [
           {
             name: 'Images',
-            extensions: ['png', 'jpg', 'jpeg', 'gif', 'bmp'],
+            extensions: [
+              'png',
+              'jpg',
+              'jpeg',
+              'webp',
+              'heic',
+              'heif',
+              'avif',
+              'gif',
+              'bmp',
+              'tiff',
+              'tif',
+            ],
           },
         ],
         title,
