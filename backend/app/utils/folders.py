@@ -1,6 +1,6 @@
 import uuid
 import os
-from typing import List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from fastapi import HTTPException, status
 from app.database.folders import (
@@ -23,7 +23,9 @@ def folder_util_add_folder_tree(
     Returns the root folder's UUID and the folder map (containing folder_id and parent_id).
     """
     folders_data = []
-    folder_map = {}  # Maps path to (folder_id, parent_id)
+    folder_map: Dict[str, Tuple[str, Optional[str]]] = (
+        {}
+    )  # Maps path to (folder_id, parent_id)
 
     for dirpath, dirnames, _ in os.walk(root_path, topdown=True):
         dirpath = os.path.abspath(dirpath)
@@ -83,6 +85,15 @@ def folder_util_get_filesystem_direct_child_folders(folder_path: str) -> List[st
             if os.path.isdir(item_path):
                 filesystem_folders.append(os.path.abspath(item_path))
         return filesystem_folders
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ErrorResponse(
+                success=False,
+                error="Folder not found",
+                message=f"Folder '{folder_path}' does not exist on filesystem",
+            ).model_dump(),
+        )
     except PermissionError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
