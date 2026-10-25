@@ -406,3 +406,32 @@ class TestExtractAll:
     def test_empty_or_invalid_json(self, extractor, metadata_json):
         """Empty or unparseable metadata yields all-None without raising."""
         assert extractor.extract_all(metadata_json) == (None, None, None)
+
+
+class TestExtractDatetime:
+    """Test class for extract_datetime's format coverage."""
+
+    @pytest.mark.parametrize(
+        "date_str",
+        [
+            "2024-01-15 14:30:45.123456",
+            "2024-01-15 14:30:45+05:30",
+            "2024-01-15T14:30:45.123456",
+            "2024-01-15T14:30:45Z",
+            "2024:01:15 14:30:45",
+            "2024:01:15 14:30:45.123456",
+            "2024-01-15 14:30:45",
+            "15/01/2024 14:30:45",
+            "2024-01-15",
+        ],
+    )
+    def test_parses_supported_formats(self, extractor, date_str):
+        """A space or T separator, fractional seconds and a timezone offset
+        or Z suffix must all parse, not just the T-separated ISO subset."""
+        result = extractor.extract_datetime({"date_created": date_str})
+        assert result is not None
+        assert result.year == 2024
+
+    def test_unparseable_string_returns_none(self, extractor):
+        """A string matching no supported format yields None, not a raise."""
+        assert extractor.extract_datetime({"date_created": "not a date"}) is None
