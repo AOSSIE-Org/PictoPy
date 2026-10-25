@@ -601,8 +601,11 @@ class TestFoldersAPI:
     @patch("app.routes.folders.API_util_restart_sync_microservice_watcher")
     @patch("app.routes.folders.db_delete_folders_batch")
     def test_delete_folders_success(
-        self, mock_delete_batch, mock_restart_watcher, client
-    ):
+        self,
+        mock_delete_batch: MagicMock,
+        mock_restart_watcher: MagicMock,
+        client: TestClient,
+    ) -> None:
         """Test successfully deleting multiple folders."""
         mock_delete_batch.return_value = 3
 
@@ -718,8 +721,11 @@ class TestFoldersAPI:
     @patch("app.routes.folders.API_util_restart_sync_microservice_watcher")
     @patch("app.routes.folders.db_delete_folders_batch")
     def test_delete_folders_single_folder(
-        self, mock_delete_batch, mock_restart_watcher, client
-    ):
+        self,
+        mock_delete_batch: MagicMock,
+        mock_restart_watcher: MagicMock,
+        client: TestClient,
+    ) -> None:
         """Test deleting a single folder."""
         mock_delete_batch.return_value = 1
 
@@ -739,8 +745,11 @@ class TestFoldersAPI:
     @patch("app.routes.folders.API_util_restart_sync_microservice_watcher")
     @patch("app.routes.folders.db_delete_folders_batch")
     def test_delete_folders_none_deleted(
-        self, mock_delete_batch, mock_restart_watcher, client
-    ):
+        self,
+        mock_delete_batch: MagicMock,
+        mock_restart_watcher: MagicMock,
+        client: TestClient,
+    ) -> None:
         """Test deleting folders when no folders were found to delete."""
         mock_delete_batch.return_value = 0
 
@@ -775,8 +784,11 @@ class TestFoldersAPI:
     @patch("app.routes.folders.API_util_restart_sync_microservice_watcher")
     @patch("app.routes.folders.db_delete_folders_batch")
     def test_delete_folders_database_error(
-        self, mock_delete_batch, mock_restart_watcher, client
-    ):
+        self,
+        mock_delete_batch: MagicMock,
+        mock_restart_watcher: MagicMock,
+        client: TestClient,
+    ) -> None:
         """Test handling database errors during folder deletion."""
         mock_delete_batch.side_effect = Exception("Database connection failed")
 
@@ -1557,8 +1569,12 @@ class TestFoldersIntegration:
     @patch("app.routes.folders.db_delete_folders_batch")
     @patch("app.routes.folders.db_enable_ai_tagging_batch")
     def test_complete_folder_lifecycle(
-        self, mock_enable_batch, mock_delete_batch, mock_restart_watcher, client
-    ):
+        self,
+        mock_enable_batch: MagicMock,
+        mock_delete_batch: MagicMock,
+        mock_restart_watcher: MagicMock,
+        client: TestClient,
+    ) -> None:
         """Test complete folder lifecycle: enable AI -> delete."""
         folder_ids = ["folder-1", "folder-2"]
 
