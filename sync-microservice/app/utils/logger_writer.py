@@ -41,14 +41,16 @@ class LoggerWriter:
 
         self._in_write = True
         try:
-            # Buffer the message until we get a complete line
+            # Buffer the message until we get a complete line. A single write()
+            # can itself carry several lines (e.g. print() of an already
+            # multi-line string) -- split on every newline, not just a
+            # trailing one, so each line becomes its own log record instead of
+            # one record with embedded newlines.
             self.buffer += message
-            if message.endswith("\n"):
-                # Log the complete line (minus the newline)
-                line = self.buffer.rstrip("\n")
+            *complete_lines, self.buffer = self.buffer.split("\n")
+            for line in complete_lines:
                 if line:  # Only log non-empty lines
                     self.logger.log(self.level, line)
-                self.buffer = ""
         finally:
             self._in_write = False
 
