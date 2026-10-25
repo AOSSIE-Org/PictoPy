@@ -1,57 +1,60 @@
 # Contributing to PictoPy
 
-Hi there! Thank you for considering contributing to **PictoPy** – we’re excited to collaborate with you. Whether you're fixing a bug, improving documentation, or suggesting a new feature — you're welcome here!
+Thanks for your interest in contributing to PictoPy. We welcome bug fixes, documentation updates, and feature work that fits the project and improves the product.
 
-NOTE: Please do not open a PR for the issue which is not yet reviewed and labelled by the maintainer. Wait for the maintainer to give a green light.
+> [!IMPORTANT]
+> Do not open a pull request for an issue until the maintainer has reviewed and labelled it.
+>
+> Low-effort, unreviewed, or AI-generated submissions that do not meaningfully improve the codebase or product may be closed without discussion.
 
-NOTE: Low-effort, unreviewed, or AI-generated issues and PRs that don't engage/add much value to the actual codebase/product will be closed without discussion.
+Before making changes, read the repository-level guidance in `AGENTS.md` and the closest area-specific `AGENTS.md` for the part of the codebase you are touching.
 
-## Setting Up the Project
+## Project setup
 
-## Setup
+### Setup options
 
-1. Setup Using Script (Recommended for Windows, Debian-based OS like Ubuntu, and Fedora/RedHat-based OS): [Guide](docs/Script_Setup_Guide.md)
-2. Setup Manually(Recommended for other OSes): [Guide](docs/Manual_Setup_Guide.md)
+1. Use the automated setup script for Windows, Debian-based systems, and Fedora/Red Hat-based systems: [Script setup guide](docs/Script_Setup_Guide.md)
+2. Use the manual setup guide for other operating systems: [Manual setup guide](docs/Manual_Setup_Guide.md)
 
-## Docs Website Setup
+## Documentation site
 
-PictoPy documentation uses MkDocs with the Material theme and the Swagger UI plugin.
+PictoPy's docs use MkDocs with the Material theme and the Swagger UI plugin.
 
-To set up and run the docs website on your local machine:
+To run the site locally:
 
-1. Ensure you have **Python 3** and **pip** installed. Navigate to the `/docs` folder.
-2. Create a virtual environment:
+1. Ensure Python 3 and `pip` are installed.
+2. Change into the `docs/` directory.
+3. Create a virtual environment:
 
    ```bash
    python -m venv .docs-env
    ```
 
-3. Activate the virtual environment:
+4. Activate it:
 
    ```bash
-   # On macOS/Linux:
+   # macOS/Linux
    source .docs-env/bin/activate
-   # On Windows:
-   .docs-env\Scripts\activate
+
+   # Windows PowerShell
+   .docs-env\Scripts\Activate.ps1
    ```
 
-4. Install the required Python packages:
+5. Install the required packages:
 
    ```bash
    pip install -r requirements.txt
    ```
 
-5. Start the local MkDocs server:
+6. Start the MkDocs development server:
 
    ```bash
    mkdocs serve -f ../mkdocs.yml
    ```
 
-6. Open your browser and navigate to: <http://127.0.0.1:8000>.
-
-7. Edit Markdown files inside the `docs/` folder. The site will automatically reload when changes are saved.
-
-8. To build the static site for production deployment, run:
+7. Open <http://127.0.0.1:8000> in your browser.
+8. Edit the Markdown files under `docs/`; the site reloads automatically on save.
+9. To build a production static site:
 
    ```bash
    mkdocs build -f ../mkdocs.yml
@@ -59,18 +62,22 @@ To set up and run the docs website on your local machine:
 
 ## Working with AI coding agents
 
-If you use Claude Code, Cursor, Copilot, Codex, or Gemini CLI, this repository ships
-committed configuration so your agent already knows our conventions — the formatting rules,
-the layering, and the checks CI runs. There is nothing to install.
+If you use Claude Code, Cursor, GitHub Copilot, Codex, or Gemini CLI, this repository ships committed agent configuration so your tools already know the project's conventions. You do not need to paste instructions into chat.
 
-Start with `AGENTS.md` at the repository root. Ready-made playbooks for common tasks
-(adding an endpoint, adding a frontend feature, running every pre-PR check) live in
-`agent-kit/`.
+Start with the repository root `AGENTS.md`. The project also includes reusable playbooks in `agent-kit/` for common tasks such as adding an endpoint, adding a frontend feature, and running the pre-PR checks.
 
-See [docs/ai-contributing.md](docs/ai-contributing.md) for the full explanation, including
-how to add rules and playbooks of your own.
+See [docs/ai-contributing.md](docs/ai-contributing.md) for the full explanation, including how to add your own rules and playbooks.
 
-You remain the author of everything you submit — read your diff before opening a PR.
+You remain responsible for everything you submit. Review your diff before opening a PR.
+
+## Contribution workflow
+
+- Keep the change focused on the issue or feature you are addressing.
+- Follow the nearest `AGENTS.md` for architectural and formatting rules.
+- Run only the checks relevant to the area you changed.
+- Open a PR only after the issue has been reviewed and labelled by maintainers.
+- PRs target `dev`; `main` is updated through release PRs from `dev`.
+- Reference the related issue in the PR body using `#<number>`.
 
 ## Testing
 
@@ -83,99 +90,104 @@ npm test
 
 ### Backend
 
-- FastAPI
+- FastAPI:
 
   ```bash
   cd backend
   pytest
   ```
 
-- Tauri
+- Tauri:
 
   ```bash
   cd frontend/src-tauri/
   cargo test
   ```
 
-## Building for Production
+## Building for production
 
-Create Signing Keys for tauri using the command:
+From the repository root, generate a signing key in the `frontend/` directory. The values below are examples; replace them with the private key and password generated for your build:
 
 ```bash
+cd frontend
 npm run tauri signer generate
+export TAURI_SIGNING_PRIVATE_KEY="<generated private key>"
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="<key password>"
 ```
 
-Set the public key in tauri.conf.json as pubkey and private key and password in Environment Variables(of your terminal) as TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+Set the corresponding public key under `plugins.updater.pubkey` in `frontend/src-tauri/tauri.conf.json`.
 
-As an **example** of the private key would look like this:
+On Windows PowerShell, use:
 
-```bash
-TAURI_SIGNING_PRIVATE_KEY=dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWduIGVuY3J5cHRlZCBzZWNyZXQga2V5ClJXUlRZMEl5NlF2SjE3cWNXOVlQQ0JBTlNITEpOUVoyQ3ZuNTdOSkwyNE1NN2RmVWQ1a0FBQkFBQUFBQUFBQUFBQUlBQUFBQU9XOGpTSFNRd0Q4SjNSbm5Oc1E0OThIUGx6SS9lWXI3ZjJxN3BESEh1QTRiQXlkR2E5aG1oK1g0Tk5kcmFzc0IvZFZScEpubnptRkxlbDlUR2R1d1Y5OGRSYUVmUGoxNTFBcHpQZ1dSS2lHWklZVHNkV1Byd1VQSnZCdTZFWlVGOUFNVENBRlgweUU9Cg==
+```powershell
+Set-Location frontend
+$env:TAURI_SIGNING_PRIVATE_KEY = "<generated private key>"
+$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = "<key password>"
 ```
 
-```bash
-TAURI_SIGNING_PRIVATE_KEY_PASSWORD=pass
-```
+With your terminal still in `frontend/`, build the app:
 
 ```bash
 npm run tauri build
 ```
 
-## Release Management
+## Release management
 
-PictoPy maintains version strings in three manifest files that must always stay in sync:
+PictoPy keeps version strings in sync across these files:
 
-- `package.json` (root)
+- `package.json`
 - `frontend/package.json`
 - `frontend/src-tauri/Cargo.toml`
 
-> **Note:** `frontend/src-tauri/tauri.conf.json` does not hold a version field in Tauri v2 - it inherits the version directly from `Cargo.toml` automatically.
+> [!NOTE]
+> `frontend/src-tauri/tauri.conf.json` does not contain a version field in Tauri v2; it inherits the version directly from `Cargo.toml`.
 
-A version bump script at `scripts/bump-version.mjs` acts as the single source of truth. To bump the version across all three files at once, run from the repository root:
+Use the version bump script as the single source of truth from the repository root:
 
 ```bash
 npm run version:bump -- <version>
 ```
 
-For example:
+Example:
 
 ```bash
 npm run version:bump -- 1.2.0
 ```
 
-The version must follow the `X.Y.Z` format (digits only, no `v` prefix). The script will validate the format, read and verify all three files before writing anything, then print a summary of each file updated.
+The version must follow the `X.Y.Z` format (digits only, no `v` prefix). The script validates the format, verifies the three manifests, then writes the changes and summarizes each file updated.
 
-After running the script, regenerate the Cargo lock file:
+After bumping the version, regenerate the Cargo lock file:
 
 ```bash
 cd frontend/src-tauri
 cargo check
 ```
 
-> **Note:** The `--` separator between `version:bump` and the version number is required by npm to forward the argument to the underlying script.
+> [!NOTE]
+> The `--` separator between `version:bump` and the version string is required by npm so the argument is forwarded to the underlying script.
 
 ### Automated release prep
 
 When a release is approaching, trigger the release prep workflow from the GitHub Actions tab:
 
-1. Go to **Actions → Release Prep → Run workflow**
-2. Enter the target version in `X.Y.Z` format (no `v` prefix)
-3. The workflow will open a PR that includes:
-   - Version bumped across all manifest files
-   - A draft `CHANGELOG.md` entry scaffolded from merged PRs since the last release, grouped by label
-4. Review the PR, clean up the CHANGELOG entry prose, and merge
-5. Create the GitHub Release with tag `v<version>` to trigger the build pipeline
+1. Go to **Actions → Release Prep → Run workflow**.
+2. Enter the target version in `X.Y.Z` format.
+3. The workflow opens a PR that includes:
+   - a version bump across all manifest files
+   - a draft `CHANGELOG.md` entry with merged PRs grouped by label
+4. Review the PR, clean up the changelog prose, and merge it.
+5. Create the GitHub Release with tag `v<version>` to trigger the build pipeline.
 
 ### Release validation (CI gate)
 
-`build-and-release.yml` includes a `validate-changelog` job that runs on every release trigger. It checks that `CHANGELOG.md` contains a `## [X.Y.Z]` entry matching the release tag before the publish step is allowed to proceed. If the entry is missing, the release is blocked. Always merge the release prep PR before creating the GitHub Release.
+`build-and-release.yml` contains a `validate-changelog` job that runs on every release trigger. It checks that `CHANGELOG.md` contains a `## [X.Y.Z]` entry matching the release tag before publishing proceeds. If the entry is missing, the release is blocked. Always merge the release prep PR before creating the GitHub Release.
 
-## Additional Resources
+## Additional resources
 
-- [Tauri Documentation](https://tauri.app/start/)
-- [React Documentation](https://reactjs.org/docs/getting-started.html)
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [Tauri documentation](https://tauri.app/start/)
+- [React documentation](https://react.dev/learn)
+- [FastAPI documentation](https://fastapi.tiangolo.com/)
 
 ## Troubleshooting
 
-If you encounter any issues, please check the respective documentation for Tauri, React, and FastAPI. For persistent problems, feel free to open an issue in the project repository.
+If you run into issues, check the relevant documentation for Tauri, React, and FastAPI. For persistent problems, open an issue in the project repository.
