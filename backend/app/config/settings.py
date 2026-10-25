@@ -254,6 +254,11 @@ PICTO_CLUSTERING_SIMILARITY_THRESHOLD = _get_env_float(
 PICTO_CLUSTERING_MERGE_THRESHOLD = _get_env_float(
     "PICTO_CLUSTERING_MERGE_THRESHOLD", 0.7, min_value=0.0, max_value=1.0
 )
+# estimate_eps only reads a 90th-percentile k-distance, so a sample is enough;
+# a full pass over every face is O(N^2).
+PICTO_CLUSTERING_EPS_SAMPLE_SIZE = _get_env_int(
+    "PICTO_CLUSTERING_EPS_SAMPLE_SIZE", 2000, min_value=10
+)
 PICTO_CLUSTERING_CONF_THRESHOLD = _get_env_float(
     "PICTO_CLUSTERING_CONF_THRESHOLD", 0.45, min_value=0.0, max_value=1.0
 )
