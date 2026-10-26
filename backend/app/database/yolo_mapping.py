@@ -1,13 +1,15 @@
 import sqlite3
 from app.config.settings import DATABASE_PATH
 from app.utils.YOLO import class_names
+# i included the logger for using logger.error() as this file doesnt actually already have it imported. I have used the same convention used in faces.py
+from app.logging.setup_logging import get_logger
+
+logger = get_logger(__name__)
+
 
 
 def db_create_YOLO_classes_table():
-    # print current directory:
-    import os
-
-    print(os.getcwd())
+    # i have removed the os lbrary and the print statement as requested by the officials
     conn = None
     try:
         conn = sqlite3.connect(DATABASE_PATH)
@@ -36,6 +38,8 @@ def db_create_YOLO_classes_table():
             )
 
         conn.commit()
+    except sqlite3.Error as v:
+        logger.error(f"error updating YOLO classes table:  {v}")
     finally:
         if conn is not None:
             conn.close()
