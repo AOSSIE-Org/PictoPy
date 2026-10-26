@@ -141,7 +141,7 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
 
         <CardContent className="flex-1 space-y-5 overflow-y-auto p-1 px-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {/* Avatar + Name row */}
-          <div className="flex items-end gap-3 rounded-lg border bg-neutral-900 p-3">
+          <div className="bg-muted/50 border-border flex items-end gap-3 rounded-lg border p-3">
             <button
               type="button"
               onClick={handleUploadClick}
@@ -155,8 +155,8 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
                   className="h-14 w-14 rounded-full object-cover ring-2 ring-blue-500"
                 />
               ) : (
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-neutral-800 ring-2 ring-blue-500">
-                  <span className="text-[9px] font-medium tracking-wide text-neutral-500 uppercase select-none">
+                <div className="bg-muted flex h-14 w-14 items-center justify-center rounded-full ring-2 ring-blue-500">
+                  <span className="text-muted-foreground text-[9px] font-medium tracking-wide uppercase select-none">
                     Preview
                   </span>
                 </div>
@@ -169,7 +169,7 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
             <div className="min-w-0 flex-1">
               <Label
                 htmlFor="name"
-                className="mb-1 block text-xs font-medium tracking-wide text-neutral-500"
+                className="text-muted-foreground mb-1 block text-xs font-medium tracking-wide"
               >
                 Your Name
               </Label>
@@ -178,7 +178,7 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
                 placeholder="Enter your name"
                 value={name}
                 onChange={(e) => handleNameChange(e.target.value)}
-                className="placeholder:text-md h-11 border-0 bg-transparent py-0 pr-0 pl-2 text-lg font-normal tracking-tight shadow-none placeholder:font-normal placeholder:tracking-normal placeholder:text-neutral-500 focus-visible:ring-0"
+                className="placeholder:text-md text-foreground placeholder:text-muted-foreground h-11 border-0 bg-transparent py-0 pr-0 pl-2 text-lg font-normal tracking-tight shadow-none placeholder:font-normal placeholder:tracking-normal focus-visible:ring-0"
               />
               {longWordError && (
                 <p className="mt-1.5 text-xs text-red-500">
