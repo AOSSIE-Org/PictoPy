@@ -39,7 +39,7 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
 
   const [name, setLocalName] = useState(localStorage.getItem('name') || '');
   const [selectedAvatar, setLocalAvatar] = useState(
-    localStorage.getItem('avatar') || '',
+    localStorage.getItem('avatar') || avatars[0],
   );
   const isEditing = useSelector(
     (state: RootState) => state.onboarding.isEditing,
