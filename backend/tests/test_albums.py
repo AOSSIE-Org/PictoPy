@@ -1,5 +1,6 @@
 import sys
 import os
+import sqlite3
 import pytest
 import bcrypt
 from fastapi import FastAPI
@@ -411,6 +412,96 @@ class TestAlbumRoutes:
             else:
                 mock_update_album.assert_not_called()
 
+    def test_update_album_duplicate_name(self, mock_db_album):
+        """
+        Test renaming an album to a name that belongs to another album return 409.
+        """
+        current_album = album_row(mock_db_album)
+        other_album = album_row(
+            {
+                "album_id": "other-album-id-123",
+                "album_name": "Vacation",
+                "description": "",
+                "is_locked": False,
+                "password_hash": None,
+            }
+        )
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_get_album_by_name"
+        ) as mock_get_by_name, patch(
+            "app.routes.albums.db_update_album"
+        ) as mock_update:
+            mock_get_album.return_value = current_album
+            mock_get_by_name.return_value = other_album
+
+            response = client.put(
+                f"/albums/{current_album['album_id']}",
+                json={"name": "Vacation", "description": "", "is_locked": False},
+            )
+            assert response.status_code == 409
+            json_response = response.json()
+            assert json_response["detail"]["success"] is False
+            assert json_response["detail"]["error"] == "Album Already Exists"
+            assert (
+                json_response["detail"]["message"]
+                == "An album with the name Vacation already exists, would you like to save this as Vacation1"
+            )
+            mock_update.assert_not_called()
+
+    def test_update_albums_same_name_allowed(self, mock_db_album):
+        """Test updating an album keeping its current name succeeds without 409."""
+        current_album = album_row(mock_db_album)
+
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_get_album_by_name"
+        ) as mock_get_by_name, patch(
+            "app.routes.albums.db_update_album"
+        ) as mock_update:
+            mock_get_album.return_value = current_album
+            mock_get_by_name.return_value = current_album
+
+            response = client.put(
+                f"/albums/{current_album['album_id']}",
+                json={
+                    "name": current_album["album_name"],
+                    "description": "Updated description",
+                    "is_locked": False,
+                },
+            )
+
+            assert response.status_code == 200
+            assert response.json()["success"] is True
+            mock_update.assert_called_once()
+
+    def test_update_album_integrity_error_mapped_to_conflict(self, mock_db_album):
+        """Test that a database uniqueness collision during update returns 409."""
+        current_album = album_row(mock_db_album)
+
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_get_album_by_name"
+        ) as mock_get_by_name, patch(
+            "app.routes.albums.db_update_album"
+        ) as mock_update:
+            mock_get_album.return_value = current_album
+            # Pre-check passes (e.g. race condition where name wasn't taken yet)
+            mock_get_by_name.return_value = None
+            mock_update.side_effect = sqlite3.IntegrityError(
+                "UNIQUE constraint failed: albums.album_name"
+            )
+
+            response = client.put(
+                f"/albums/{current_album['album_id']}",
+                json={"name": "RaceName", "description": "", "is_locked": False},
+            )
+            assert response.status_code == 409
+            json_response = response.json()
+            assert json_response["detail"]["success"] is False
+            assert json_response["detail"]["error"] == "Album Already Exists"
+            assert (
+                json_response["detail"]["message"]
+                == "An album with the name RaceName already exists, would you like to save this as RaceName1"
+            )
+
     def test_delete_album_success(self, mock_db_album):
         """
         Test successfully deleting an existing album.
@@ -466,6 +557,89 @@ class TestAlbumImageManagement:
             assert json_response["success"] is True
             assert "msg" in json_response
             assert f"{len(request_body['image_ids'])} images" in json_response["msg"]
+
+            mock_get_album.assert_called_once_with(album_id)
+            mock_add_images.assert_called_once_with(album_id, request_body["image_ids"])
+
+    def test_add_images_to_album_album_not_found(self):
+        """
+        Test adding images to a non-existent album returns HTTP 404 NOT FOUND.
+        """
+        album_id = "non-existent-album-id"
+        request_body = {
+            "image_ids": [
+                "71abff29-27b4-43a4-9e76-b78504bea325",
+            ]
+        }
+
+        with patch("app.routes.albums.db_get_album") as mock_get_album:
+            mock_get_album.return_value = None
+
+            response = client.post(f"/albums/{album_id}/images", json=request_body)
+            assert response.status_code == 404
+
+            json_response = response.json()
+            assert json_response["detail"]["success"] is False
+            assert json_response["detail"]["error"] == "Album Not Found"
+            mock_get_album.assert_called_once_with(album_id)
+
+    def test_add_images_to_album_invalid_ids_returns_404(self, mock_db_album):
+        """
+        Test adding invalid/non-existent image IDs returns HTTP 404 NOT FOUND.
+        """
+        album_id = mock_db_album["album_id"]
+        request_body = {
+            "image_ids": [
+                "71abff29-27b4-43a4-9e76-b78504bea325",
+            ]
+        }
+
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_add_images_to_album"
+        ) as mock_add_images:
+            mock_get_album.return_value = album_row(mock_db_album)
+            mock_add_images.side_effect = ValueError(
+                "None of the provided image IDs exist in the database."
+            )
+
+            response = client.post(f"/albums/{album_id}/images", json=request_body)
+            assert response.status_code == 404
+
+            json_response = response.json()
+            assert json_response["detail"]["success"] is False
+            assert json_response["detail"]["error"] == "Image Not Found"
+            assert (
+                "None of the provided image IDs exist in the database."
+                in json_response["detail"]["message"]
+            )
+
+            mock_get_album.assert_called_once_with(album_id)
+            mock_add_images.assert_called_once_with(album_id, request_body["image_ids"])
+
+    def test_add_images_to_album_db_error_returns_500(self, mock_db_album):
+        """
+        Test unexpected database exception when adding images returns HTTP 500.
+        """
+        album_id = mock_db_album["album_id"]
+        request_body = {
+            "image_ids": [
+                "71abff29-27b4-43a4-9e76-b78504bea325",
+            ]
+        }
+
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_add_images_to_album"
+        ) as mock_add_images:
+            mock_get_album.return_value = album_row(mock_db_album)
+            mock_add_images.side_effect = Exception("Database connection failed")
+
+            response = client.post(f"/albums/{album_id}/images", json=request_body)
+            assert response.status_code == 500
+
+            json_response = response.json()
+            assert json_response["detail"]["success"] is False
+            assert json_response["detail"]["error"] == "Failed to Add Images"
+            assert "Database connection failed" in json_response["detail"]["message"]
 
             mock_get_album.assert_called_once_with(album_id)
             mock_add_images.assert_called_once_with(album_id, request_body["image_ids"])
