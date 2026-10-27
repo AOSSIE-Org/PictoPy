@@ -3,6 +3,7 @@ Where export sits in the processing pipeline: once per sequence, after every
 photo stage, before the videos; and a failing export must not break anything.
 """
 
+from pathlib import Path
 from typing import Callable, List
 
 import pytest
@@ -101,9 +102,16 @@ def test_non_semantic_model_install_queues_nothing():
     assert submitted == []
 
 
-def test_startup_creates_and_shutdown_closes_the_debouncer():
+def test_startup_creates_and_shutdown_closes_the_debouncer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     from fastapi.testclient import TestClient
 
+    # main creates the thumbnail directory as it is imported, so point it away
+    # from the real user data directory first.
+    monkeypatch.setattr(
+        "app.config.settings.THUMBNAIL_IMAGES_PATH", str(tmp_path / "thumbnails")
+    )
     import main
     from app.utils.xmp.debounce import ExportDebouncer
 
