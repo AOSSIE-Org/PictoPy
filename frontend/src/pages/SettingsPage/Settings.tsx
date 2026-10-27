@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router';
 // Import modular components
 import FolderManagementCard from './components/FolderManagementCard';
 import UserPreferencesCard from './components/UserPreferencesCard';
+import MetadataExportCard from './components/MetadataExportCard';
 import ApplicationControlsCard from './components/ApplicationControlsCard';
 import AccountSettingsCard, {
   AccountSettingsCardHandle,
@@ -84,6 +85,7 @@ const Settings: React.FC = () => {
               <>
                 <FolderManagementCard />
                 <UserPreferencesCard />
+                <MetadataExportCard />
                 <ApplicationControlsCard />
                 <SystemSettingsCard />
               </>

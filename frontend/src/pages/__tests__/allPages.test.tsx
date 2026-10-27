@@ -2,6 +2,7 @@ import { render, act } from '@testing-library/react';
 import { AITagging } from '@/pages/AITagging/AITagging';
 import Album from '../Album/Album';
 import { Home } from '@/pages/Home/Home';
+import { MyFav } from '@/pages/Home/MyFav';
 import Memories from '../Memories/Memories';
 import Settings from '../SettingsPage/Settings';
 import { Videos } from '../VideosPage/Videos';
@@ -15,6 +16,7 @@ import { store } from '@/app/store';
 const pages = [
   { path: ROUTES.HOME, Component: Home },
   { path: ROUTES.VIDEOS, Component: Videos },
+  { path: ROUTES.FAVOURITES, Component: MyFav },
   { path: ROUTES.SETTINGS, Component: Settings },
   { path: ROUTES.AI, Component: AITagging },
   { path: ROUTES.ALBUMS, Component: Album },

@@ -24,7 +24,7 @@ you change this list, change that file too.
 Find what changed:
 
 ```bash
-git diff --name-only origin/main...HEAD
+git diff --name-only origin/dev...HEAD
 ```
 
 Skip gates for areas the diff does not touch, and say which ones you skipped and why. A
@@ -76,7 +76,18 @@ by hand.
 Covers both `backend/` and `sync-microservice/`.
 
 ```bash
-pre-commit run --config .pre-commit-config.yaml --all-files
+SKIP=mypy-backend,mypy-sync-microservice pre-commit run --config .pre-commit-config.yaml --all-files
+BASE_SHA=origin/dev
+HEAD_SHA=HEAD
+if ! git rev-parse --verify --quiet "${BASE_SHA}^{commit}" > /dev/null || \
+  ! git rev-parse --verify --quiet "${HEAD_SHA}^{commit}" > /dev/null; then
+  echo "Unable to resolve pull request commits for MyPy."
+  exit 1
+fi
+mapfile -t backend_files < <(git diff --name-only --diff-filter=ACMR "$BASE_SHA...$HEAD_SHA" -- ':(glob)backend/**/*.py')
+mapfile -t sync_files < <(git diff --name-only --diff-filter=ACMR "$BASE_SHA...$HEAD_SHA" -- ':(glob)sync-microservice/**/*.py')
+(( ${#backend_files[@]} > 0 )) && mypy --config-file backend/pyproject.toml "${backend_files[@]}"
+(( ${#sync_files[@]} > 0 )) && mypy --config-file sync-microservice/pyproject.toml "${sync_files[@]}"
 (cd backend && pytest)
 ```
 
@@ -122,7 +133,7 @@ If the format check fails, run `cargo fmt` without `--check` to fix it.
   from the linked issue onto the PR.
 - Confirm the issue was reviewed and labelled by a maintainer. PictoPy asks contributors
   not to open PRs against unlabelled issues.
-- PRs target `main`.
+- PRs target `dev`.
 
 ## Report
 

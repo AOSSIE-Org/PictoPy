@@ -21,8 +21,14 @@ def db_create_YOLO_classes_table():
         """
         )
         for class_id, name in enumerate(class_names):
+            # Upsert, not INSERT OR REPLACE: a replace deletes the row first,
+            # which cascades to every image_classes row once foreign keys are
+            # on. Writing only on a real change also keeps startup from
+            # marking every tagged image for metadata export.
             cursor.execute(
-                "INSERT OR REPLACE INTO mappings (class_id, name) VALUES (?, ?)",
+                "INSERT INTO mappings (class_id, name) VALUES (?, ?) "
+                "ON CONFLICT(class_id) DO UPDATE SET name = excluded.name "
+                "WHERE mappings.name IS NOT excluded.name",
                 (
                     class_id,
                     name,
