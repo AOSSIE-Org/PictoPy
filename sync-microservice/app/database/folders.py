@@ -5,7 +5,6 @@ from app.logging.setup_logging import get_sync_logger
 
 logger = get_sync_logger(__name__)
 
-# Type definitions
 FolderId = str
 FolderPath = str
 FolderIdPath = Tuple[FolderId, str]
@@ -68,7 +67,6 @@ def db_check_database_connection() -> bool:
     try:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
-        # Check if folders table exists
         cursor.execute(
             """
             SELECT name FROM sqlite_master 
@@ -99,11 +97,9 @@ def db_get_tagging_progress() -> List[FolderTaggingInfo]:
     cursor = conn.cursor()
 
     try:
-        # Pre-aggregate each media table by folder before joining, so a folder
-        # with M images and N videos never fans out to M*N intermediate rows.
-        # A video is "embedded" once tagged with no unembedded frames left -- a
-        # zero-frame (undecodable) video counts as embedded so it never stalls
-        # the bar.
+        # Pre-aggregated per table before joining, so M images and N videos never
+        # fan out to M*N rows. A video is embedded once tagged with no unembedded
+        # frames, so a tagged zero-frame (undecodable) one never stalls the bar.
         cursor.execute(
             """
             SELECT

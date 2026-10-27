@@ -335,7 +335,6 @@ const AccountSettingsCard = forwardRef<AccountSettingsCardHandle>(
             </div>
           </div>
 
-          {/* FOOTER */}
           <div className="border-border flex flex-col-reverse items-stretch gap-3 border-t px-6 py-4 sm:flex-row sm:items-center sm:justify-between md:px-8">
             <p className="text-muted-foreground text-xs">
               {hasUnsavedChanges

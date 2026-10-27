@@ -1,9 +1,5 @@
-/**
- * Memories Redux slice.
- *
- * Holds story-viewer UI state only. Memory data itself lives in React Query,
- * matching how the rest of the app splits server and UI state.
- */
+// Story-viewer UI state only. Memory data lives in React Query, matching how the
+// rest of the app splits server and UI state.
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 

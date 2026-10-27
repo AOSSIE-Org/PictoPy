@@ -7,7 +7,6 @@ from app.logging.setup_logging import get_logger
 
 logger = get_logger(__name__)
 
-# Type definitions
 FaceId = int
 ImageId = str
 FrameId = str
@@ -73,10 +72,9 @@ def db_create_faces_table() -> None:
             )
         """
         )
-        # Legacy databases only: they predate the column above, and
-        # CREATE IF NOT EXISTS will not add it to a table that already exists.
-        # No CHECK enforcing the exclusive arc -- SQLite cannot ALTER one in, so
-        # fresh and migrated databases would end up with different schemas.
+        # Legacy databases predate frame_id, and CREATE IF NOT EXISTS won't add
+        # it. No CHECK for the exclusive arc: SQLite can't ALTER one in, so fresh
+        # and migrated schemas would differ.
         cursor.execute("PRAGMA table_info(faces)")
         if "frame_id" not in {row[1] for row in cursor.fetchall()}:
             cursor.execute(
@@ -181,7 +179,6 @@ def db_insert_face_embeddings(
     try:
         embeddings_json = json.dumps([emb.tolist() for emb in embeddings])
 
-        # Convert bbox to JSON string if provided
         bbox_json = json.dumps(bbox) if bbox is not None else None
 
         cursor.execute(
@@ -220,7 +217,6 @@ def db_insert_face_embeddings_by_image_id(
         cluster_id: Cluster ID(s) for the face(s) (optional)
     """
 
-    # Handle multiple faces in one image
     if (
         isinstance(embeddings, list)
         and len(embeddings) > 0
@@ -247,7 +243,6 @@ def db_insert_face_embeddings_by_image_id(
             face_ids.append(face_id)
         return face_ids
     else:
-        # Single face
         return db_insert_face_embeddings(
             image_id,
             cast(FaceEmbedding, embeddings),
@@ -365,7 +360,6 @@ def db_get_faces_unassigned_clusters() -> (
         faces = []
         for row in rows:
             face_id, image_id, frame_id, embeddings_json = row
-            # Convert JSON string back to numpy array
             embeddings = np.array(json.loads(embeddings_json))
             faces.append(
                 {
@@ -410,7 +404,6 @@ def db_get_all_faces_with_cluster_names() -> (
         faces = []
         for row in rows:
             face_id, image_id, frame_id, embeddings_json, cluster_name = row
-            # Convert JSON string back to numpy array
             embeddings = np.array(json.loads(embeddings_json))
             faces.append(
                 {
@@ -455,9 +448,8 @@ def db_update_face_cluster_ids_batch(
         cursor = conn.cursor()
     assert cursor is not None
 
-    # 1. Prepare update data outside the DB transaction.
-    # mapping.get() calls could raise AttributeError if mappings are malformed;
-    # these are not sqlite3 errors and must be caught before the transaction.
+    # Build rows before the transaction: a malformed mapping raises AttributeError,
+    # which the sqlite3.Error handler below would not catch.
     try:
         update_data = [
             (mapping.get("cluster_id"), mapping.get("face_id"))
@@ -469,7 +461,7 @@ def db_update_face_cluster_ids_batch(
         logger.error(f"Failed to prepare face cluster update data: {e}")
         raise
 
-    # 2. Database transaction — only pure DB operations here, so sqlite3.Error is safe.
+    # Only DB calls in here, so catching sqlite3.Error is enough.
     try:
         cursor.executemany(
             """
@@ -536,21 +528,17 @@ def db_get_cluster_mean_embeddings() -> List[Dict[str, Union[str, FaceEmbedding]
         if not rows:
             return []
 
-        # Group embeddings by cluster_id
         cluster_embeddings: Dict[ClusterId, List[FaceEmbedding]] = {}
         for row in rows:
             cluster_id, embeddings_json = row
-            # Convert JSON string back to numpy array
             embeddings = np.array(json.loads(embeddings_json))
 
             if cluster_id not in cluster_embeddings:
                 cluster_embeddings[cluster_id] = []
             cluster_embeddings[cluster_id].append(embeddings)
 
-        # Calculate mean embeddings for each cluster
         cluster_means = []
         for cluster_id, embeddings_list in cluster_embeddings.items():
-            # Stack all embeddings for this cluster and calculate mean
             stacked_embeddings = np.stack(embeddings_list)
             mean_embedding = np.mean(stacked_embeddings, axis=0)
 

@@ -140,7 +140,6 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
         </CardHeader>
 
         <CardContent className="flex-1 space-y-5 overflow-y-auto p-1 px-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {/* Avatar + Name row */}
           <div className="flex items-end gap-3 rounded-lg border bg-neutral-900 p-3">
             <button
               type="button"
@@ -188,7 +187,6 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
             </div>
           </div>
 
-          {/* Avatar Grid */}
           <div>
             <div className="mb-3 pl-2">
               <Label className="text-sm">Choose Your Avatar</Label>

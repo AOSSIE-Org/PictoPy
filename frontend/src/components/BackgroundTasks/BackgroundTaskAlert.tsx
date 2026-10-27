@@ -15,10 +15,7 @@ export interface BackgroundTaskAlertProps {
   className?: string;
 }
 
-/**
- * Generic floating alert for long-running background work. Purely
- * presentational — pair it with a status hook that decides when and what.
- */
+/** Purely presentational -- pair it with a status hook that decides when. */
 export const BackgroundTaskAlert: React.FC<BackgroundTaskAlertProps> = ({
   title,
   description,

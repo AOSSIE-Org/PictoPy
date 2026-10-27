@@ -4,7 +4,6 @@ import { APIResponse } from '@/types/API';
 import { BackendRes } from '@/hooks/useQueryExtension';
 import type { Image, ImageMetadata, Video } from '@/types/Media';
 
-//Request Types
 export interface RenameClusterRequest {
   clusterId: string;
   newName: string;
@@ -21,7 +20,6 @@ export interface FetchSearchedFacesBase64Request {
   base64_data: string;
 }
 
-//Response Types
 /** A photo as the face routes return it: less than a full `Image`. */
 export interface FacePhoto {
   id: string;
