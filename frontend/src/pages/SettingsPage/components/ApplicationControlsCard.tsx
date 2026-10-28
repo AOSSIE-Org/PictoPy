@@ -150,7 +150,7 @@ const ApplicationControlsCard: React.FC = () => {
           <Button
             onClick={onGlobalReclusterClick}
             variant="outline"
-            className="flex h-12 w-full gap-3"
+            className="flex h-12 w-full cursor-pointer gap-3"
             title="Rebuild all face clusters from scratch using latest clustering algorithms"
           >
             <Users className="h-4 w-4 text-gray-600 dark:text-gray-400" />
