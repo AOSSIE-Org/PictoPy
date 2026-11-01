@@ -217,7 +217,7 @@ export const SearchResults = () => {
 
       return { ...tagResponse, resultType: 'tag' };
     },
-    enabled: !!query && clustersSettled && !isPeopleQuery,
+    enabled: !!query && clustersSettled && !isPeopleQuery && !isFaceMode,
   });
 
   // Videos run as their own query: they share the mode logic but a video
@@ -260,7 +260,7 @@ export const SearchResults = () => {
 
       return { ...tagResponse, resultType: 'tag' };
     },
-    enabled: !!query && clustersSettled && !isPeopleQuery,
+    enabled: !!query && clustersSettled && !isPeopleQuery && !isFaceMode,
   });
 
   useEffect(() => {

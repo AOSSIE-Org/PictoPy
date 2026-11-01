@@ -5,6 +5,8 @@ import { SearchResults } from '../SearchResults/SearchResults';
 import {
   fetchSearchedFaces,
   fetchSearchedFacesBase64,
+  searchImagesByTag,
+  searchVideosByTag,
 } from '@/api/api-functions';
 
 jest.mock('@/api/api-functions', () => ({
@@ -190,5 +192,18 @@ describe('SearchResults face mode', () => {
     fireEvent.error(await screen.findByAltText('Searched face'));
 
     expect(screen.queryByAltText('Searched face')).not.toBeInTheDocument();
+  });
+
+  test('ignores a text value in the URL and only runs the face search', async () => {
+    (fetchSearchedFaces as jest.Mock).mockResolvedValue({
+      success: true,
+      data: IMAGES,
+    });
+
+    renderPage('/photos/me.jpg', ['/search?mode=face&value=tree']);
+
+    await waitFor(() => expect(fetchSearchedFaces).toHaveBeenCalled());
+    expect(searchImagesByTag).not.toHaveBeenCalled();
+    expect(searchVideosByTag).not.toHaveBeenCalled();
   });
 });
