@@ -373,6 +373,89 @@ class TestExtractGPSCoordinatesExisting:
         assert extractor.extract_gps_coordinates(metadata) == (0.0, 0.0)
 
 
+class MockExifRatio:
+    """Simulates an EXIF rational value (e.g. IFDRational) with numerator and denominator."""
+
+    def __init__(self, numerator: int, denominator: int):
+        self.numerator = numerator
+        self.denominator = denominator
+
+
+class MockExifObject:
+    """Simulates PIL.Image.Exif object providing get_ifd."""
+
+    def __init__(self, gps_info: dict):
+        self._gps_info = gps_info
+
+    def get_ifd(self, tag: int):
+        # 34853 is GPS_INFO_TAG
+        if tag == 34853:
+            return self._gps_info
+        return {}
+
+
+class TestGpsZeroDivisionHandling:
+    """Tests that corrupted EXIF GPS values with denominator == 0 are handled gracefully."""
+
+    def test_convert_to_degrees_raises_zerodivision_on_zero_denominator(self):
+        """_convert_to_degrees must raise ZeroDivisionError when denominator is zero."""
+        from app.utils.images import _convert_to_degrees
+
+        # Corrupted DMS where the seconds rational has a denominator of zero
+        corrupt_dms = (
+            MockExifRatio(37, 1),
+            MockExifRatio(46, 1),
+            MockExifRatio(29, 0),
+        )
+        with pytest.raises(ZeroDivisionError, match="denominator is zero"):
+            _convert_to_degrees(corrupt_dms)
+
+    def test_convert_to_degrees_valid_rationals(self):
+        """_convert_to_degrees correctly calculates decimal degrees from valid rationals."""
+        from app.utils.images import _convert_to_degrees
+
+        # 37 deg, 30 min, 0 sec = 37.5 degrees
+        valid_dms = (
+            MockExifRatio(37, 1),
+            MockExifRatio(30, 1),
+            MockExifRatio(0, 1),
+        )
+        assert _convert_to_degrees(valid_dms) == pytest.approx(37.5)
+
+    def test_extract_gps_coordinates_handles_zero_denominator(self):
+        """_extract_gps_coordinates returns (None, None) when encountering zero denominator."""
+        from app.utils.images import _extract_gps_coordinates
+
+        # GPSInfo dict: Tag 1 = LatRef, 2 = LatDMS, 3 = LonRef, 4 = LonDMS
+        corrupt_gps_info = {
+            1: "N",
+            2: (MockExifRatio(37, 1), MockExifRatio(46, 1), MockExifRatio(29, 0)),
+            3: "W",
+            4: (MockExifRatio(122, 1), MockExifRatio(28, 1), MockExifRatio(56, 1)),
+        }
+        mock_exif = MockExifObject(corrupt_gps_info)
+
+        latitude, longitude = _extract_gps_coordinates(mock_exif)
+        assert latitude is None
+        assert longitude is None
+
+    def test_extract_gps_coordinates_handles_non_rational_numbers(self):
+        """_extract_gps_coordinates works when coordinates are plain floats/ints."""
+        from app.utils.images import _extract_gps_coordinates
+
+        plain_gps_info = {
+            1: "N",
+            2: (37.0, 30.0, 0.0),
+            3: "W",
+            4: (122.0, 30.0, 0.0),
+        }
+        mock_exif = MockExifObject(plain_gps_info)
+
+        latitude, longitude = _extract_gps_coordinates(mock_exif)
+        assert latitude == pytest.approx(37.5)
+        assert longitude == pytest.approx(-122.5)
+
+
 class TestExtractAll:
     """Test class for the JSON entry point used during image upload."""
 
