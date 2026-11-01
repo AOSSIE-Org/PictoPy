@@ -204,32 +204,4 @@ describe('MyFav (Favorites) page', () => {
     await screen.findByAltText('summer-photo.jpg');
     expect(screen.queryByText(/June 2024/)).not.toBeInTheDocument();
   });
-
-  test('excludes previously-loaded favourited videos while a face search is active', async () => {
-    jest.mocked(fetchAllImages).mockResolvedValue({
-      success: true,
-      data: [],
-    });
-    jest.mocked(fetchAllVideos).mockResolvedValue({
-      success: true,
-      data: [],
-    });
-
-    render(<MyFav />, {
-      preloadedState: {
-        search: { active: true, queryImage: 'query.jpg' },
-        images: {
-          images: [makeImage({ id: 'search-hit' })],
-          currentViewIndex: -1,
-        },
-        videos: { videos: [makeVideo()], currentViewIndex: -1 },
-      },
-    });
-
-    expect(await screen.findByAltText('summer-photo.jpg')).toBeInTheDocument();
-    expect(screen.getByText(/Face Search Results/)).toBeInTheDocument();
-    expect(
-      screen.queryByLabelText('Play winter-clip.mp4'),
-    ).not.toBeInTheDocument();
-  });
 });

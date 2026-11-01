@@ -1,12 +1,10 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 interface SearchState {
-  active: boolean;
   queryImage?: string;
 }
 
 const initialState: SearchState = {
-  active: false,
   queryImage: undefined,
 };
 
@@ -15,11 +13,9 @@ const searchSlice = createSlice({
   initialState,
   reducers: {
     startSearch(state, action: PayloadAction<string>) {
-      state.active = true;
       state.queryImage = action.payload;
     },
     clearSearch(state) {
-      state.active = false;
       state.queryImage = undefined;
     },
   },

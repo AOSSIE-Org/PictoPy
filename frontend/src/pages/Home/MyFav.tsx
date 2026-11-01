@@ -13,7 +13,6 @@ import { selectVideos } from '@/features/videoSelectors';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { usePersistedSort } from '@/hooks/usePersistedSort';
 import { fetchAllImages, fetchAllVideos } from '@/api/api-functions';
-import { RootState } from '@/app/store';
 import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 import { Calendar, Heart, ListOrdered } from 'lucide-react';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
@@ -36,8 +35,6 @@ export const MyFav = () => {
   const videos = useSelector(selectVideos);
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
-  const searchState = useSelector((state: RootState) => state.search);
-  const isSearchActive = searchState.active;
   const [sortBy, setSortBy] = usePersistedSort<FavoritesSortValue>(
     FAV_SORT_STORAGE_KEY,
     'date',
@@ -53,7 +50,6 @@ export const MyFav = () => {
   } = usePictoQuery({
     queryKey: ['images'],
     queryFn: () => fetchAllImages(),
-    enabled: !isSearchActive,
   });
 
   const {
@@ -65,7 +61,6 @@ export const MyFav = () => {
   } = usePictoQuery({
     queryKey: ['videos'],
     queryFn: () => fetchAllVideos(),
-    enabled: !isSearchActive,
   });
 
   // A single feedback call owns the global loader, kept up for as long as
@@ -110,16 +105,16 @@ export const MyFav = () => {
 
   // Handle fetching lifecycle
   useEffect(() => {
-    if (!isSearchActive && isImagesSuccess) {
+    if (isImagesSuccess) {
       dispatch(setImages(imageData?.data ?? []));
     }
-  }, [imageData, isImagesSuccess, dispatch, isSearchActive]);
+  }, [imageData, isImagesSuccess, dispatch]);
 
   useEffect(() => {
-    if (!isSearchActive && isVideosSuccess) {
+    if (isVideosSuccess) {
       dispatch(setVideos(videoData?.data ?? []));
     }
-  }, [videoData, isVideosSuccess, dispatch, isSearchActive]);
+  }, [videoData, isVideosSuccess, dispatch]);
 
   const favouriteImages = useMemo(
     () => images.filter((image) => image.isFavourite === true),
@@ -127,27 +122,16 @@ export const MyFav = () => {
   );
 
   const favouriteVideos = useMemo(
-    // The video query is disabled during search, but the store still holds
-    // whatever favourited videos were loaded before search started -- don't
-    // let them leak into the face-search results.
-    () =>
-      isSearchActive
-        ? []
-        : videos.filter((video) => video.isFavourite === true),
-    [videos, isSearchActive],
+    () => videos.filter((video) => video.isFavourite === true),
+    [videos],
   );
 
   const favouriteCount = favouriteImages.length + favouriteVideos.length;
 
-  const title =
-    isSearchActive && images.length > 0
-      ? `Face Search Results (${images.length} found)`
-      : 'Favorites';
-
   if (favouriteCount === 0) {
     return (
       <div className="p-6">
-        <h1 className="mb-6 text-2xl font-bold">{title}</h1>
+        <h1 className="mb-6 text-2xl font-bold">Favorites</h1>
         <div className="flex flex-col items-center justify-center py-16 text-center">
           {/* Heart Icon/Sticker */}
           <div className="bg-muted/50 mb-6 flex h-32 w-32 items-center justify-center rounded-full">
@@ -180,15 +164,13 @@ export const MyFav = () => {
             videos={favouriteVideos}
             sortBy={sortBy}
             showTitle={true}
-            title={title}
+            title="Favorites"
             titleRight={
-              !isSearchActive && (
-                <GallerySortDropdown
-                  value={sortBy}
-                  onValueChange={setSortBy}
-                  options={FAV_SORT_OPTIONS}
-                />
-              )
+              <GallerySortDropdown
+                value={sortBy}
+                onValueChange={setSortBy}
+                options={FAV_SORT_OPTIONS}
+              />
             }
             onMonthOffsetsChange={setMonthMarkers}
             scrollContainerRef={scrollableRef}
