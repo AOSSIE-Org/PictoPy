@@ -52,8 +52,29 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
+def _format_exception_message(error_message: str, exc: Exception) -> str:
+    """Format a clear and informative error message for clients while avoiding raw internal trace dumps."""
+    if isinstance(exc, sqlite3.OperationalError):
+        # Database busy/locked or disk I/O constraints
+        msg = str(exc).lower()
+        if "locked" in msg or "busy" in msg:
+            return "Database is currently busy or locked. Please retry in a moment."
+        return "Database operational error occurred while processing the request."
+    elif isinstance(exc, sqlite3.IntegrityError):
+        # Foreign key or constraint failure
+        return "Database integrity constraint violated."
+    elif isinstance(exc, (PermissionError, IOError)):
+        # Storage or filesystem permission issues
+        return "Storage or filesystem access error occurred."
+    elif isinstance(exc, (ValueError, TypeError)):
+        # Input validation issues raised during database processing
+        return str(exc)
+
+    return error_message
+
+
 def handle_route_exceptions(
-    error_title: str, error_message: str
+    error_title: str, default_error_message: str
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     def decorator(func: Callable[P, R]) -> Callable[P, R]:
         @wraps(func)
@@ -64,12 +85,13 @@ def handle_route_exceptions(
                 raise
             except Exception as e:
                 logger.error(f"Error in {func.__name__} route: {e}")
+                client_message = _format_exception_message(default_error_message, e)
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail=ErrorResponse(
                         success=False,
                         error=error_title,
-                        message=error_message,
+                        message=client_message,
                     ).model_dump(),
                 )
 

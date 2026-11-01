@@ -849,3 +849,19 @@ class TestAlbumRouteErrors:
                 json_resp = response.json()
                 assert json_resp["detail"]["success"] is False
                 assert "album already exists" in json_resp["detail"]["error"].lower()
+
+    def test_database_locked_operational_error(self):
+        """Verify that a database locked OperationalError provides an informative error message."""
+        import sqlite3
+        from unittest.mock import patch
+
+        with patch("app.routes.albums.db_get_all_albums") as mock_get_all:
+            mock_get_all.side_effect = sqlite3.OperationalError("database is locked")
+            response = client.get("/albums/")
+            assert response.status_code == 500
+            json_resp = response.json()
+            assert json_resp["detail"]["success"] is False
+            assert (
+                "database is currently busy or locked"
+                in json_resp["detail"]["message"].lower()
+            )
