@@ -127,7 +127,14 @@ function Albums() {
   });
 
   const deleteAlbumMutation = usePictoMutation({
-    mutationFn: deleteAlbum,
+    mutationFn: ({
+      albumId,
+      password,
+    }: {
+      albumId: string;
+      password?: string;
+    }) =>
+      deleteAlbum(albumId, password !== undefined ? { password } : undefined),
     autoInvalidateTags: ['albums'],
   });
 
@@ -195,14 +202,14 @@ function Albums() {
     setIsDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = (password?: string) => {
     if (!albumToDelete) return;
     const albumId = albumToDelete.id;
     // Close on confirm rather than on success: a failed delete would otherwise
     // leave this dialog stacked underneath the error dialog.
     setIsDeleteDialogOpen(false);
     setAlbumToDelete(null);
-    deleteAlbumMutation.mutate(albumId);
+    deleteAlbumMutation.mutate({ albumId, password });
   };
 
   const handleRefresh = async () => {
@@ -326,6 +333,7 @@ function Albums() {
         }}
         onConfirm={confirmDelete}
         albumName={albumToDelete?.name || ''}
+        isLocked={albumToDelete?.is_locked || false}
       />
     </div>
   );

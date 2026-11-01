@@ -51,6 +51,10 @@ export interface GetAlbumImagesRequest {
   password?: string;
 }
 
+export interface DeleteAlbumRequest {
+  password?: string;
+}
+
 export interface RemoveImagesFromAlbumRequest {
   image_ids: string[];
 }
