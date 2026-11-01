@@ -45,7 +45,7 @@ const renderPage = (
     {
       initialRoutes,
       preloadedState: {
-        search: { active: !!queryImage, queryImage },
+        search: { queryImage },
       },
     },
   );
