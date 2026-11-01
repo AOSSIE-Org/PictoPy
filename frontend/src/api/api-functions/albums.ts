@@ -9,6 +9,7 @@ import {
   UpdateAlbumRequest,
   AddImagesToAlbumRequest,
   GetAlbumImagesRequest,
+  DeleteAlbumRequest,
   RemoveImagesFromAlbumRequest,
 } from '@/types/Album';
 
@@ -80,10 +81,16 @@ export const updateAlbum = async (
 /**
  * Delete an album
  * @param albumId - Album UUID
+ * @param data - Optional delete data (e.g., password for locked albums)
  */
-export const deleteAlbum = async (albumId: string): Promise<APIResponse> => {
+export const deleteAlbum = async (
+  albumId: string,
+  data?: DeleteAlbumRequest,
+): Promise<APIResponse> => {
+  // Axios DELETE sends body via config.data
   const response = await apiClient.delete<APIResponse>(
     albumsEndpoints.deleteAlbum(albumId),
+    data ? { data } : undefined,
   );
   return response.data;
 };

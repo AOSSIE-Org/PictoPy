@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Body, Path
 from starlette.datastructures import State
 import sqlite3
@@ -13,6 +14,7 @@ from app.schemas.album import (
     GetAlbumResponse,
     GetAlbumImagesRequest,
     GetAlbumImagesResponse,
+    DeleteAlbumRequest,
     UpdateAlbumRequest,
     SuccessResponse,
     ErrorResponse,
@@ -267,7 +269,11 @@ def update_album(
 
 # DELETE /albums/{album_id} - Delete an album
 @router.delete("/{album_id}", response_model=SuccessResponse)
-def delete_album(album_id: str = Path(...), app_state: State = Depends(get_state)):
+def delete_album(
+    album_id: str = Path(...),
+    body: Optional[DeleteAlbumRequest] = Body(None),
+    app_state: State = Depends(get_state),
+):
     album = db_get_album(album_id)
     if not album:
         raise HTTPException(
@@ -278,6 +284,29 @@ def delete_album(album_id: str = Path(...), app_state: State = Depends(get_state
                 message="No album exists with the provided ID.",
             ).model_dump(),
         )
+
+    # Security check: Password-protected locked albums must not be deletable without password verification
+    if album["is_locked"]:
+        provided_password = body.password if body else None
+        if not provided_password:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Missing Password",
+                    message="Password is required to delete this locked album.",
+                ).model_dump(),
+            )
+
+        if not verify_album_password(album_id, provided_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Incorrect Password",
+                    message="The provided password is incorrect.",
+                ).model_dump(),
+            )
 
     try:
         db_delete_album(album_id)

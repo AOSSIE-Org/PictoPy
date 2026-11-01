@@ -312,4 +312,61 @@ describe('Albums page', () => {
     expect(store.getState().albums.albums).toHaveLength(1);
     expect(screen.getByText('Trip')).toBeInTheDocument();
   }, 30000);
+
+  test('prompts for password when deleting a locked album', async () => {
+    serverAlbums = [
+      {
+        album_id: 'locked-1',
+        album_name: 'Locked Album',
+        description: '',
+        is_locked: true,
+        cover_image_path: null,
+        image_count: 2,
+      },
+    ];
+
+    const user = userEvent.setup();
+    render(<AlbumsWithGlobalOverlays />);
+
+    await screen.findByText('Locked Album');
+
+    const card = screen.getByText('Locked Album').closest('[data-slot="card"]');
+    await user.click(
+      card!.querySelector('[aria-haspopup="menu"]') as HTMLElement,
+    );
+
+    const menuItems = await screen.findAllByRole('menuitem');
+    const deleteItem = menuItems.find((item) =>
+      /delete album/i.test(item.textContent || ''),
+    );
+    await user.click(deleteItem as HTMLElement);
+
+    // Dialog opens with password input
+    const confirmDialog = await screen.findByRole('dialog');
+    const passwordInput =
+      within(confirmDialog).getByLabelText(/album password/i);
+    expect(passwordInput).toBeInTheDocument();
+
+    // Clicking delete without typing password shows validation error
+    const deleteBtn = within(confirmDialog).getByRole('button', {
+      name: /delete album/i,
+    });
+    await user.click(deleteBtn);
+    expect(
+      within(confirmDialog).getByText(
+        /password is required to delete a locked album/i,
+      ),
+    ).toBeInTheDocument();
+    expect(mockDeleteAlbum).not.toHaveBeenCalled();
+
+    // Fill in password and submit
+    await user.type(passwordInput, 'secret123');
+    await user.click(deleteBtn);
+
+    await waitFor(() =>
+      expect(mockDeleteAlbum).toHaveBeenCalledWith('locked-1', {
+        password: 'secret123',
+      }),
+    );
+  }, 30000);
 });
