@@ -60,7 +60,8 @@ def submit_embedding_backfill_if_semantic(
 class DownloadTaskEntry:
     queue: asyncio.Queue
     task: asyncio.Task
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    # Updated on every progress event, so cleanup only stops stuck downloads.
+    last_activity: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     active_listeners: int = 0
     listener_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
@@ -81,6 +82,12 @@ async def _get_model_download_lock(model_key: str) -> asyncio.Lock:
         return _model_download_locks[model_key]
 
 
+def _mark_activity(task_id: str) -> None:
+    entry = download_tasks.get(task_id)
+    if entry:
+        entry.last_activity = datetime.now(timezone.utc)
+
+
 async def _cleanup_stale_tasks(max_age_minutes: int = 10):
     while True:
         await asyncio.sleep(300)  # run every 5 minutes
@@ -88,7 +95,7 @@ async def _cleanup_stale_tasks(max_age_minutes: int = 10):
         stale = [
             tid
             for tid, entry in download_tasks.items()
-            if (now - entry.created_at).total_seconds() > max_age_minutes * 60
+            if (now - entry.last_activity).total_seconds() > max_age_minutes * 60
         ]
         for tid in stale:
             entry = download_tasks.pop(tid, None)
@@ -252,6 +259,7 @@ async def setup_models(request: SetupRequest, app_state: State = Depends(get_sta
                     _idx: int = idx,
                     _total_models: int = total_models,
                 ):
+                    _mark_activity(task_id)
                     # Send progress update
                     queue.put_nowait(
                         {
@@ -273,6 +281,10 @@ async def setup_models(request: SetupRequest, app_state: State = Depends(get_sta
                 models_to_download, app_state.executor
             )
             queue.put_nowait({"status": "complete"})
+        except asyncio.CancelledError:
+            # CancelledError is not an Exception, so tell the client here.
+            queue.put_nowait({"status": "error", "message": "Download cancelled"})
+            raise
         except Exception as e:
             logger.error(f"Error during setup download: {e}")
             queue.put_nowait({"status": "error", "message": str(e)})
@@ -306,6 +318,7 @@ async def start_download_model(model_key: str, app_state: State = Depends(get_st
         try:
 
             def progress_callback(percent: float, downloaded: int, total: int):
+                _mark_activity(task_id)
                 queue.put_nowait(
                     {
                         "status": "downloading",
@@ -321,6 +334,10 @@ async def start_download_model(model_key: str, app_state: State = Depends(get_st
                 await ensure_model(model_key, progress_callback=progress_callback)
             submit_embedding_backfill_if_semantic([model_key], app_state.executor)
             queue.put_nowait({"status": "complete", "model_key": model_key})
+        except asyncio.CancelledError:
+            # CancelledError is not an Exception, so tell the client here.
+            queue.put_nowait({"status": "error", "message": "Download cancelled"})
+            raise
         except Exception as e:
             logger.error(f"Error downloading model {model_key}: {e}")
             queue.put_nowait({"status": "error", "message": str(e)})

@@ -3,6 +3,7 @@ import asyncio
 import sys
 import json
 import uuid
+from datetime import datetime, timedelta, timezone
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -990,3 +991,84 @@ class TestEmbeddingBackfillTrigger:
                 call(semantic_util_score_images),
             ]
         )
+
+
+class TestStaleDownloadCleanup:
+    @staticmethod
+    async def _start(endpoint: str) -> DownloadTaskEntry:
+        # Call the route functions directly so the test owns the event loop
+        # and can cancel the background task the same way cleanup does.
+        app_state = MagicMock()
+        if endpoint == "setup":
+            response = await models_module.setup_models(
+                models_module.SetupRequest(tier="required"), app_state
+            )
+        else:
+            response = await models_module.start_download_model("facenet", app_state)
+        return models_module.download_tasks[response["task_id"]]
+
+    def test_cleanup_cancels_only_downloads_without_progress(self):
+        stuck_task, active_task = MagicMock(), MagicMock()
+        stuck_task.done.return_value = active_task.done.return_value = False
+        stuck = DownloadTaskEntry(queue=asyncio.Queue(), task=stuck_task)
+        stuck.last_activity -= timedelta(minutes=11)
+        active = DownloadTaskEntry(queue=asyncio.Queue(), task=active_task)
+        active.last_activity -= timedelta(minutes=9)
+        models_module.download_tasks.update({"stuck": stuck, "active": active})
+
+        # Let the loop run one pass, then stop it on the second sleep.
+        with patch(
+            "app.routes.models.asyncio.sleep",
+            new=AsyncMock(side_effect=[None, asyncio.CancelledError]),
+        ):
+            with pytest.raises(asyncio.CancelledError):
+                asyncio.run(models_module._cleanup_stale_tasks())
+
+        assert list(models_module.download_tasks) == ["active"]
+        stuck_task.cancel.assert_called_once()
+        active_task.cancel.assert_not_called()
+
+    @pytest.mark.parametrize("endpoint", ["setup", "download"])
+    def test_progress_updates_last_activity(self, endpoint):
+        old = datetime.now(timezone.utc) - timedelta(minutes=20)
+
+        async def fake_ensure_model(model_key, progress_callback):
+            entry = next(iter(models_module.download_tasks.values()))
+            entry.last_activity = old
+            progress_callback(50.0, 1, 2)
+
+        async def run():
+            entry = await self._start(endpoint)
+            await entry.task
+            return entry
+
+        with patch("app.routes.models.ensure_model", new=fake_ensure_model):
+            entry = asyncio.run(run())
+
+        statuses = [
+            entry.queue.get_nowait()["status"] for _ in range(entry.queue.qsize())
+        ]
+        assert statuses == ["downloading", "complete"]
+        assert entry.last_activity > old
+
+    @pytest.mark.parametrize("endpoint", ["setup", "download"])
+    def test_cancelled_download_sends_error_event(self, endpoint):
+        async def never_finishes(model_key, progress_callback):
+            await asyncio.Event().wait()
+
+        async def run():
+            entry = await self._start(endpoint)
+            await asyncio.sleep(0)  # let the download start
+            entry.task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await entry.task
+            return entry
+
+        with patch("app.routes.models.ensure_model", new=never_finishes):
+            entry = asyncio.run(run())
+
+        assert entry.queue.get_nowait() == {
+            "status": "error",
+            "message": "Download cancelled",
+        }
+        assert entry.queue.empty()
