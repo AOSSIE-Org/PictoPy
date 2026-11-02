@@ -2,7 +2,7 @@ import os
 import sqlite3
 import tempfile
 from typing import Iterator, List, Tuple
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -113,3 +113,17 @@ class TestCreateYOLOClassesTable:
                 db_create_YOLO_classes_table()
 
         mock_logger.error.assert_called_once()
+
+    def test_logs_the_original_error_when_rollback_fails(self):
+        conn = MagicMock()
+        conn.cursor.return_value.execute.side_effect = sqlite3.Error("original")
+        conn.rollback.side_effect = sqlite3.Error("rollback failed")
+
+        with patch(
+            "app.database.yolo_mapping.sqlite3.connect", return_value=conn
+        ), patch("app.database.yolo_mapping.logger") as mock_logger:
+            with pytest.raises(sqlite3.Error):
+                db_create_YOLO_classes_table()
+
+        mock_logger.error.assert_called_once()
+        assert "original" in mock_logger.error.call_args[0][0]
