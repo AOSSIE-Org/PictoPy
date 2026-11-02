@@ -69,7 +69,7 @@ Opens an image or video in the operating system's default application.
 
 The path is validated before the file is opened. The command rejects with an error if any check fails:
 
-1. The path is resolved with `canonicalize`, which blocks `..` tricks and symlinks. If the file does not exist, the error is `File does not exist`.
+1. The path is resolved with `canonicalize`, which normalizes `..` segments and follows symlinks to their real target. All later checks run against that resolved path. If the file does not exist, the error is `File does not exist`.
 2. The resolved path must be a file (`Path is not a file`).
 3. Its extension must be in the list returned by the backend's `/config/supported-extensions` endpoint (`Only image and video files can be opened`).
 4. It must be inside one of the library folders returned by the backend's `/folders/all-folders` endpoint (`File is outside the library folders`).
@@ -245,7 +245,7 @@ A background task in `src/memories.rs` checks the backend for a new memory and a
 
 ### open_memory
 
-Brings the main window to the front and routes the app to a memory.
+Brings the main window to the front and asks the frontend to open a memory by emitting `memory:open`.
 
 - **Source**: `src/memories.rs`
 - **Signature**: `pub fn open_memory(app: AppHandle, memory_id: String) -> Result<(), String>`
@@ -314,7 +314,7 @@ interface MemoryOpenPayload {
 
 ### Subscription pattern
 
-Register the listeners, then call `take_pending_memory` to collect any announcement emitted before the listeners existed.
+Register the listeners first and wait for registration to finish, then call `take_pending_memory` to collect any announcement emitted before the listeners existed.
 
 ```typescript
 import { useEffect } from 'react';
@@ -326,28 +326,49 @@ function useMemoryEvents(
   onOpen: (memoryId: string) => void,
 ) {
   useEffect(() => {
-    const subscriptions = [
-      listen<MemoryAnnouncement>('memory:pending', (event) =>
-        onPending(event.payload),
-      ),
-      listen<{ memory_id: string }>('memory:open', (event) =>
-        onOpen(event.payload.memory_id),
-      ),
-    ];
+    let cancelled = false;
+    let cleanup = () => {};
+    const seen = new Set<string>();
 
-    // Collect an announcement emitted before the listeners were registered.
-    invoke<MemoryAnnouncement | null>('take_pending_memory').then((pending) => {
-      if (pending) onPending(pending);
-    });
+    const deliver = (memory: MemoryAnnouncement) => {
+      if (seen.has(memory.memory_id)) return;
+      seen.add(memory.memory_id);
+      onPending(memory);
+    };
+
+    (async () => {
+      const unlistenPending = await listen<MemoryAnnouncement>(
+        'memory:pending',
+        (event) => deliver(event.payload),
+      );
+      const unlistenOpen = await listen<{ memory_id: string }>(
+        'memory:open',
+        (event) => onOpen(event.payload.memory_id),
+      );
+      cleanup = () => {
+        unlistenPending();
+        unlistenOpen();
+      };
+      if (cancelled) {
+        cleanup();
+        return;
+      }
+
+      const pending = await invoke<MemoryAnnouncement | null>(
+        'take_pending_memory',
+      );
+      if (pending && !cancelled) deliver(pending);
+    })();
 
     return () => {
-      subscriptions.forEach((subscription) =>
-        subscription.then((unlisten) => unlisten()),
-      );
+      cancelled = true;
+      cleanup();
     };
   }, [onPending, onOpen]);
 }
 ```
+
+The backend stores each announcement in a pending slot before emitting the event, and only `take_pending_memory` clears it. Deduplicating by `memory_id` avoids delivering the same memory twice, for example if the hook remounts.
 
 ## Cross-Platform Support
 
