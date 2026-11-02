@@ -314,7 +314,7 @@ interface MemoryOpenPayload {
 
 ### Subscription pattern
 
-Register the listeners first and wait for registration to finish, then call `take_pending_memory` to collect any announcement emitted before the listeners existed.
+Register the listeners, then call `take_pending_memory` to collect any `memory:pending` announcement emitted before the listener existed.
 
 `take_pending_memory` clears the backend slot before its promise resolves, so the returned value must never be dropped. In particular, do not discard it because the component unmounted while the call was in flight. Deliver it to a store that outlives the component, and let a later mount pick it up.
 
@@ -357,45 +357,43 @@ function useMemoryEvents(
   onOpen: (memoryId: string) => void,
 ) {
   useEffect(() => {
-    let cancelled = false;
-    let cleanup = () => {};
     const unsubscribe = pendingStore.subscribe(onPending);
 
-    (async () => {
-      const unlistenPending = await listen<MemoryAnnouncement>(
-        'memory:pending',
-        (event) => pendingStore.deliver(event.payload),
-      );
-      const unlistenOpen = await listen<{ memory_id: string }>(
-        'memory:open',
-        (event) => onOpen(event.payload.memory_id),
-      );
-      cleanup = () => {
-        unlistenPending();
-        unlistenOpen();
-      };
-      if (cancelled) {
-        cleanup();
-        return;
-      }
+    // Start both registrations at once, so neither waits on the other.
+    const pendingListener = listen<MemoryAnnouncement>(
+      'memory:pending',
+      (event) => pendingStore.deliver(event.payload),
+    );
+    const openListener = listen<{ memory_id: string }>('memory:open', (event) =>
+      onOpen(event.payload.memory_id),
+    );
+    openListener.catch((error) => console.error('memory:open:', error));
 
-      // Always hand the result to the store, even if the effect has since unmounted.
-      const pending = await invoke<MemoryAnnouncement | null>(
-        'take_pending_memory',
-      );
-      if (pending) pendingStore.deliver(pending);
-    })();
+    // Collect an announcement emitted before the pending listener existed.
+    // The result always goes to the store, even if this effect has unmounted.
+    pendingListener
+      .then(() => invoke<MemoryAnnouncement | null>('take_pending_memory'))
+      .then((pending) => {
+        if (pending) pendingStore.deliver(pending);
+      })
+      .catch((error) => console.error('memory:pending:', error));
 
     return () => {
-      cancelled = true;
       unsubscribe();
-      cleanup();
+      // Clean up each registration on its own. One that has not resolved yet
+      // is removed as soon as it does, and one that rejects does not affect
+      // the other.
+      [pendingListener, openListener].forEach((registration) =>
+        registration.then((unlisten) => unlisten()).catch(() => {}),
+      );
     };
   }, [onPending, onOpen]);
 }
 ```
 
 The backend stores each announcement in a pending slot before emitting the event, and only `take_pending_memory` clears it. The store deduplicates by `memory_id`, so a memory delivered by both the event and the pending slot is handled once.
+
+`memory:open` has no pending slot. It is emitted only while the app is running, when `open_memory` is invoked, and an event emitted before its listener registers is not replayed. Use the hook in a component that stays mounted for the lifetime of the main window, such as the app root.
 
 ## Cross-Platform Support
 
