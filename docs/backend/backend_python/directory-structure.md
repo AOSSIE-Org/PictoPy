@@ -111,7 +111,7 @@ This directory contains Pydantic models defining the structure and validation of
 | `memories.py`         | Requests and responses for the memories API: generating, listing, viewing, updating and deleting memories, today's memory, generation status, and error responses. |
 | `metadata_export.py`  | Error response for the metadata export routes.                  |
 | `share.py`            | Requests and responses for album sharing: creating, listing and revoking shares, available network interfaces, and error responses. |
-| `test.py`             | Tests image detection requests, responses, and error handling.  |
+| `test.py`             | Defines Pydantic request and response models for the legacy test routes.  |
 | `user_preferences.py` | User preferences API requests, responses, and error handling.   |
 | `videos.py`           | Video data and metadata models, and the error response used by the video routes. |
 
