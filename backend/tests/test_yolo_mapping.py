@@ -96,3 +96,20 @@ class TestCreateYOLOClassesTable:
         ):
             with pytest.raises(sqlite3.Error):
                 db_create_YOLO_classes_table()
+
+    def test_creation_prints_nothing(self, test_db, monkeypatch, capsys):
+        set_class_names(monkeypatch, ["person"])
+
+        db_create_YOLO_classes_table()
+
+        assert capsys.readouterr().out == ""
+
+    def test_logs_and_reraises_a_database_error(self):
+        with patch(
+            "app.database.yolo_mapping.sqlite3.connect",
+            side_effect=sqlite3.Error("fail"),
+        ), patch("app.database.yolo_mapping.logger") as mock_logger:
+            with pytest.raises(sqlite3.Error):
+                db_create_YOLO_classes_table()
+
+        mock_logger.error.assert_called_once()
