@@ -240,8 +240,21 @@ def image_util_classify_and_face_detect_images(
             image_path = image["path"]
             image_id = image["id"]
 
-            # Step 1: Get classes
-            classes = object_classifier.get_classes(image_path)
+            # Keep inference failures local without hiding database failures.
+            try:
+                classes = object_classifier.get_classes(image_path)
+            except Exception:
+                logger.exception(
+                    f"Error classifying image {image_id} ({image_path}); skipping"
+                )
+                continue
+
+            if classes is None:
+                logger.warning(
+                    f"Could not classify image {image_id} ({image_path}); "
+                    "leaving untagged for retry"
+                )
+                continue
 
             # Step 2: Insert class-image pairs if classes were detected
             if len(classes) > 0:
@@ -254,7 +267,15 @@ def image_util_classify_and_face_detect_images(
 
             # Step 3: Detect faces if "person" class is present
             if classes and 0 in classes:
-                result = face_detector.detect_faces(image_path)
+                try:
+                    result = face_detector.detect_faces(image_path)
+                except Exception:
+                    logger.exception(
+                        f"Error detecting faces for image {image_id} "
+                        f"({image_path}); skipping"
+                    )
+                    continue
+
                 if result and result["embeddings"]:
                     try:
                         db_insert_face_embeddings_by_image_id(
