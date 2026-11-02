@@ -316,30 +316,55 @@ interface MemoryOpenPayload {
 
 Register the listeners first and wait for registration to finish, then call `take_pending_memory` to collect any announcement emitted before the listeners existed.
 
+`take_pending_memory` clears the backend slot before its promise resolves, so the returned value must never be dropped. In particular, do not discard it because the component unmounted while the call was in flight. Deliver it to a store that outlives the component, and let a later mount pick it up.
+
 ```typescript
 import { useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 
+type PendingHandler = (memory: MemoryAnnouncement) => void;
+
+// Lives outside React, so it survives the hook unmounting.
+const pendingStore = {
+  seen: new Set<string>(),
+  latest: null as MemoryAnnouncement | null,
+  subscribers: new Set<PendingHandler>(),
+
+  deliver(memory: MemoryAnnouncement) {
+    if (this.seen.has(memory.memory_id)) return;
+    this.seen.add(memory.memory_id);
+    if (this.subscribers.size === 0) {
+      this.latest = memory; // nobody is mounted: hold it for the next subscriber
+      return;
+    }
+    this.subscribers.forEach((handler) => handler(memory));
+  },
+
+  subscribe(handler: PendingHandler) {
+    this.subscribers.add(handler);
+    if (this.latest) {
+      const held = this.latest;
+      this.latest = null;
+      handler(held);
+    }
+    return () => this.subscribers.delete(handler);
+  },
+};
+
 function useMemoryEvents(
-  onPending: (memory: MemoryAnnouncement) => void,
+  onPending: PendingHandler,
   onOpen: (memoryId: string) => void,
 ) {
   useEffect(() => {
     let cancelled = false;
     let cleanup = () => {};
-    const seen = new Set<string>();
-
-    const deliver = (memory: MemoryAnnouncement) => {
-      if (seen.has(memory.memory_id)) return;
-      seen.add(memory.memory_id);
-      onPending(memory);
-    };
+    const unsubscribe = pendingStore.subscribe(onPending);
 
     (async () => {
       const unlistenPending = await listen<MemoryAnnouncement>(
         'memory:pending',
-        (event) => deliver(event.payload),
+        (event) => pendingStore.deliver(event.payload),
       );
       const unlistenOpen = await listen<{ memory_id: string }>(
         'memory:open',
@@ -354,21 +379,23 @@ function useMemoryEvents(
         return;
       }
 
+      // Always hand the result to the store, even if the effect has since unmounted.
       const pending = await invoke<MemoryAnnouncement | null>(
         'take_pending_memory',
       );
-      if (pending && !cancelled) deliver(pending);
+      if (pending) pendingStore.deliver(pending);
     })();
 
     return () => {
       cancelled = true;
+      unsubscribe();
       cleanup();
     };
   }, [onPending, onOpen]);
 }
 ```
 
-The backend stores each announcement in a pending slot before emitting the event, and only `take_pending_memory` clears it. Deduplicating by `memory_id` avoids delivering the same memory twice, for example if the hook remounts.
+The backend stores each announcement in a pending slot before emitting the event, and only `take_pending_memory` clears it. The store deduplicates by `memory_id`, so a memory delivered by both the event and the pending slot is handled once.
 
 ## Cross-Platform Support
 
