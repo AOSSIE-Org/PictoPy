@@ -36,10 +36,13 @@ def db_create_YOLO_classes_table():
 
         conn.commit()
     except sqlite3.Error as e:
-        # Log first: a failing rollback must not hide the original error.
         logger.error(f"Error creating YOLO classes table: {e}")
         if conn is not None:
-            conn.rollback()
+            # A failing rollback must not replace the original error.
+            try:
+                conn.rollback()
+            except sqlite3.Error:
+                logger.exception("Rollback failed after YOLO classes table error")
         raise
     finally:
         if conn is not None:

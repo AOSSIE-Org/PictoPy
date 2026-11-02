@@ -114,7 +114,7 @@ class TestCreateYOLOClassesTable:
 
         mock_logger.error.assert_called_once()
 
-    def test_logs_the_original_error_when_rollback_fails(self):
+    def test_reraises_the_original_error_when_rollback_fails(self):
         conn = MagicMock()
         conn.cursor.return_value.execute.side_effect = sqlite3.Error("original")
         conn.rollback.side_effect = sqlite3.Error("rollback failed")
@@ -122,8 +122,9 @@ class TestCreateYOLOClassesTable:
         with patch(
             "app.database.yolo_mapping.sqlite3.connect", return_value=conn
         ), patch("app.database.yolo_mapping.logger") as mock_logger:
-            with pytest.raises(sqlite3.Error):
+            with pytest.raises(sqlite3.Error, match="original"):
                 db_create_YOLO_classes_table()
 
         mock_logger.error.assert_called_once()
         assert "original" in mock_logger.error.call_args[0][0]
+        mock_logger.exception.assert_called_once()
