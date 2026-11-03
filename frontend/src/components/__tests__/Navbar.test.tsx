@@ -79,7 +79,7 @@ describe('Navbar Component', () => {
       if (selector === selectAvatar) return '/test-avatar.png';
 
       const mockState = {
-        search: { active: false, queryImage: null },
+        search: { queryImage: null },
         faceClusters: { clusters },
       };
       return selector(mockState);

@@ -39,7 +39,7 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
 
   const [name, setLocalName] = useState(localStorage.getItem('name') || '');
   const [selectedAvatar, setLocalAvatar] = useState(
-    localStorage.getItem('avatar') || '',
+    localStorage.getItem('avatar') || avatars[0],
   );
   const isEditing = useSelector(
     (state: RootState) => state.onboarding.isEditing,
@@ -140,12 +140,12 @@ export const AvatarSelectionStep: React.FC<AvatarNameSelectionStepProps> = ({
         </CardHeader>
 
         <CardContent className="flex-1 space-y-5 overflow-y-auto p-1 px-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="flex items-end gap-3 rounded-lg border bg-neutral-900 p-3">
+          <div className="flex items-start gap-3 rounded-lg border bg-neutral-900 p-3">
             <button
               type="button"
               onClick={handleUploadClick}
               aria-label="Change profile avatar"
-              className="group relative inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full"
+              className="group relative mt-5 inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full"
             >
               {selectedAvatar ? (
                 <img
