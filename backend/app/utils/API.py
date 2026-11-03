@@ -1,8 +1,8 @@
-import requests
+import httpx
 from app.config.settings import SYNC_MICROSERVICE_URL
-import logging
+from app.logging.setup_logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def API_util_restart_sync_microservice_watcher():
@@ -14,7 +14,7 @@ def API_util_restart_sync_microservice_watcher():
     """
     try:
         url = f"{SYNC_MICROSERVICE_URL}/watcher/restart"
-        response = requests.post(url, timeout=30)
+        response = httpx.post(url, timeout=30.0)
 
         if response.status_code == 200:
             logger.info("Successfully restarted sync microservice watcher")
@@ -25,9 +25,10 @@ def API_util_restart_sync_microservice_watcher():
             )
             return False
 
-    except requests.exceptions.RequestException as e:
+    except httpx.RequestError as e:
         logger.error(f"Error communicating with sync microservice: {e}")
         return False
     except Exception as e:
         logger.error(f"Unexpected error restarting sync microservice watcher: {e}")
         return False
+
