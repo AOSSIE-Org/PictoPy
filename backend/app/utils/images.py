@@ -20,7 +20,7 @@ from app.database.images import (
     db_bulk_insert_images,
     db_get_untagged_images,
     db_update_image_tagged_status,
-    db_insert_image_classes_batch,
+    db_replace_image_object_classes,
     db_get_image_sync_state_by_folder_ids,
     db_get_images_by_folder_ids,
     db_get_images_by_ids,
@@ -256,16 +256,8 @@ def image_util_classify_and_face_detect_images(
                 )
                 continue
 
-            # Step 2: Insert class-image pairs if classes were detected
-            if len(classes) > 0:
-                # Create image-class pairs
-                image_class_pairs = [(image_id, class_id) for class_id in classes]
-                logger.debug(f"Image-class pairs: {image_class_pairs}")
-
-                # Insert the pairs into the database
-                db_insert_image_classes_batch(image_class_pairs)
-
-            # Step 3: Detect faces if "person" class is present
+            # Detect before any write, so a retry never sees partial results.
+            result = None
             if classes and 0 in classes:
                 try:
                     result = face_detector.detect_faces(image_path)
@@ -276,26 +268,39 @@ def image_util_classify_and_face_detect_images(
                     )
                     continue
 
-                if result and result["embeddings"]:
-                    try:
-                        db_insert_face_embeddings_by_image_id(
-                            image_id,
-                            result["embeddings"],
-                            confidence=result["confidences"],
-                            bbox=result["bboxes"],
-                        )
-                    except sqlite3.IntegrityError:
-                        # The image can be deleted during inference, which fails
-                        # the faces FK; skip it rather than abort the whole pass.
-                        logger.info(
-                            f"Image {image_id} was removed during tagging; skipping"
-                        )
-                        continue
-                if result:
-                    total_faces_skipped += result["faces_skipped"]
+            # Step 2: Replace class-image pairs. An empty result also clears
+            # rows left by a previous failed attempt.
+            image_class_pairs = [(image_id, class_id) for class_id in classes]
+            logger.debug(f"Image-class pairs: {image_class_pairs}")
+            if not db_replace_image_object_classes(image_id, classes):
+                logger.error(
+                    f"Failed to store classes for image {image_id}; "
+                    "leaving untagged for retry"
+                )
+                continue
+
+            # Step 3: Store faces if "person" class is present
+            if result and result["embeddings"]:
+                try:
+                    db_insert_face_embeddings_by_image_id(
+                        image_id,
+                        result["embeddings"],
+                        confidence=result["confidences"],
+                        bbox=result["bboxes"],
+                    )
+                except sqlite3.IntegrityError:
+                    # The image can be deleted during inference, which fails
+                    # the faces FK; skip it rather than abort the whole pass.
+                    logger.info(
+                        f"Image {image_id} was removed during tagging; skipping"
+                    )
+                    continue
+            if result:
+                total_faces_skipped += result["faces_skipped"]
 
             # Step 4: Update the image status in the database
-            db_update_image_tagged_status(image_id, True)
+            if not db_update_image_tagged_status(image_id, True):
+                logger.error(f"Failed to mark image {image_id} as tagged")
     finally:
         # Ensure resources are cleaned up
         object_classifier.close()

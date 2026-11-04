@@ -493,6 +493,46 @@ def db_insert_image_classes_batch(image_class_pairs: List[ImageClassPair]) -> bo
         conn.close()
 
 
+def db_replace_image_object_classes(
+    image_id: ImageId, class_ids: List[ClassId]
+) -> bool:
+    """
+    Replace an image's object-detection classes with a fresh set.
+
+    Rows from an earlier tagging attempt are removed so a retry cannot keep
+    stale classes. Semantic tags (class_id >= SEMANTIC_CLASS_ID_OFFSET) belong
+    to the semantic pass and are left untouched.
+
+    Returns:
+        True if the replacement was successful, False otherwise
+    """
+    # Imported late: semantic_labels imports _connect from this module.
+    from app.database.semantic_labels import SEMANTIC_CLASS_ID_OFFSET
+
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            "DELETE FROM image_classes WHERE image_id = ? AND class_id < ?",
+            (image_id, SEMANTIC_CLASS_ID_OFFSET),
+        )
+        if class_ids:
+            cursor.executemany(
+                "INSERT OR IGNORE INTO image_classes (image_id, class_id) "
+                "VALUES (?, ?)",
+                [(image_id, class_id) for class_id in class_ids],
+            )
+        conn.commit()
+        return True
+    except sqlite3.Error as e:
+        logger.error(f"Error replacing image classes: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
 def db_get_images_by_folder_ids(
     folder_ids: List[FolderId],
 ) -> List[Tuple[ImageId, ImagePath, str]]:

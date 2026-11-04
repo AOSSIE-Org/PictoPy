@@ -1,11 +1,12 @@
 import os
 import sqlite3
 import tempfile
-from typing import Any, Dict, Iterator
+from typing import Any, Dict, Iterator, cast
 
 import pytest
 
 from app.database.images import (
+    ImageRecord,
     db_create_images_table,
     db_bulk_insert_images,
     db_get_all_images,
@@ -13,6 +14,7 @@ from app.database.images import (
     db_get_unembedded_images,
     db_update_image_tagged_status,
     db_insert_image_classes_batch,
+    db_replace_image_object_classes,
     db_get_images_by_folder_ids,
     db_delete_images_by_ids,
     db_toggle_image_favourite_status,
@@ -23,7 +25,10 @@ from app.database.images import (
 )
 from app.database.folders import db_create_folders_table
 from app.database.yolo_mapping import db_create_YOLO_classes_table
-from app.database.semantic_labels import db_create_semantic_labels_table
+from app.database.semantic_labels import (
+    SEMANTIC_CLASS_ID_OFFSET,
+    db_create_semantic_labels_table,
+)
 
 # ##############################
 # Pytest Fixtures
@@ -70,7 +75,7 @@ def folder(test_db: str) -> str:
 
 def make_image_record(
     image_id: str, path: str, folder_id: str, **overrides: Any
-) -> Dict[str, Any]:
+) -> ImageRecord:
     record: Dict[str, Any] = {
         "id": image_id,
         "path": path,
@@ -84,7 +89,7 @@ def make_image_record(
         "captured_at": None,
     }
     record.update(overrides)
-    return record
+    return cast(ImageRecord, record)
 
 
 def add_tag(db_path: str, image_id: str, class_id: int, name: str) -> None:
@@ -227,6 +232,7 @@ class TestGetImageById:
             [make_image_record("img-1", "/photos/a.jpg", folder, metadata='{"k": 1}')]
         )
         image = db_get_image_by_id("img-1")
+        assert image is not None
         assert image["metadata"] == {"k": 1}
         assert image["isFavourite"] is False
 
@@ -234,7 +240,9 @@ class TestGetImageById:
         db_bulk_insert_images(
             [make_image_record("img-1", "/photos/a.jpg", folder, metadata="not json")]
         )
-        assert db_get_image_by_id("img-1")["metadata"] == {}
+        image = db_get_image_by_id("img-1")
+        assert image is not None
+        assert image["metadata"] == {}
 
 
 class TestUntaggedAndUnembedded:
@@ -266,7 +274,9 @@ class TestTaggedStatusAndClasses:
     def test_update_tagged_status(self, folder, test_db):
         db_bulk_insert_images([make_image_record("img-1", "/photos/a.jpg", folder)])
         assert db_update_image_tagged_status("img-1", True) is True
-        assert db_get_image_by_id("img-1")["isTagged"] is True
+        image = db_get_image_by_id("img-1")
+        assert image is not None
+        assert image["isTagged"] is True
 
     def test_update_tagged_status_missing_image(self, test_db):
         assert db_update_image_tagged_status("nope", True) is False
@@ -285,14 +295,51 @@ class TestTaggedStatusAndClasses:
         conn.close()
         assert count == 1
 
+    def test_replace_object_classes_removes_stale_rows(self, folder, test_db):
+        db_bulk_insert_images([make_image_record("img-1", "/photos/a.jpg", folder)])
+        db_insert_image_classes_batch([("img-1", 0), ("img-1", 16)])
+
+        assert db_replace_image_object_classes("img-1", [2]) is True
+
+        conn = sqlite3.connect(test_db)
+        rows = conn.execute(
+            "SELECT class_id FROM image_classes WHERE image_id = 'img-1'"
+        ).fetchall()
+        conn.close()
+        assert rows == [(2,)]
+
+    def test_replace_object_classes_keeps_semantic_rows(self, folder, test_db):
+        db_bulk_insert_images([make_image_record("img-1", "/photos/a.jpg", folder)])
+        conn = sqlite3.connect(test_db)
+        conn.execute(
+            "INSERT INTO image_classes (image_id, class_id) VALUES (?, ?)",
+            ("img-1", SEMANTIC_CLASS_ID_OFFSET),
+        )
+        conn.commit()
+        conn.close()
+
+        assert db_replace_image_object_classes("img-1", [2]) is True
+
+        conn = sqlite3.connect(test_db)
+        rows = conn.execute(
+            "SELECT class_id FROM image_classes WHERE image_id = 'img-1' "
+            "ORDER BY class_id"
+        ).fetchall()
+        conn.close()
+        assert rows == [(2,), (SEMANTIC_CLASS_ID_OFFSET,)]
+
 
 class TestFavouriteStatus:
     def test_toggles_on_then_off(self, folder, test_db):
         db_bulk_insert_images([make_image_record("img-1", "/photos/a.jpg", folder)])
         assert db_toggle_image_favourite_status("img-1") is True
-        assert db_get_image_by_id("img-1")["isFavourite"] is True
+        image = db_get_image_by_id("img-1")
+        assert image is not None
+        assert image["isFavourite"] is True
         assert db_toggle_image_favourite_status("img-1") is True
-        assert db_get_image_by_id("img-1")["isFavourite"] is False
+        image = db_get_image_by_id("img-1")
+        assert image is not None
+        assert image["isFavourite"] is False
 
     def test_missing_image_returns_false(self, test_db):
         assert db_toggle_image_favourite_status("nope") is False
@@ -461,7 +508,7 @@ class TestErrorHandling:
 
     def test_get_by_folder_ids_returns_empty_on_db_error(self, test_db):
         drop_object(test_db, "TABLE", "images")
-        assert db_get_images_by_folder_ids([1]) == []
+        assert db_get_images_by_folder_ids(["1"]) == []
 
     def test_update_tagged_status_returns_false_on_db_error(self, test_db):
         drop_object(test_db, "TABLE", "images")
@@ -482,3 +529,7 @@ class TestErrorHandling:
     def test_insert_image_classes_returns_false_on_db_error(self, test_db):
         drop_object(test_db, "TABLE", "image_classes")
         assert db_insert_image_classes_batch([("x", 0)]) is False
+
+    def test_replace_image_object_classes_returns_false_on_db_error(self, test_db):
+        drop_object(test_db, "TABLE", "image_classes")
+        assert db_replace_image_object_classes("x", [0]) is False

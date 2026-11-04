@@ -37,7 +37,7 @@ def pipeline() -> Iterator[SimpleNamespace]:
     with (
         patch("app.utils.images.ObjectClassifier") as classifier_cls,
         patch("app.utils.images.FaceDetector") as detector_cls,
-        patch("app.utils.images.db_insert_image_classes_batch") as insert_classes,
+        patch("app.utils.images.db_replace_image_object_classes") as replace_classes,
         patch("app.utils.images.db_insert_face_embeddings_by_image_id") as insert,
         patch("app.utils.images.db_update_image_tagged_status") as mark_tagged,
     ):
@@ -46,7 +46,7 @@ def pipeline() -> Iterator[SimpleNamespace]:
             detector_cls=detector_cls,
             classifier=classifier_cls.return_value,
             detector=detector_cls.return_value,
-            insert_classes=insert_classes,
+            replace_classes=replace_classes,
             insert_faces=insert,
             mark_tagged=mark_tagged,
         )
@@ -64,6 +64,7 @@ class TestClassifyAndFaceDetectImages:
 
         # The detector only sees a path: it has no notion of which record it serves.
         pipeline.detector.detect_faces.assert_called_once_with("/photos/img-1.jpg")
+        pipeline.replace_classes.assert_called_once_with("img-1", [0])
         pipeline.insert_faces.assert_called_once_with(
             "img-1",
             result["embeddings"],
@@ -93,6 +94,7 @@ class TestClassifyAndFaceDetectImages:
         image_util_classify_and_face_detect_images([_image("img-1")])
 
         pipeline.detector.detect_faces.assert_not_called()
+        pipeline.replace_classes.assert_called_once_with("img-1", [2])
         pipeline.insert_faces.assert_not_called()
         pipeline.mark_tagged.assert_called_once_with("img-1", True)
 
@@ -173,14 +175,15 @@ class TestClassifyAndFaceDetectImages:
             "img-before",
             "img-after",
         ]
-        expected_class_writes = [call([("img-before", 0)])]
+        # Inference fails before the bad image reaches any write.
+        assert pipeline.replace_classes.call_args_list == [
+            call("img-before", [0]),
+            call("img-after", [0]),
+        ]
         expected_detector_calls = [call("/photos/img-before.jpg")]
         if failure == "detector":
-            expected_class_writes.append(call([("img-bad", 0)]))
             expected_detector_calls.append(call("/photos/img-bad.jpg"))
-        expected_class_writes.append(call([("img-after", 0)]))
         expected_detector_calls.append(call("/photos/img-after.jpg"))
-        assert pipeline.insert_classes.call_args_list == expected_class_writes
         assert pipeline.detector.detect_faces.call_args_list == expected_detector_calls
         pipeline.classifier.close.assert_called_once()
         pipeline.detector.close.assert_called_once()
@@ -204,7 +207,8 @@ class TestClassifyAndFaceDetectImages:
         skipped = image_util_classify_and_face_detect_images([_image("img-empty")])
 
         assert skipped == 0
-        pipeline.insert_classes.assert_not_called()
+        # Empty still replaces, clearing rows from an earlier failed attempt.
+        pipeline.replace_classes.assert_called_once_with("img-empty", [])
         pipeline.detector.detect_faces.assert_not_called()
         pipeline.insert_faces.assert_not_called()
         pipeline.mark_tagged.assert_called_once_with("img-empty", True)
@@ -230,29 +234,59 @@ class TestClassifyAndFaceDetectImages:
         images = [_image("img-retry")]
 
         assert image_util_classify_and_face_detect_images(images) == 0
+        pipeline.replace_classes.assert_not_called()
         pipeline.mark_tagged.assert_not_called()
         pipeline.insert_faces.assert_not_called()
 
         assert image_util_classify_and_face_detect_images(images) == 2
+        pipeline.replace_classes.assert_called_once_with("img-retry", [0])
         pipeline.mark_tagged.assert_called_once_with("img-retry", True)
         pipeline.insert_faces.assert_called_once()
         assert pipeline.insert_faces.call_args.args[0] == "img-retry"
         assert pipeline.classifier.close.call_count == 2
         assert pipeline.detector.close.call_count == 2
 
-    @pytest.mark.parametrize("write", ["insert_classes", "insert_faces", "mark_tagged"])
-    def test_database_errors_still_propagate(
-        self, pipeline: SimpleNamespace, write: str
+    def test_face_insert_errors_still_propagate(
+        self, pipeline: SimpleNamespace
     ) -> None:
         pipeline.classifier.get_classes.return_value = [0]
         pipeline.detector.detect_faces.return_value = _faces(1)
-        getattr(pipeline, write).side_effect = sqlite3.OperationalError(
-            "database locked"
-        )
+        pipeline.insert_faces.side_effect = sqlite3.OperationalError("database locked")
 
         with pytest.raises(sqlite3.OperationalError, match="database locked"):
             image_util_classify_and_face_detect_images([_image("img-1")])
 
+        pipeline.mark_tagged.assert_not_called()
+        pipeline.classifier.close.assert_called_once()
+        pipeline.detector.close.assert_called_once()
+
+    def test_class_write_failure_leaves_image_untagged(
+        self, pipeline: SimpleNamespace, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        pipeline.classifier.get_classes.return_value = [0]
+        pipeline.detector.detect_faces.return_value = _faces(1)
+        pipeline.replace_classes.return_value = False
+
+        skipped = image_util_classify_and_face_detect_images([_image("img-1")])
+
+        assert skipped == 0
+        pipeline.insert_faces.assert_not_called()
+        pipeline.mark_tagged.assert_not_called()
+        assert "Failed to store classes for image img-1" in caplog.text
+        pipeline.classifier.close.assert_called_once()
+        pipeline.detector.close.assert_called_once()
+
+    def test_tagged_status_failure_is_logged(
+        self, pipeline: SimpleNamespace, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        pipeline.classifier.get_classes.return_value = [0]
+        pipeline.detector.detect_faces.return_value = _faces(0)
+        pipeline.mark_tagged.return_value = False
+
+        image_util_classify_and_face_detect_images([_image("img-1")])
+
+        pipeline.mark_tagged.assert_called_once_with("img-1", True)
+        assert "Failed to mark image img-1 as tagged" in caplog.text
         pipeline.classifier.close.assert_called_once()
         pipeline.detector.close.assert_called_once()
 
@@ -265,6 +299,6 @@ class TestClassifyAndFaceDetectImages:
         with pytest.raises(RuntimeError, match="model unavailable"):
             image_util_classify_and_face_detect_images([_image("img-1")])
 
-        pipeline.insert_classes.assert_not_called()
+        pipeline.replace_classes.assert_not_called()
         pipeline.insert_faces.assert_not_called()
         pipeline.mark_tagged.assert_not_called()
