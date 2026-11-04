@@ -80,18 +80,33 @@ def db_insert_folders_batch(
         # same real directory would be inserted again as a second row under a
         # fresh folder_id. Pre-filter case-insensitively instead, against both
         # what's already stored and what's earlier in this same batch.
+        #
+        # Exact-path matches are checked first and take priority over a
+        # normalized-only match. The table's folder_path column isn't itself
+        # normalized, so two rows that already differ only by case (e.g. left
+        # over from before this case-insensitive check existed) can both be
+        # stored; without an exact-match pass, which of them a later lookup
+        # resolves to would depend on dict-overwrite order rather than on
+        # which row the incoming path actually matches byte-for-byte.
         cursor.execute("SELECT folder_id, folder_path FROM folders")
-        seen = {os.path.normcase(path): folder_id for folder_id, path in cursor.fetchall()}
+        existing_rows = cursor.fetchall()
+        exact: Dict[FolderPath, FolderId] = {}
+        by_normcase: Dict[str, FolderId] = {}
+        for folder_id, path in existing_rows:
+            exact.setdefault(path, folder_id)
+            by_normcase.setdefault(os.path.normcase(path), folder_id)
 
         deduped = []
         for row in folders_data:
             row_id, row_path = row[0], row[1]
-            normalized = os.path.normcase(row_path)
-            existing_id = seen.get(normalized)
+            existing_id = exact.get(row_path)
+            if existing_id is None:
+                existing_id = by_normcase.get(os.path.normcase(row_path))
             if existing_id is not None:
                 skipped_to_existing[row_id] = existing_id
                 continue
-            seen[normalized] = row_id
+            exact[row_path] = row_id
+            by_normcase.setdefault(os.path.normcase(row_path), row_id)
             deduped.append(row)
 
         cursor.executemany(

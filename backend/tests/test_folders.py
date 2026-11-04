@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
 import tempfile
 import os
+import ntpath
 import shutil
 from concurrent.futures import Future, ProcessPoolExecutor
 
@@ -900,19 +901,30 @@ class TestFoldersUnit:
         mock_conn.close.assert_called_once()
 
     def test_folder_util_add_folder_tree_reconciles_case_duplicate_root(
-        self, test_db, tmp_path
+        self, test_db, tmp_path, monkeypatch
     ):
         # Register the root path under a different case than the one the
         # upcoming walk will use, as if an earlier scan had already stored
         # it (Windows paths are case-insensitive, but os.walk/the file
         # picker can report the same real directory with different casing
-        # between scans).
+        # between scans). Seed it through db_insert_folders_batch rather
+        # than db_insert_folder -- the latter requires the exact path it's
+        # given to exist as a directory, which this lowercase variant
+        # won't on a case-sensitive filesystem even though the two paths
+        # name the same real directory on Windows.
         root = tmp_path / "Photos"
         root.mkdir()
         (root / "sub").mkdir()
         existing_root_path = str(root).replace("Photos", "photos")
-        existing_root_id = db_insert_folder(existing_root_path, folder_id="existing-root-id")
-        assert existing_root_id == "existing-root-id"
+        db_insert_folders_batch(
+            [("existing-root-id", existing_root_path, None, 1693526400, False, None)]
+        )
+
+        # os.path.normcase is a no-op on POSIX, so the case-insensitive
+        # matching this test exercises -- which is specifically Windows
+        # filesystem behavior -- only happens on a POSIX CI runner if we
+        # emulate Windows normalization explicitly.
+        monkeypatch.setattr(os.path, "normcase", ntpath.normcase)
 
         root_folder_id, folder_map = folder_util_add_folder_tree(str(root))
 
