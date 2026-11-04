@@ -72,10 +72,13 @@ export const AlbumDetail = () => {
     isError: imagesError,
     refetch: refetchImages,
   } = usePictoQuery({
-    queryKey: ['album-images', albumId],
+    // Keyed on the password so each attempt is checked, not served from cache.
+    queryKey: ['album-images', albumId, password],
     queryFn: () =>
       getAlbumImages(albumId!, password ? { password } : undefined),
     enabled: !!albumId && !!album,
+    // A wrong password stays wrong, so retrying only delays the error.
+    retry: false,
   });
 
   // Fetch all images to get full details
