@@ -328,6 +328,28 @@ class TestTaggedStatusAndClasses:
         conn.close()
         assert rows == [(2,), (SEMANTIC_CLASS_ID_OFFSET,)]
 
+    def test_replace_object_classes_empty_list_clears_object_rows(
+        self, folder, test_db
+    ):
+        db_bulk_insert_images([make_image_record("img-1", "/photos/a.jpg", folder)])
+        db_insert_image_classes_batch([("img-1", 0)])
+        conn = sqlite3.connect(test_db)
+        conn.execute(
+            "INSERT INTO image_classes (image_id, class_id) VALUES (?, ?)",
+            ("img-1", SEMANTIC_CLASS_ID_OFFSET),
+        )
+        conn.commit()
+        conn.close()
+
+        assert db_replace_image_object_classes("img-1", []) is True
+
+        conn = sqlite3.connect(test_db)
+        rows = conn.execute(
+            "SELECT class_id FROM image_classes WHERE image_id = 'img-1'"
+        ).fetchall()
+        conn.close()
+        assert rows == [(SEMANTIC_CLASS_ID_OFFSET,)]
+
 
 class TestFavouriteStatus:
     def test_toggles_on_then_off(self, folder, test_db):
