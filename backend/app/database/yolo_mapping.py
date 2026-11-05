@@ -6,7 +6,7 @@ from app.utils.YOLO import class_names
 logger = get_logger(__name__)
 
 
-def db_create_YOLO_classes_table():
+def db_create_YOLO_classes_table() -> None:
     conn = None
     try:
         conn = sqlite3.connect(DATABASE_PATH)
@@ -36,13 +36,9 @@ def db_create_YOLO_classes_table():
 
         conn.commit()
     except sqlite3.Error as e:
-        logger.error(f"Error creating YOLO classes table: {e}")
         if conn is not None:
-            # A failing rollback must not replace the original error.
-            try:
-                conn.rollback()
-            except sqlite3.Error:
-                logger.exception("Rollback failed after YOLO classes table error")
+            conn.rollback()
+        logger.error("Error creating YOLO classes table: %s", e, exc_info=True)
         raise
     finally:
         if conn is not None:
