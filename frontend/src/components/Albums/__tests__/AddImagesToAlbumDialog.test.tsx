@@ -160,6 +160,34 @@ describe('AddImagesToAlbumDialog filename search', () => {
     ).toBeInTheDocument();
   });
 
+  it('searches the native filename when a POSIX name contains a backslash', async () => {
+    const user = userEvent.setup();
+    const name = String.raw`Summer\2024.jpg`;
+    await renderDialog([
+      {
+        id: 'posix-backslash-image',
+        path: `/home/me/Pictures/Trips/${name}`,
+        thumbnailPath: '',
+        folder_id: 'posix-backslash-folder',
+        isTagged: false,
+        metadata: {
+          name,
+          date_created: null,
+          width: 100,
+          height: 100,
+          file_location: `/home/me/Pictures/Trips/${name}`,
+          file_size: 1024,
+          item_type: 'image',
+        },
+      },
+    ]);
+
+    await user.type(screen.getByPlaceholderText('Search images...'), 'SUMMER');
+
+    expect(screen.getByRole('button', { name })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { pressed: false })).toHaveLength(1);
+  });
+
   it('restores images after clearing and submits a selected search result', async () => {
     const user = userEvent.setup();
     const onClose = jest.fn();
