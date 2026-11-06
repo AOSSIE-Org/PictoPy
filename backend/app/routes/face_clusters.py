@@ -2,9 +2,10 @@ import logging
 from binascii import Error as Base64Error
 import base64
 from concurrent.futures import CancelledError, Future, ProcessPoolExecutor
+from contextlib import contextmanager
 from typing import Annotated
-import uuid
 import os
+import tempfile
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.database.face_clusters import (
     db_get_cluster_by_id,
@@ -44,6 +45,27 @@ from app.schemas.images import FaceSearchRequest, InputType
 from app.utils.faceSearch import perform_face_search
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def _temporary_base64_image(image_bytes: bytes, extension: str):
+    """Yield a temporary file holding ``image_bytes``, removed on exit.
+
+    The file lives in the system temporary directory rather than in a
+    ``temp_uploads/`` folder relative to the working directory: that folder is
+    not reliably writable (e.g. in the packaged app) and leftovers there would
+    survive a crash.
+    """
+    fd, path = tempfile.mkstemp(prefix="pictopy_face_search_", suffix=f".{extension}")
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(image_bytes)
+        yield path
+    finally:
+        if os.path.exists(path):
+            os.remove(path)
+
+
 router = APIRouter()
 
 
@@ -353,21 +375,10 @@ def face_tagging(
             if format_match in ["jpeg", "jpg", "png", "gif", "webp"]
             else "jpeg"
         )
-        image_id = str(uuid.uuid4())[:8]
-        temp_dir = "temp_uploads"
-        os.makedirs(temp_dir, exist_ok=True)
-        local_image_path = os.path.join(temp_dir, f"{image_id}.{extension}")
+        with _temporary_base64_image(image_bytes, extension) as image_path:
+            return perform_face_search(image_path)
 
-        with open(local_image_path, "wb") as f:
-            f.write(image_bytes)
-
-        image_path = local_image_path
-
-    try:
-        return perform_face_search(image_path)
-    finally:
-        if input_type == InputType.base64 and image_path and os.path.exists(image_path):
-            os.remove(image_path)
+    return perform_face_search(image_path)
 
 
 @router.post(

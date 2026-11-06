@@ -1,3 +1,5 @@
+import os
+import tempfile
 from typing import Iterator, Optional
 from unittest.mock import MagicMock, patch
 
@@ -5,6 +7,7 @@ import numpy as np
 import pytest
 
 from app.models.FaceDetector import FaceDetectionResult
+from app.routes.face_clusters import _temporary_base64_image
 from app.utils.faceSearch import perform_face_search
 
 QUERY = np.eye(128, dtype=np.float32)[0]
@@ -261,3 +264,31 @@ class TestMultiFacePhotos:
 def _looks_like(similarity: float) -> list:
     """An embedding at the given cosine similarity to QUERY."""
     return (similarity * QUERY + np.sqrt(1 - similarity**2) * np.eye(128)[5]).tolist()
+
+
+class TestBase64TempFile:
+    """Regression tests for #1682: base64 uploads must not be written to a
+    ``temp_uploads/`` folder relative to the working directory."""
+
+    def test_file_is_outside_cwd_and_removed(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+
+        with _temporary_base64_image(b"image-bytes", "png") as path:
+            assert os.path.isfile(path)
+            assert path.endswith(".png")
+            assert os.path.dirname(os.path.abspath(path)) != str(tmp_path)
+            assert os.path.abspath(path).startswith(
+                os.path.abspath(tempfile.gettempdir())
+            )
+            with open(path, "rb") as f:
+                assert f.read() == b"image-bytes"
+
+        assert not os.path.exists(path)
+        assert not (tmp_path / "temp_uploads").exists()
+
+    def test_file_is_removed_when_the_caller_raises(self, tmp_path):
+        with pytest.raises(RuntimeError):
+            with _temporary_base64_image(b"image-bytes", "jpg") as path:
+                raise RuntimeError("search failed")
+
+        assert not os.path.exists(path)

@@ -41,3 +41,6 @@ CLAUDE.local.md
 # semantic vocabulary source downloads (cache for scripts/build_semantic_vocabulary.py)
 backend/scripts/vocabulary/sources/
 backend/scripts/vocabulary/eval_images/
+
+# leftovers from face search base64 uploads (see #1682)
+temp_uploads/
