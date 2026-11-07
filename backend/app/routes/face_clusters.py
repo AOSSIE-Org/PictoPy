@@ -377,8 +377,8 @@ def face_tagging(
 )
 def trigger_global_reclustering(app_state: State = Depends(get_state)):
     """
-    Manually trigger global face reclustering.
-    This forces full reclustering regardless of the 24-hour rule.
+    Manually trigger a full global face reclustering.
+    Rebuilds every cluster from scratch, instead of the incremental path.
     """
     try:
         logger.info("Starting manual global face reclustering...")
