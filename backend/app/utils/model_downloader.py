@@ -55,7 +55,11 @@ async def _download_to_part(
         headers["Range"] = f"bytes={existing_size}-"
 
     async with client.stream("GET", url, headers=headers) as response:
-        if response.status_code == 416:
+        # A 416 in response to our Range request means the partial file is stale
+        # (as large as or larger than the remote file), so discard it and fetch
+        # fresh. A 416 without a Range we sent is a real error; let the retry
+        # loop handle it via raise_for_status() rather than looping here.
+        if response.status_code == 416 and existing_size > 0:
             logger.warning(
                 "Range not satisfiable for %s; discarding partial file and "
                 "restarting the download.",
