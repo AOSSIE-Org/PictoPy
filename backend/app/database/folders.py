@@ -298,11 +298,18 @@ def db_find_parent_folder_id(folder_path: FolderPath) -> Optional[FolderId]:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
-        cursor.execute(
-            "SELECT folder_id FROM folders WHERE folder_path = ?", (parent_path,)
-        )
-        result = cursor.fetchone()
-        return result[0] if result else None
+        # Case-insensitive match: the parent may already be registered under
+        # casing that differs from this subfolder's path (e.g. a drive letter
+        # or path component reported with different case by the OS/file
+        # picker on Windows, which is case-insensitive). A plain `=` is a
+        # byte-exact SQLite comparison and would otherwise miss a real,
+        # already-registered parent.
+        normalized_parent = os.path.normcase(parent_path)
+        cursor.execute("SELECT folder_id, folder_path FROM folders")
+        for folder_id, candidate_path in cursor.fetchall():
+            if os.path.normcase(candidate_path) == normalized_parent:
+                return folder_id
+        return None
     finally:
         conn.close()
 
