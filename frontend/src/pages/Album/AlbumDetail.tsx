@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate, useLocation } from 'react-router';
+import axios from 'axios';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { ImageCard } from '@/components/Media/ImageCard';
@@ -72,10 +73,18 @@ export const AlbumDetail = () => {
     isError: imagesError,
     refetch: refetchImages,
   } = usePictoQuery({
-    queryKey: ['album-images', albumId],
+    // Keyed on the password so each attempt is checked, not served from cache.
+    queryKey: ['album-images', albumId, password],
     queryFn: () =>
       getAlbumImages(albumId!, password ? { password } : undefined),
     enabled: !!albumId && !!album,
+    // A wrong password stays wrong, so retrying only delays the error.
+    retry: (failureCount, error) => {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
 
   // Fetch all images to get full details
