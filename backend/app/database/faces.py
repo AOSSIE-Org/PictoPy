@@ -3,6 +3,7 @@ import json
 import numpy as np
 from typing import Optional, List, Dict, Union, TypedDict, TypeAlias, cast
 from app.config.settings import DATABASE_PATH
+from app.database.face_clusters import ClusterId
 from app.logging.setup_logging import get_logger
 
 logger = get_logger(__name__)
@@ -11,7 +12,6 @@ logger = get_logger(__name__)
 FaceId = int
 ImageId = str
 FrameId = str
-ClusterId = int
 BoundingBox = Dict[str, Union[int, float]]
 FaceEmbedding: TypeAlias = np.ndarray
 
