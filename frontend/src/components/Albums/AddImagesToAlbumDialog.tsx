@@ -93,7 +93,11 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
 
   const filteredImages = allImages.filter((image) => {
     const searchLower = searchQuery.toLowerCase();
-    const fileName = image.path.split('/').pop()?.toLowerCase() || '';
+    const fileName = (
+      image.metadata?.name ||
+      image.path.split(/[/\\]/).pop() ||
+      ''
+    ).toLowerCase();
     return fileName.includes(searchLower);
   });
 
@@ -139,7 +143,9 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
                     type="button"
                     aria-pressed={selectedImages.has(image.id)}
                     aria-label={
-                      image.path.split(/[/\\]/).pop() || 'Untitled image'
+                      image.metadata?.name ||
+                      image.path.split(/[/\\]/).pop() ||
+                      'Untitled image'
                     }
                     className="group hover:border-primary focus-visible:ring-ring relative w-full cursor-pointer appearance-none overflow-hidden rounded-md border-2 bg-transparent p-0 text-left transition-all focus-visible:ring-2 focus-visible:outline-none"
                     style={{
