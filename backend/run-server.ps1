@@ -44,13 +44,12 @@ if ($args[0] -eq "--test") {
         Start-Sleep -Seconds 3
     }
 } else {
-    # Get the WORKERS environment variable or use a default value
-    $workers = if ($env:WORKERS) { $env:WORKERS } else { "1" }
-    Write-Host "WORKERS: $workers"
+    # Model-download and reclustering jobs are tracked in memory, per worker, so
+    # a second worker would answer status polls it knows nothing about.
 
     # Start the Hypercorn server
     $process = Start-Process -FilePath "hypercorn" `
-                             -ArgumentList "main:app --workers $workers --bind 0.0.0.0:8000" `
+                             -ArgumentList "main:app --workers 1 --bind 0.0.0.0:8000" `
                              -PassThru
 
     # Wait for process termination or Ctrl+C
