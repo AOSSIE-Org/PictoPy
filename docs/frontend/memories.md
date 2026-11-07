@@ -70,7 +70,11 @@ Photos grouped by month for images without GPS:
 ```typescript
 const applyFilter = (memories: Memory[]) => {
   if (filter === "location") {
-    return memories.filter((m) => m.center_lat !== 0 || m.center_lon !== 0);
+    return memories.filter(
+  (m) =>
+    m.center_lat != null &&
+    m.center_lon != null
+);
   }
   if (filter === "date") {
     return memories.filter((m) => m.center_lat === 0 && m.center_lon === 0);
