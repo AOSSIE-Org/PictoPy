@@ -3052,6 +3052,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "walkdir",
+ "webkit2gtk",
  "winapi",
 ]
 
