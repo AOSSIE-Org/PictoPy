@@ -44,9 +44,8 @@ class LoggerWriter:
             # Buffer the message until we get a complete line
             self.buffer += message
             if message.endswith("\n"):
-                # Log the complete line (minus the newline)
                 line = self.buffer.rstrip("\n")
-                if line:  # Only log non-empty lines
+                if line:
                     self.logger.log(self.level, line)
                 self.buffer = ""
         finally:

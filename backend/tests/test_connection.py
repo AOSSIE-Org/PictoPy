@@ -7,10 +7,6 @@ import pytest
 
 from app.database.connection import get_db_connection
 
-# ##############################
-# Pytest Fixtures
-# ##############################
-
 
 @pytest.fixture(scope="function")
 def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
@@ -33,11 +29,6 @@ def read_names(db_path: str) -> List[Tuple[str]]:
         return conn.execute("SELECT name FROM test").fetchall()
     finally:
         conn.close()
-
-
-# ##############################
-# Transaction handling
-# ##############################
 
 
 class TestGetDbConnection:
@@ -69,9 +60,7 @@ class TestGetDbConnection:
             conn.execute("SELECT 1")
 
 
-# ##############################
 # Pragmas
-# ##############################
 
 
 class TestConnectionPragmas:

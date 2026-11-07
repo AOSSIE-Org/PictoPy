@@ -209,10 +209,8 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
     setCreatedShare(null);
     setSelectedUrl('');
     setCopied(false);
-    // A share made earlier is still served by whatever tunnel is up, so ask
-    // rather than assume it was a local one. The mode follows the answer:
-    // showing an internet link while the help button explains local sharing
-    // would describe the wrong thing.
+    // An earlier share is served by whatever tunnel is up, so ask rather than
+    // assume local -- the mode has to follow the answer, not the other way round.
     tunnel.refresh().then((current) => {
       if (current) {
         setMode('internet');

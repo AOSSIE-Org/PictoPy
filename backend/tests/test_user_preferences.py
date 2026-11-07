@@ -9,11 +9,6 @@ app.include_router(user_preferences_router, prefix="/user_preferences")
 client = TestClient(app)
 
 
-# ##############################
-# Pytest Fixtures
-# ##############################
-
-
 @pytest.fixture
 def sample_update_request():
     """Sample update user preferences request data."""
@@ -45,11 +40,6 @@ def sample_metadata_without_preferences():
 def empty_metadata():
     """Empty metadata."""
     return {}
-
-
-# ##############################
-# Test Classes
-# ##############################
 
 
 class TestUserPreferencesAPI:
@@ -565,11 +555,6 @@ class TestVideoFrameIntervalValidation:
             UpdateUserPreferencesRequest(Video_Frame_Interval=None).Video_Frame_Interval
             is None
         )
-
-
-# ##############################
-# Memories preferences
-# ##############################
 
 
 class TestMemoriesPreferences:

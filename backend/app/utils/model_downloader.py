@@ -127,7 +127,6 @@ async def ensure_model(
                                     )
                                     progress_callback(percent, downloaded, total_size)
 
-            # Post-download verification
             if await verify_sha256(model_path, expected_sha256):
                 logger.info(f"Model {model_key} successfully downloaded and verified.")
                 return model_path

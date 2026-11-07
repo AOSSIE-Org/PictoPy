@@ -27,7 +27,7 @@ export interface ConfirmDialogProps {
   /** Spells out what the current checkbox state will actually do. */
   checkboxHint?: string;
   checkboxHintDestructive?: boolean;
-  /** "Don't show again" checkbox, rendered on the left of the footer buttons. Omit onDontShowAgainChange to leave it out entirely. */
+  /** Omit onDontShowAgainChange to leave the "Don't show again" checkbox out. */
   dontShowAgainLabel?: string;
   dontShowAgainChecked?: boolean;
   onDontShowAgainChange?: (checked: boolean) => void;
@@ -44,7 +44,7 @@ interface DialogCheckboxProps {
   card?: boolean;
 }
 
-/** Shared checkbox + label (+ optional hint) row, reused for both the body option and the footer's "don't show again". */
+/** Checkbox row shared by the body option and the footer's "don't show again". */
 const DialogCheckbox: React.FC<DialogCheckboxProps> = ({
   id,
   label,

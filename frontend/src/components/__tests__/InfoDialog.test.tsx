@@ -62,7 +62,6 @@ describe('InfoDialog', () => {
         .find((btn) => !btn.querySelector('svg'))!;
       await user.click(actionButton);
 
-      // verify store updated - dialog should be closed
       const state = store.getState().infoDialog;
       expect(state.isOpen).toBe(false);
     });

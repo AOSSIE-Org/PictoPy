@@ -57,8 +57,6 @@ const ProgressRow: React.FC<{ label: string; percentage: number }> = ({
   );
 };
 
-//Progress display for a single folder.
-
 const FolderProgress: React.FC<{
   folder: FolderDetails;
   taggingStatus: TaggingStatus;
@@ -124,8 +122,6 @@ const FolderProgress: React.FC<{
   );
 };
 
-//  Component for managing folder operations in settings
-
 const FolderManagementCard: React.FC = () => {
   const queryClient = useQueryClient();
   const {
@@ -148,7 +144,7 @@ const FolderManagementCard: React.FC = () => {
     new Set(),
   );
 
-  // --- NEW: Force data refresh when window regains focus or visibility ---
+  // Refresh when the window regains focus or becomes visible again.
   useEffect(() => {
     const handleFocus = () => {
       // Invalidating targeted queries forces useLibraryProcessingStatus() and folder hooks

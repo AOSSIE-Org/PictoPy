@@ -44,7 +44,6 @@ def _not_found(error: str, message: str) -> HTTPException:
     )
 
 
-# GET /share/interfaces - Ranked LAN addresses the share could be reached on
 @router.get(
     "/interfaces", response_model=GetInterfacesResponse, responses=_SERVER_ERROR
 )
@@ -64,7 +63,6 @@ def get_interfaces() -> GetInterfacesResponse:
     )
 
 
-# GET /share/ - List every active share
 @router.get("/", response_model=GetSharesResponse, responses=_SERVER_ERROR)
 def get_shares() -> GetSharesResponse:
     port = share_server_port()
@@ -78,7 +76,6 @@ def get_shares() -> GetSharesResponse:
     )
 
 
-# POST /share/albums/{album_id} - Start sharing an album over the network
 @router.post(
     "/albums/{album_id}",
     response_model=CreateShareResponse,
@@ -118,7 +115,6 @@ async def create_share(
     )
 
 
-# DELETE /share/{token} - Stop sharing
 @router.delete(
     "/{token}",
     response_model=RevokeShareResponse,

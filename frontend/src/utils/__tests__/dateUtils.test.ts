@@ -1,10 +1,6 @@
 import { getTimeAgo, groupImagesByYearMonthFromMetadata } from '../dateUtils';
 import { Image, ImageMetadata } from '@/types/Media';
 
-/* ------------------------------------------------------------------ */
-/*  getTimeAgo                                                        */
-/* ------------------------------------------------------------------ */
-
 describe('getTimeAgo', () => {
   beforeEach(() => {
     jest.useFakeTimers();
@@ -35,10 +31,6 @@ describe('getTimeAgo', () => {
     expect(getTimeAgo(input)).toBe(expected);
   });
 });
-
-/* ------------------------------------------------------------------ */
-/*  groupImagesByYearMonthFromMetadata                                */
-/* ------------------------------------------------------------------ */
 
 const makeImage = (id: string, dateCreated: string | null): Image => ({
   id,

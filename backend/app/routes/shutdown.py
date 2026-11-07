@@ -49,7 +49,6 @@ async def shutdown():
     """
     logger.info("Shutdown request received for PictoPy backend")
 
-    # Define callback to handle potential exceptions in the background task
     def _handle_shutdown_exception(task: asyncio.Task):
         try:
             task.result()

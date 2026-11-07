@@ -12,9 +12,6 @@ import {
   RemoveImagesFromAlbumRequest,
 } from '@/types/Album';
 
-/**
- * Get all albums
- */
 export const getAllAlbums = async (): Promise<APIResponse> => {
   const response = await apiClient.get<APIResponse>(
     albumsEndpoints.getAllAlbums,
@@ -22,10 +19,6 @@ export const getAllAlbums = async (): Promise<APIResponse> => {
   return response.data;
 };
 
-/**
- * Get album by ID
- * @param albumId - Album UUID
- */
 export const getAlbumById = async (albumId: string): Promise<APIResponse> => {
   const response = await apiClient.get<APIResponse>(
     albumsEndpoints.getAlbumById(albumId),
@@ -33,10 +26,6 @@ export const getAlbumById = async (albumId: string): Promise<APIResponse> => {
   return response.data;
 };
 
-/**
- * Create a new album
- * @param data - Album creation data
- */
 export const createAlbum = async (
   data: CreateAlbumRequest,
 ): Promise<APIResponse> => {
@@ -47,10 +36,6 @@ export const createAlbum = async (
   return response.data;
 };
 
-/**
- * Create an album from a curated memory's photos
- * @param data - Source memory and the new album's name
- */
 export const createAlbumFromMemory = async (
   data: CreateAlbumFromMemoryRequest,
 ): Promise<BackendRes<CreateAlbumFromMemoryData>> => {
@@ -61,11 +46,6 @@ export const createAlbumFromMemory = async (
   return response.data;
 };
 
-/**
- * Update an existing album
- * @param albumId - Album UUID
- * @param data - Album update data
- */
 export const updateAlbum = async (
   albumId: string,
   data: UpdateAlbumRequest,
@@ -77,10 +57,6 @@ export const updateAlbum = async (
   return response.data;
 };
 
-/**
- * Delete an album
- * @param albumId - Album UUID
- */
 export const deleteAlbum = async (albumId: string): Promise<APIResponse> => {
   const response = await apiClient.delete<APIResponse>(
     albumsEndpoints.deleteAlbum(albumId),
@@ -88,11 +64,6 @@ export const deleteAlbum = async (albumId: string): Promise<APIResponse> => {
   return response.data;
 };
 
-/**
- * Add images to an album
- * @param albumId - Album UUID
- * @param data - Image IDs to add
- */
 export const addImagesToAlbum = async (
   albumId: string,
   data: AddImagesToAlbumRequest,
@@ -104,11 +75,7 @@ export const addImagesToAlbum = async (
   return response.data;
 };
 
-/**
- * Get all images in an album
- * @param albumId - Album UUID
- * @param data - Optional password for locked albums
- */
+// Reads use POST so a locked album's password stays out of the URL.
 export const getAlbumImages = async (
   albumId: string,
   data?: GetAlbumImagesRequest,
@@ -120,11 +87,6 @@ export const getAlbumImages = async (
   return response.data;
 };
 
-/**
- * Remove a single image from an album
- * @param albumId - Album UUID
- * @param imageId - Image UUID
- */
 export const removeImageFromAlbum = async (
   albumId: string,
   imageId: string,
@@ -135,11 +97,6 @@ export const removeImageFromAlbum = async (
   return response.data;
 };
 
-/**
- * Remove multiple images from an album
- * @param albumId - Album UUID
- * @param data - Image IDs to remove
- */
 export const removeMultipleImagesFromAlbum = async (
   albumId: string,
   data: RemoveImagesFromAlbumRequest,

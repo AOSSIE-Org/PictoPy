@@ -28,7 +28,5 @@ export const rootReducer = combineReducers({
 export const store = configureStore({
   reducer: rootReducer,
 });
-// Infer the `RootState` and `AppDispatch` types from the store itself
 export type RootState = ReturnType<typeof store.getState>;
-// Inferred type: {loader: LoaderState, onboarding: OnboardingState, images: ImageState, ...}
 export type AppDispatch = typeof store.dispatch;

@@ -47,7 +47,6 @@ export const AlbumCard: React.FC<AlbumCardProps> = ({
       onClick={onClick}
     >
       <CardContent className="p-0">
-        {/* Album Cover Image */}
         <div className="bg-muted relative aspect-4/5 overflow-hidden">
           <img
             src={coverImageSrc}
@@ -59,20 +58,17 @@ export const AlbumCard: React.FC<AlbumCardProps> = ({
               img.src = placeholderSrc;
             }}
           />
-          {/* Lock Icon for Locked Albums */}
           {album.is_locked && (
             <div className="bg-background/90 absolute top-3 left-3 rounded-full p-2.5 shadow-lg backdrop-blur-md">
               <Lock className="text-foreground h-5 w-5" />
             </div>
           )}
-          {/* Sharing Badge */}
           {isSharing && (
             <div className="bg-primary text-primary-foreground absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium shadow-lg">
               <Share2 className="h-3.5 w-3.5" />
               Sharing
             </div>
           )}
-          {/* Actions Menu */}
           <div className="absolute top-3 right-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -105,7 +101,6 @@ export const AlbumCard: React.FC<AlbumCardProps> = ({
             </DropdownMenu>
           </div>
         </div>
-        {/* Album Info */}
         <div className="space-y-0.5 p-3">
           <h3 className="truncate text-sm font-semibold">{album.name}</h3>
           {album.description && (

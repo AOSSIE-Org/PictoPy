@@ -86,6 +86,5 @@ const customRender = (ui: ReactElement, options?: CustomRenderOptions) => {
   };
 };
 
-// Re-export everything
 export * from '@testing-library/react';
 export { customRender as render };

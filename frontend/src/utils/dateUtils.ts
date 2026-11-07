@@ -25,7 +25,7 @@ export const getTimeAgo = (dateString: string): string => {
   return 'a long time ago';
 };
 
-// To group media items (images or videos) from same Month & Year.
+// Takes videos too, despite the name: anything with metadata.date_created.
 export const groupImagesByYearMonthFromMetadata = <
   T extends { metadata?: { date_created: string | null } },
 >(
@@ -34,7 +34,7 @@ export const groupImagesByYearMonthFromMetadata = <
   const grouped: Record<string, Record<string, T[]>> = {};
 
   images.forEach((image) => {
-    const dateStr = image.metadata?.date_created; // extract date from metadata.date_created
+    const dateStr = image.metadata?.date_created;
     if (!dateStr) return;
 
     const date = new Date(dateStr);
