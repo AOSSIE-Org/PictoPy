@@ -232,7 +232,9 @@ class MetadataExtractor:
                 # Try multiple datetime formats
                 datetime_formats = [
                     "%Y-%m-%d %H:%M:%S",  # 2024-01-15 14:30:45
+                    "%Y-%m-%d %H:%M:%S.%f",  # 2024-01-15 14:30:45.123456
                     "%Y:%m:%d %H:%M:%S",  # 2024:01:15 14:30:45 (EXIF format)
+                    "%Y:%m:%d %H:%M:%S.%f",  # 2024:01:15 14:30:45.123456 (EXIF, subsecond)
                     "%Y-%m-%dT%H:%M:%S",  # 2024-01-15T14:30:45 (ISO)
                     "%Y-%m-%dT%H:%M:%S.%f",  # 2024-01-15T14:30:45.123456
                     "%Y-%m-%d",  # 2024-01-15
@@ -242,19 +244,15 @@ class MetadataExtractor:
                     "%m/%d/%Y",  # 01/15/2024
                 ]
 
-                # Try ISO format first (handles timezone)
-                if "T" in date_str:
-                    try:
-                        # Remove timezone suffix for simpler parsing
-                        date_str_clean = (
-                            date_str.replace("Z", "").split("+")[0].split("-")
-                        )
-                        # Rejoin only date-time parts (not timezone)
-                        if len(date_str_clean) >= 3:
-                            date_str_clean = "-".join(date_str_clean[:3])
-                            captured_at = datetime.fromisoformat(date_str_clean)
-                    except Exception:
-                        pass
+                # Try ISO 8601 first: handles "T" or space separators, fractional
+                # seconds and timezone offsets natively ("Z" is the one suffix
+                # fromisoformat doesn't accept on this project's Python version).
+                try:
+                    captured_at = datetime.fromisoformat(
+                        date_str.replace("Z", "+00:00")
+                    )
+                except (ValueError, TypeError):
+                    pass
 
                 # Try other formats
                 if not captured_at:
