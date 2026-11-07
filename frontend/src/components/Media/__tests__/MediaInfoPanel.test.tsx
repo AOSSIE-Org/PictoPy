@@ -1,15 +1,17 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MediaInfoPanel } from '../MediaInfoPanel';
 import { Image } from '@/types/Media';
-import { invoke } from '@tauri-apps/api/core';
+import { revealItemInDir } from '@tauri-apps/plugin-opener';
 
 jest.mock('@tauri-apps/plugin-shell', () => ({
   open: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('@tauri-apps/api/core', () => ({
-  invoke: jest.fn().mockResolvedValue(undefined),
+jest.mock('@tauri-apps/plugin-opener', () => ({
+  revealItemInDir: jest.fn().mockResolvedValue(undefined),
 }));
+
+const mockRevealItemInDir = jest.mocked(revealItemInDir);
 
 const makeImage = (tags: string[]): Image => ({
   id: 'img1',
@@ -130,17 +132,133 @@ describe('MediaInfoPanel tag list', () => {
 });
 
 describe('MediaInfoPanel Open Original File button', () => {
-  test('calls the open_image_file command with the current image path when clicked', async () => {
-    renderPanel(['alpha']);
+  beforeEach(() => {
+    mockRevealItemInDir.mockReset();
+    mockRevealItemInDir.mockResolvedValue(undefined);
+  });
+
+  test.each([
+    ['Windows', 'C:\\Library\\original1.jpg'],
+    ['POSIX', '/home/user/pics/img1.jpg'],
+    ['Windows root', 'C:\\img1.jpg'],
+    ['POSIX root', '/img1.jpg'],
+    ['Windows spaces and Unicode', 'C:\\My Photos\\旅行\\été.jpg'],
+    ['POSIX spaces and Unicode', '/home/user/My Photos/旅行/été.jpg'],
+  ])('reveals the full %s path exactly once', async (_description, path) => {
+    const image: Image = { ...makeImage(['alpha']), path };
+    render(
+      <MediaInfoPanel
+        show
+        onClose={jest.fn()}
+        currentImage={image}
+        currentIndex={0}
+        totalImages={1}
+      />,
+    );
 
     fireEvent.click(
       screen.getByRole('button', { name: /open original file/i }),
     );
 
     await waitFor(() => {
-      expect(invoke).toHaveBeenCalledWith('open_image_file', {
-        path: 'C:\\pics\\img1.jpg',
-      });
+      expect(mockRevealItemInDir).toHaveBeenCalledTimes(1);
+      expect(mockRevealItemInDir).toHaveBeenCalledWith(path);
     });
+  });
+
+  test('reveals the newly selected image after rerendering', async () => {
+    const first: Image = { ...makeImage(['alpha']), path: '/pics/first.jpg' };
+    const second: Image = {
+      ...makeImage(['beta']),
+      id: 'img2',
+      path: '/pics/second.jpg',
+    };
+    const { rerender } = render(
+      <MediaInfoPanel
+        show
+        onClose={jest.fn()}
+        currentImage={first}
+        currentIndex={0}
+        totalImages={2}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /open original file/i }),
+    );
+    await waitFor(() => {
+      expect(mockRevealItemInDir).toHaveBeenNthCalledWith(1, first.path);
+    });
+
+    rerender(
+      <MediaInfoPanel
+        show
+        onClose={jest.fn()}
+        currentImage={second}
+        currentIndex={1}
+        totalImages={2}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: /open original file/i }),
+    );
+
+    await waitFor(() => {
+      expect(mockRevealItemInDir).toHaveBeenCalledTimes(2);
+      expect(mockRevealItemInDir).toHaveBeenNthCalledWith(2, second.path);
+    });
+  });
+
+  test.each<{ description: string; image: Image | null }>([
+    { description: 'no image is selected', image: null },
+    {
+      description: 'the selected image has an empty path',
+      image: { ...makeImage(['alpha']), path: '' },
+    },
+  ])('does not reveal when $description', ({ image }) => {
+    render(
+      <MediaInfoPanel
+        show
+        onClose={jest.fn()}
+        currentImage={image}
+        currentIndex={0}
+        totalImages={1}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /open original file/i }),
+    );
+
+    expect(mockRevealItemInDir).not.toHaveBeenCalled();
+  });
+
+  test('handles and logs a rejected reveal request', async () => {
+    const error = new Error('Unable to reveal image');
+    mockRevealItemInDir.mockRejectedValueOnce(error);
+    const consoleError = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+
+    try {
+      renderPanel(['alpha']);
+      fireEvent.click(
+        screen.getByRole('button', { name: /open original file/i }),
+      );
+
+      await waitFor(() => {
+        expect(consoleError).toHaveBeenCalledTimes(1);
+        expect(consoleError).toHaveBeenCalledWith(
+          'Failed to open folder:',
+          error,
+        );
+      });
+      expect(mockRevealItemInDir).toHaveBeenCalledTimes(1);
+      expect(mockRevealItemInDir).toHaveBeenCalledWith(
+        makeImage(['alpha']).path,
+      );
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 });
