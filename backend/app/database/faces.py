@@ -1,7 +1,7 @@
 import sqlite3
 import json
 import numpy as np
-from typing import Optional, List, Dict, Union, TypedDict, TypeAlias, cast
+from typing import Optional, List, Dict, Union, TypedDict, TypeAlias, TypeVar
 from app.config.settings import DATABASE_PATH
 from app.logging.setup_logging import get_logger
 
@@ -41,6 +41,8 @@ class VideoFace(TypedDict):
     video_id: str
     embeddings: List[float]
 
+
+T = TypeVar("T")
 
 FaceClusterMapping = Dict[FaceId, Optional[ClusterId]]
 
@@ -202,59 +204,45 @@ def db_insert_face_embeddings(
         conn.close()
 
 
+def _at(values: Optional[List[T]], index: int) -> Optional[T]:
+    """One face's entry from a per-face list, or None when it has none."""
+    if values is None or index >= len(values):
+        return None
+    return values[index]
+
+
 def db_insert_face_embeddings_by_image_id(
     image_id: ImageId,
-    embeddings: Union[FaceEmbedding, List[FaceEmbedding]],
-    confidence: Optional[Union[float, List[float]]] = None,
-    bbox: Optional[Union[BoundingBox, List[BoundingBox]]] = None,
-    cluster_id: Optional[Union[ClusterId, List[ClusterId]]] = None,
-) -> Union[FaceId, List[FaceId]]:
+    embeddings: List[FaceEmbedding],
+    confidence: Optional[List[float]] = None,
+    bbox: Optional[List[BoundingBox]] = None,
+    cluster_id: Optional[List[ClusterId]] = None,
+) -> List[FaceId]:
     """
-    Insert face embeddings using image path (convenience function).
+    Store every face found in one image.
+
+    All four lists are index aligned, which is the contract FaceDetectionResult
+    already states. A face whose entry is missing is stored with NULL rather
+    than letting the list itself reach sqlite, which raises partway through and
+    leaves the remaining faces unwritten.
 
     Args:
         image_id: Image ID (uuid string)
-        embeddings: Face embedding vector (numpy array) or list of embeddings
-        confidence: Confidence score(s) for face detection (optional)
-        bbox: Bounding box coordinates or list of bounding boxes (optional)
-        cluster_id: Cluster ID(s) for the face(s) (optional)
+        embeddings: One face embedding per face
+        confidence: Detection confidence per face (optional)
+        bbox: Bounding box per face (optional)
+        cluster_id: Cluster assignment per face (optional)
     """
-
-    # Handle multiple faces in one image
-    if (
-        isinstance(embeddings, list)
-        and len(embeddings) > 0
-        and isinstance(embeddings[0], np.ndarray)
-    ):
-        face_ids: List[FaceId] = []
-        for i, emb in enumerate(embeddings):
-            conf = (
-                confidence[i]
-                if isinstance(confidence, list) and i < len(confidence)
-                else cast(Optional[float], confidence)
-            )
-            bb = (
-                bbox[i]
-                if isinstance(bbox, list) and i < len(bbox)
-                else cast(Optional[BoundingBox], bbox)
-            )
-            cid = (
-                cluster_id[i]
-                if isinstance(cluster_id, list) and i < len(cluster_id)
-                else cast(Optional[ClusterId], cluster_id)
-            )
-            face_id = db_insert_face_embeddings(image_id, emb, conf, bb, cid)
-            face_ids.append(face_id)
-        return face_ids
-    else:
-        # Single face
-        return db_insert_face_embeddings(
+    return [
+        db_insert_face_embeddings(
             image_id,
-            cast(FaceEmbedding, embeddings),
-            cast(Optional[float], confidence),
-            cast(Optional[BoundingBox], bbox),
-            cast(Optional[ClusterId], cluster_id),
+            emb,
+            _at(confidence, i),
+            _at(bbox, i),
+            _at(cluster_id, i),
         )
+        for i, emb in enumerate(embeddings)
+    ]
 
 
 def db_get_all_video_face_embeddings() -> List[VideoFace]:
