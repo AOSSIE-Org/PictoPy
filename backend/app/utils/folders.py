@@ -58,7 +58,21 @@ def folder_util_add_folder_tree(
         )
 
     # Insert all folders in a single database transaction
-    db_insert_folders_batch(folders_data)
+    skipped_to_existing = db_insert_folders_batch(folders_data)
+
+    # Any path that turned out to be a case-insensitive duplicate of an
+    # already-stored folder was never actually inserted under the id
+    # generated for it above -- that id only exists in folder_map and in
+    # other entries' recorded parent_id. Swap it everywhere it appears for
+    # the id the row is really stored under, or callers (including the
+    # root_folder_id returned below, and db_update_parent_ids_for_subtree)
+    # end up referencing a folder_id that was never written to the table.
+    if skipped_to_existing:
+        for path, (folder_id, parent_id) in folder_map.items():
+            folder_map[path] = (
+                skipped_to_existing.get(folder_id, folder_id),
+                skipped_to_existing.get(parent_id, parent_id),
+            )
 
     return folder_map[root_path][0], folder_map
 
