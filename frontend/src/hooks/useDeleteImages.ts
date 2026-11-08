@@ -36,7 +36,7 @@ export const useDeleteImages = () => {
           showInfoDialog({
             title: 'Some Files Could Not Be Deleted',
             message: `The following file(s) could not be deleted from your device: ${failedPaths
-              .map((path) => path.split('/').pop())
+              .map((path) => path.split(/[/\\]/).pop())
               .join(', ')}`,
             variant: 'error',
           }),
