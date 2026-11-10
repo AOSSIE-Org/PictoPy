@@ -1,3 +1,4 @@
+pub mod settings;
 pub mod tunnel;
 
 use tauri::path::BaseDirectory;
