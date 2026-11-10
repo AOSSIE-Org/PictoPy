@@ -285,6 +285,16 @@ fn set_close_to_tray(app: tauri::AppHandle, enabled: bool) -> Result<(), String>
 
 fn main() {
     tauri::Builder::default()
+        // Must be the first plugin registered: a second launch hands off to this
+        // instance instead of starting a new process, so a window hidden to the
+        // tray gets restored rather than duplicated.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.unminimize();
+                let _ = w.show();
+                let _ = w.set_focus();
+            }
+        }))
         // Auto-start: pass --minimized so the window starts hidden when launched at boot
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
