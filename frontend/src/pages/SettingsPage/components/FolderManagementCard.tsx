@@ -130,6 +130,7 @@ const FolderManagementCard: React.FC = () => {
   const queryClient = useQueryClient();
   const {
     folders,
+    isError: foldersQueryIsError,
     toggleAITagging,
     deleteFolder,
     enableAITaggingPending,
@@ -154,7 +155,12 @@ const FolderManagementCard: React.FC = () => {
       // Invalidating targeted queries forces useLibraryProcessingStatus() and folder hooks
       // to fetch fresh data instantly without invalidating the entire app cache
       queryClient.invalidateQueries({ queryKey: ['models', 'status'] });
-      queryClient.invalidateQueries({ queryKey: ['folders'] });
+      // Only re-invalidate folders if the query is currently in an error
+      // state -- otherwise this refetches on every focus/visibility change
+      // even when data is already fresh.
+      if (foldersQueryIsError) {
+        queryClient.invalidateQueries({ queryKey: ['folders'] });
+      }
       queryClient.invalidateQueries({
         queryKey: ['folders', 'tagging-status'],
       });
@@ -170,7 +176,7 @@ const FolderManagementCard: React.FC = () => {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [queryClient]);
+  }, [queryClient, foldersQueryIsError]);
 
   const handleViewMore = () => {
     setVisibleFoldersCount((prevCount) => prevCount + 5);
