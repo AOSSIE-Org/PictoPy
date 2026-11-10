@@ -29,14 +29,14 @@ export const useFolderOperations = () => {
     queryKey: ['folders'],
     queryFn: getAllFolders,
     refetchInterval: (query) => {
-      // Don't hammer a persistently failing backend every second.
-      if (query.state.status === 'error') return false;
-
-      return folders.some(
+      const hasPending = folders.some(
         (f) => f.AI_Tagging && isIndexingPending(f.indexing_status),
-      )
-        ? 1000
-        : false;
+      );
+      if (!hasPending) return false;
+
+      // Back off after a failure instead of stopping, so progress
+      // recovers if the backend comes back during indexing.
+      return query.state.status === 'error' ? 10000 : 1000;
     },
     refetchIntervalInBackground: true,
     staleTime: 1000,
