@@ -59,7 +59,7 @@ def watcher_util_handle_file_changes(changes: set) -> None:
     deleted_folder_ids = []
 
     affected_folders = {}  # folder_path -> folder_id mapping
-    # Folders that only lost files, synced last so a move's destination goes first
+    # Folders that lost something, synced last so a move's destination goes first
     lost_folders = {}
 
     # First pass - count changes and identify affected folders
@@ -90,10 +90,10 @@ def watcher_util_handle_file_changes(changes: set) -> None:
 
     # Process affected folders
     for folder_path, folder_id in affected_folders.items():
-        watcher_util_call_sync_folder_api(folder_id, folder_path)
-    for folder_path, folder_id in lost_folders.items():
-        if folder_path not in affected_folders:
+        if folder_path not in lost_folders:
             watcher_util_call_sync_folder_api(folder_id, folder_path)
+    for folder_path, folder_id in lost_folders.items():
+        watcher_util_call_sync_folder_api(folder_id, folder_path)
 
     # Handle deleted folders
     if deleted_folder_ids:

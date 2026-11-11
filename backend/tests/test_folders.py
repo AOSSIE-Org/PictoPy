@@ -47,6 +47,7 @@ from app.database.albums import (
 from app.database.images import (
     db_bulk_insert_images,
     db_create_images_table,
+    db_exclude_image_paths,
     db_get_image_by_id,
     db_toggle_image_favourite_status,
 )
@@ -1569,6 +1570,8 @@ class TestSyncFolderRenames:
         assert image["isFavourite"] is True
         assert db_get_album_images("album-id") == [image_id]
         assert _folder_row(library_db, "trip-id") == (renamed, "root-id", 1)
+        submitted = client.app.state.executor.submit.call_args.args
+        assert ("trip-id", renamed) in submitted[3]
 
     def test_folder_moved_to_another_parent_keeps_its_subtree(
         self, client, library_db, tmp_path
@@ -1645,3 +1648,64 @@ class TestSyncFolderRenames:
         assert response.json()["data"]["added_count"] == 1
         assert db_get_image_by_id(image_id) is None
         assert _folder_row(library_db, "old-id") is None
+
+    def test_hidden_photo_stays_hidden_after_its_folder_is_renamed(
+        self, client, library_db, tmp_path
+    ):
+        photos = str(tmp_path / "Photos")
+        trip = os.path.join(photos, "Trip")
+        db_insert_folders_batch(
+            [
+                ("root-id", photos, None, 0, False, None),
+                ("trip-id", trip, "root-id", 0, True, True),
+            ]
+        )
+        _index_photo("trip-id", os.path.join(trip, "beach.jpg"))
+        hidden = os.path.join(trip, "hidden.jpg")
+        with open(hidden, "wb") as f:
+            f.write(b"hidden photo")
+        db_exclude_image_paths([(hidden, "trip-id")])
+
+        renamed = os.path.join(photos, "Goa Trip 2026")
+        os.rename(trip, renamed)
+        response = client.post(
+            "/folders/sync-folder",
+            json={"folder_path": photos, "folder_id": "root-id"},
+        )
+
+        assert response.status_code == 200
+        conn = sqlite3.connect(library_db)
+        try:
+            excluded = [
+                row[0] for row in conn.execute("SELECT path FROM excluded_image_paths")
+            ]
+        finally:
+            conn.close()
+        assert excluded == [os.path.normcase(os.path.join(renamed, "hidden.jpg"))]
+
+    def test_folder_with_an_unknown_file_size_is_not_matched(
+        self, client, library_db, tmp_path
+    ):
+        photos = str(tmp_path / "Photos")
+        trip = os.path.join(photos, "Trip")
+        db_insert_folders_batch(
+            [
+                ("root-id", photos, None, 0, False, None),
+                ("trip-id", trip, "root-id", 0, True, True),
+            ]
+        )
+        image_id = _index_photo("trip-id", os.path.join(trip, "beach.jpg"))
+        conn = sqlite3.connect(library_db)
+        conn.execute("UPDATE images SET metadata = '{}' WHERE id = ?", (image_id,))
+        conn.commit()
+        conn.close()
+
+        os.rename(trip, os.path.join(photos, "Goa Trip 2026"))
+        response = client.post(
+            "/folders/sync-folder",
+            json={"folder_path": photos, "folder_id": "root-id"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["data"]["deleted_count"] == 1
+        assert db_get_image_by_id(image_id) is None

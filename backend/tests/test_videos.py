@@ -17,6 +17,7 @@ from app.database.videos import (
     db_delete_videos_by_ids,
     db_toggle_video_favourite_status,
     db_get_video_by_id,
+    db_relocate_videos,
 )
 from app.utils.videos import (
     video_util_is_valid_video,
@@ -464,6 +465,10 @@ class TestProcessFolderVideos:
 
 
 class TestVideosDatabase:
+    def test_relocating_a_deleted_row_fails(self, test_db, test_folder_id):
+        record = make_video_record("gone", "/videos/moved.mp4", test_folder_id)
+        assert db_relocate_videos([record]) is False
+
     def test_bulk_insert_and_get_all(self, test_db, test_folder_id):
         records = [
             make_video_record("vid-1", "/videos/a.mp4", test_folder_id),

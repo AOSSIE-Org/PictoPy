@@ -655,6 +655,10 @@ def db_relocate_images(image_records: List[ImageRecord]) -> bool:
             """,
             image_records,
         )
+        # A row deleted since it was looked up leaves the record to be inserted
+        if cursor.rowcount != len(image_records):
+            conn.rollback()
+            return False
         conn.commit()
         return True
     except sqlite3.Error as e:

@@ -20,6 +20,7 @@ from app.database.images import (
     db_create_images_table,
     db_get_image_by_id,
     db_get_image_sync_state_by_folder_ids,
+    db_relocate_images,
     db_toggle_image_favourite_status,
 )
 from app.database.yolo_mapping import db_create_YOLO_classes_table
@@ -478,6 +479,23 @@ class TestRescanningAFolder:
 
         assert db_get_image_by_id(image_id) is None
         assert _image_id(test_db, replacement) != image_id
+
+
+class TestRelocateImages:
+    def test_a_row_deleted_since_the_lookup_fails_the_relocation(
+        self, folder, tmp_path
+    ):
+        moved = db_relocate_images(
+            [
+                {
+                    "id": "gone",
+                    "path": str(tmp_path / "a.jpg"),
+                    "folder_id": folder,
+                    "metadata": "{}",
+                }
+            ]
+        )
+        assert moved is False
 
 
 class TestExtractMetadataRecordsMtime:

@@ -8,6 +8,14 @@ from app.logging.setup_logging import get_logger
 # Initialize logger
 logger = get_logger(__name__)
 
+
+def _connect() -> sqlite3.Connection:
+    conn = sqlite3.connect(DATABASE_PATH)
+    # Ensure ON DELETE CASCADE and other FKs are enforced
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
+
+
 # Type definitions
 FolderId = str
 FolderPath = str
@@ -486,7 +494,7 @@ def db_get_all_subfolders() -> List[FolderIdPath]:
     Get all folders that have a parent folder.
     Returns list of tuples (folder_id, folder_path).
     """
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
@@ -507,7 +515,7 @@ def db_get_media_sizes_under_path(folder_path: FolderPath) -> Dict[str, Optional
     Returns a dict mapping each path to its recorded file size, or None if unknown.
     """
     prefix = folder_path + os.sep
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
@@ -533,13 +541,15 @@ def db_relocate_folder_tree(
     old_path: FolderPath,
     new_path: FolderPath,
     parent_folder_id: FolderId,
-) -> None:
+) -> List[FolderIdPath]:
     """
     Point a folder, its subfolders and their images and videos at new_path,
     keeping every row and its id.
+    Returns list of tuples (folder_id, folder_path) for the moved folders.
     """
     old_prefix = old_path + os.sep
-    conn = sqlite3.connect(DATABASE_PATH)
+    new_prefix = new_path + os.sep
+    conn = _connect()
     cursor = conn.cursor()
 
     try:
@@ -557,7 +567,28 @@ def db_relocate_folder_tree(
             "UPDATE folders SET parent_folder_id = ? WHERE folder_id = ?",
             (parent_folder_id, folder_id),
         )
+        # Exclusions are stored normcased, see _normalise_path in images.py
+        old_key_prefix = os.path.normcase(old_path) + os.sep
+        cursor.execute(
+            "UPDATE excluded_image_paths SET path = ? || substr(path, ?) "
+            "WHERE substr(path, 1, ?) = ?",
+            (
+                os.path.normcase(new_path),
+                len(old_key_prefix),
+                len(old_key_prefix),
+                old_key_prefix,
+            ),
+        )
+        cursor.execute(
+            """
+            SELECT folder_id, folder_path FROM folders
+            WHERE folder_path = ? OR substr(folder_path, 1, ?) = ?
+        """,
+            (new_path, len(new_prefix), new_prefix),
+        )
+        relocated = cursor.fetchall()
         conn.commit()
+        return relocated
     except sqlite3.Error as e:
         logger.error(f"Error relocating folder tree: {e}")
         conn.rollback()

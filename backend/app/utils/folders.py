@@ -183,15 +183,17 @@ def folder_util_add_multiple_folder_trees(
 
 
 def _file_has_size(path: str, size: Optional[int]) -> bool:
+    if size is None:
+        return False
     try:
-        return os.path.isfile(path) and (size is None or os.path.getsize(path) == size)
+        return os.path.isfile(path) and os.path.getsize(path) == size
     except OSError:
         return False
 
 
 def folder_util_relocate_moved_folders(
     folders_to_add: set, parent_folder_id: str
-) -> int:
+) -> List[Tuple[str, str]]:
     """
     Point subfolders that no longer exist at the new folder they were moved to.
 
@@ -204,10 +206,10 @@ def folder_util_relocate_moved_folders(
         parent_folder_id: ID of the folder they were found in
 
     Returns:
-        Number of folders relocated
+        List of (folder_id, folder_path) tuples for every relocated folder
     """
     if not folders_to_add:
-        return 0
+        return []
 
     missing_folders = {
         folder_path: folder_id
@@ -235,12 +237,13 @@ def folder_util_relocate_moved_folders(
         ]
 
     match_counts = Counter(path for found in matches.values() for path in found)
-    relocated_count = 0
+    relocated_folders: List[Tuple[str, str]] = []
     for old_path, found in matches.items():
         if len(found) == 1 and match_counts[found[0]] == 1:
-            db_relocate_folder_tree(
-                missing_folders[old_path], old_path, found[0], parent_folder_id
+            relocated_folders.extend(
+                db_relocate_folder_tree(
+                    missing_folders[old_path], old_path, found[0], parent_folder_id
+                )
             )
-            relocated_count += 1
 
-    return relocated_count
+    return relocated_folders

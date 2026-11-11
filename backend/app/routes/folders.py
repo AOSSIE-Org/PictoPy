@@ -522,9 +522,10 @@ def sync_folder(request: SyncFolderRequest, app_state: State = Depends(get_state
 
         # Renamed or moved folders keep their rows, and with them their albums,
         # favourites and faces, instead of being deleted and added again
-        if folder_util_relocate_moved_folders(
+        relocated_folders = folder_util_relocate_moved_folders(
             filesystem_folder_set - db_folder_paths, request.folder_id
-        ):
+        )
+        if relocated_folders:
             db_child_folders = db_get_direct_child_folders(request.folder_id)
             db_folder_paths = {
                 folder_path for folder_id, folder_path in db_child_folders
@@ -551,7 +552,8 @@ def sync_folder(request: SyncFolderRequest, app_state: State = Depends(get_state
             post_sync_folder_sequence,
             request.folder_path,
             request.folder_id,
-            added_folders_with_ids,
+            # Moved folders are scanned too, for files added while they moved
+            added_folders_with_ids + relocated_folders,
         )
         # Step 4: Return comprehensive response
         return SyncFolderResponse(

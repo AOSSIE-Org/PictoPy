@@ -368,6 +368,10 @@ def db_relocate_videos(video_records: List[VideoRecord]) -> bool:
             """,
             video_records,
         )
+        # A row deleted since it was looked up leaves the record to be inserted
+        if cursor.rowcount != len(video_records):
+            conn.rollback()
+            return False
         conn.commit()
         return True
     except sqlite3.Error as e:
