@@ -11,6 +11,7 @@ import tempfile
 import os
 import shutil
 from concurrent.futures import Future, ProcessPoolExecutor
+from pathlib import Path
 
 
 from app.routes.folders import router as folders_router
@@ -1710,7 +1711,9 @@ class TestSyncFolderRenames:
         assert response.json()["data"]["deleted_count"] == 1
         assert db_get_image_by_id(image_id) is None
 
-    def test_stale_folder_path_is_rejected(self, client, library_db, tmp_path):
+    def test_stale_folder_path_is_rejected(
+        self, client: TestClient, library_db: str, tmp_path: Path
+    ) -> None:
         photos = str(tmp_path / "Photos")
         trip = os.path.join(photos, "Trip")
         day_one = os.path.join(trip, "Day 1")

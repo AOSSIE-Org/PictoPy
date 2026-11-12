@@ -1,5 +1,6 @@
 import os
 import shutil
+from pathlib import Path
 from typing import List, Tuple
 
 import pytest
@@ -163,8 +164,12 @@ class TestWatcherFolderChanges:
 
     @pytest.mark.parametrize("other_deletion_first", [True, False])
     def test_destination_that_also_lost_a_file_is_synced_before_the_source(
-        self, monkeypatch, api_calls, tmp_path, other_deletion_first
-    ):
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        api_calls: List[Tuple[str, object]],
+        tmp_path: Path,
+        other_deletion_first: bool,
+    ) -> None:
         photos = str(tmp_path / "Photos")
         source = os.path.join(photos, "2024")
         destination = os.path.join(photos, "2025")
