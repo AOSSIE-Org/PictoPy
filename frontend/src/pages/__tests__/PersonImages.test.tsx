@@ -283,7 +283,8 @@ describe('PersonImages cluster rename', () => {
     const updatedCluster = store.getState().faceClusters.clusters[0];
     expect(updatedCluster.cluster_name).toBe('Alicia');
     expect(store.getState().infoDialog.isOpen).toBe(true);
-    expect(store.getState().infoDialog.variant).toBe('success');
+    expect(store.getState().infoDialog.variant).toBe('info');
+    expect(store.getState().infoDialog.title).toBe('Success');
   });
 
   test('rejects blank names without calling renameCluster', async () => {
