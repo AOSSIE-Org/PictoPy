@@ -16,6 +16,7 @@ from app.database.folders import (
     db_get_all_folder_details,
     db_get_direct_child_folders,
     db_get_folder_ids_by_path_prefix,
+    db_get_folder_path_from_id,
     db_set_tagging_completed,
     db_update_folder_indexing_status,
     db_update_parent_ids_for_subtree,
@@ -505,11 +506,25 @@ def delete_folders(
 @router.post(
     "/sync-folder",
     response_model=SyncFolderResponse,
-    responses={code: {"model": ErrorResponse} for code in [400, 404, 500]},
+    responses={code: {"model": ErrorResponse} for code in [400, 404, 409, 500]},
 )
 def sync_folder(request: SyncFolderRequest, app_state: State = Depends(get_state)):
     """Sync a folder by comparing filesystem folders with database entries and removing extra DB entries."""
     try:
+        # The watcher can still hold a folder's old path after it was moved,
+        # and syncing that path would delete the moved folder's children
+        if db_get_folder_path_from_id(request.folder_id) != os.path.abspath(
+            request.folder_path
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Folder Moved",
+                    message="The folder id no longer matches this path.",
+                ).model_dump(),
+            )
+
         # Step 1: Get current state from both sources
         db_child_folders = db_get_direct_child_folders(request.folder_id)
         filesystem_folders = folder_util_get_filesystem_direct_child_folders(

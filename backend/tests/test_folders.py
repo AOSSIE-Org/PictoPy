@@ -1709,3 +1709,34 @@ class TestSyncFolderRenames:
         assert response.status_code == 200
         assert response.json()["data"]["deleted_count"] == 1
         assert db_get_image_by_id(image_id) is None
+
+    def test_stale_folder_path_is_rejected(self, client, library_db, tmp_path):
+        photos = str(tmp_path / "Photos")
+        trip = os.path.join(photos, "Trip")
+        day_one = os.path.join(trip, "Day 1")
+        db_insert_folders_batch(
+            [
+                ("root-id", photos, None, 0, False, None),
+                ("trip-id", trip, "root-id", 0, True, True),
+                ("day-id", day_one, "trip-id", 0, True, True),
+            ]
+        )
+        image_id = _index_photo("day-id", os.path.join(day_one, "sunrise.jpg"))
+
+        os.rename(trip, os.path.join(photos, "Goa Trip 2026"))
+        response = client.post(
+            "/folders/sync-folder",
+            json={"folder_path": photos, "folder_id": "root-id"},
+        )
+        assert response.status_code == 200
+
+        # A new folder at the old path, synced with the moved folder's id
+        os.makedirs(trip)
+        response = client.post(
+            "/folders/sync-folder",
+            json={"folder_path": trip, "folder_id": "trip-id"},
+        )
+
+        assert response.status_code == 409
+        assert db_get_image_by_id(image_id) is not None
+        assert _folder_row(library_db, "day-id") is not None

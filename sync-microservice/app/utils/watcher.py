@@ -88,12 +88,17 @@ def watcher_util_handle_file_changes(changes: set) -> None:
             else:
                 affected_folders[folder_path] = folder_id
 
-    # Process affected folders
+    # Process affected folders: those that only gained something, then those
+    # that gained and lost, then those that only lost
     for folder_path, folder_id in affected_folders.items():
         if folder_path not in lost_folders:
             watcher_util_call_sync_folder_api(folder_id, folder_path)
     for folder_path, folder_id in lost_folders.items():
-        watcher_util_call_sync_folder_api(folder_id, folder_path)
+        if folder_path in affected_folders:
+            watcher_util_call_sync_folder_api(folder_id, folder_path)
+    for folder_path, folder_id in lost_folders.items():
+        if folder_path not in affected_folders:
+            watcher_util_call_sync_folder_api(folder_id, folder_path)
 
     # Handle deleted folders
     if deleted_folder_ids:

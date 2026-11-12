@@ -161,6 +161,33 @@ class TestWatcherFolderChanges:
 
         assert api_calls == [("sync", "2025-id"), ("sync", "2024-id")]
 
+    @pytest.mark.parametrize("other_deletion_first", [True, False])
+    def test_destination_that_also_lost_a_file_is_synced_before_the_source(
+        self, monkeypatch, api_calls, tmp_path, other_deletion_first
+    ):
+        photos = str(tmp_path / "Photos")
+        source = os.path.join(photos, "2024")
+        destination = os.path.join(photos, "2025")
+        _watch(
+            monkeypatch,
+            [("root-id", photos), ("2024-id", source), ("2025-id", destination)],
+        )
+        old = os.path.join(source, "beach.jpg")
+        new = os.path.join(destination, "beach.jpg")
+        with open(new, "wb") as f:
+            f.write(b"photo")
+
+        changes = [
+            (Change.deleted, os.path.join(destination, "old.jpg")),
+            (Change.deleted, old),
+            (Change.added, new),
+        ]
+        if not other_deletion_first:
+            changes = [changes[1], changes[2], changes[0]]
+        watcher.watcher_util_handle_file_changes(_InOrder(changes))
+
+        assert api_calls == [("sync", "2025-id"), ("sync", "2024-id")]
+
     def test_removed_library_folder_is_still_deleted(
         self, monkeypatch, api_calls, tmp_path
     ):
