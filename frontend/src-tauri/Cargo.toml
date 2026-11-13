@@ -46,9 +46,7 @@ tauri = { version = "2.9.1", features = ["test"] }
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
 custom-protocol = ["tauri/custom-protocol"]
-# Enables spawning the bundled Python backend/sync sidecars. Required for
-# release builds (see frontend/src-tauri/src/services/sidecars.rs); without it `prod()`
-# fails loudly in release builds instead of silently launching a backend-less app.
+# Lets release builds spawn the bundled backend and sync sidecars. Without it `prod()` fails loudly.
 bundled-sidecars = []
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
