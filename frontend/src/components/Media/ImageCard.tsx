@@ -25,7 +25,6 @@ export function ImageCard({
   onClick,
 }: ImageCardViewProps) {
   const [isImageHovered, setIsImageHovered] = useState(false);
-  // Default to empty array if no tags are provided
   const tags = image.tags || [];
   const { toggleFavourite } = useToggleFav();
 
@@ -68,7 +67,6 @@ export function ImageCard({
               isSelected ? 'opacity-95' : '',
             )}
           />
-          {/* Dark overlay on hover */}
           <div className="pointer-events-none absolute inset-0 bg-black/30 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
 
           {/* Favourite action: top-right, matching VideoCard's placement */}
@@ -96,7 +94,6 @@ export function ImageCard({
           </div>
         </AspectRatio>
 
-        {/* Tag section */}
         <ImageTags
           tags={tags}
           showTags={showTags}

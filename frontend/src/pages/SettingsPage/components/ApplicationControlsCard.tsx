@@ -14,9 +14,6 @@ import { usePictoMutation } from '@/hooks/useQueryExtension';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { showGlobalAlert } from '@/features/globalAlertSlice';
 
-/**
- * Component for application controls in settings
- */
 const ApplicationControlsCard: React.FC = () => {
   const dispatch = useDispatch();
 
@@ -60,8 +57,6 @@ const ApplicationControlsCard: React.FC = () => {
       errorMessage:
         reclusterMutation.errorMessage ||
         'Failed to complete global face reclustering.',
-      // You can use reclusterMutation.successData?.clusters_created to show the number of clusters created if needed
-      // Example: `Clusters created: ${reclusterMutation.successData?.clusters_created}`
     }),
     [
       reclusterMutation.successMessage,
@@ -84,12 +79,10 @@ const ApplicationControlsCard: React.FC = () => {
         const hasUpdate = await checkForUpdates();
 
         if (hasUpdate) {
-          // First hide the loader, then show the update dialog
           dispatch(hideLoader());
           // Add small delay to prevent UI flicker
           setTimeout(() => setUpdateDialogOpen(true), 50);
         } else {
-          // First hide the loader, then show the info dialog with a small delay
           dispatch(hideLoader());
           // Add small delay to prevent UI flicker
           setTimeout(() => {
@@ -104,10 +97,8 @@ const ApplicationControlsCard: React.FC = () => {
           }, 50);
         }
       } catch (err: unknown) {
-        // Handle errors during update check
         const errorMessage = err instanceof Error ? err.message : String(err);
 
-        // First hide the loader, then show the error dialog with a small delay
         dispatch(hideLoader());
         // Add small delay to prevent UI flicker
         setTimeout(() => {
@@ -119,9 +110,6 @@ const ApplicationControlsCard: React.FC = () => {
             }),
           );
         }, 50);
-      } finally {
-        // We've moved the hideLoader calls into each specific branch to control timing
-        // This empty finally block is kept for clarity and potential future use
       }
     };
 

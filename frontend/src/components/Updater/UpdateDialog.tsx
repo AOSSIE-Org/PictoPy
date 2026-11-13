@@ -62,7 +62,6 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Version Information */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-2 text-sm font-medium">
@@ -97,7 +96,6 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
 
           <Separator />
 
-          {/* Release Notes */}
           {update?.body && (
             <div className="space-y-2">
               <h4 className="text-sm font-medium">Release Notes:</h4>
@@ -107,7 +105,6 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
             </div>
           )}
 
-          {/* Error Message */}
           {error && (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
@@ -115,7 +112,6 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
             </Alert>
           )}
 
-          {/* Download Progress */}
           {isDownloading && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">

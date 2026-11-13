@@ -107,7 +107,6 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-6 py-4">
-          {/* Search Input */}
           <div className="relative shrink-0">
             <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
             <Input
@@ -117,7 +116,6 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
               className="pl-10"
             />
           </div>
-          {/* Image Grid */}
           <ScrollArea className="flex-1 overflow-auto">
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
@@ -181,7 +179,6 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
             )}
           </ScrollArea>
         </div>
-        {/* Selected Count */}
         {selectedImages.size > 0 && (
           <div className="px-6 pb-2">
             <p className="text-muted-foreground text-sm">

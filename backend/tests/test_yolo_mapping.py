@@ -8,10 +8,6 @@ import pytest
 
 from app.database.yolo_mapping import db_create_YOLO_classes_table
 
-# ##############################
-# Pytest Fixtures
-# ##############################
-
 
 @pytest.fixture(scope="function")
 def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
@@ -43,11 +39,6 @@ def fetch_mappings(db_path: str) -> List[Tuple[int, str]]:
     return rows
 
 
-# ##############################
-# Table creation
-# ##############################
-
-
 class TestCreateYOLOClassesTable:
     def test_inserts_class_names_by_index(self, test_db, monkeypatch):
         set_class_names(monkeypatch, ["person", "bicycle", "car"])
@@ -68,7 +59,7 @@ class TestCreateYOLOClassesTable:
         set_class_names(monkeypatch, ["old-person", "old-car"])
         db_create_YOLO_classes_table()
 
-        # Same ids, new names -> INSERT OR REPLACE overwrites in place
+        # Same ids, new names: the upsert overwrites them in place.
         set_class_names(monkeypatch, ["person", "car"])
         db_create_YOLO_classes_table()
 

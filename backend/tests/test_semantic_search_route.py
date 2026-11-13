@@ -135,13 +135,9 @@ class TestSemanticSearchEndpoint:
         mock_get_path.return_value = "/models/text.onnx"
         mock_exists.return_value = True
 
-        # Two embeddings that both clear SIGLIP2_MATCH_THRESHOLD (0.01) with
-        # clearly distinct scores after 4dp rounding (dot=0.16 -> ~0.7782,
-        # dot=0.13 -> ~0.1067 -- realistic dot-product magnitudes per the
-        # calibrated scoring, not the near-1.0/near-0.0 saturation you'd get
-        # from naive orthogonal/aligned toy vectors). img_high has the
-        # *lower* score despite being listed first in db_get_all_embeddings,
-        # so a broken sort would put it first in the response too.
+        # Both clear SIGLIP2_MATCH_THRESHOLD with distinct scores at realistic dot
+        # magnitudes, not saturated toy vectors. img_high scores *lower* despite
+        # being listed first, so a broken sort shows.
         mock_get_all_embeddings.return_value = (
             ["img_high", "img_highest"],
             np.array([[0.13, 0.0], [0.16, 0.0]], dtype=np.float32),
@@ -157,12 +153,8 @@ class TestSemanticSearchEndpoint:
         )
         mock_get_text_model.return_value = mock_text_model
 
-        # db_get_images_by_ids preserves caller-supplied ID order in the
-        # real implementation (verified in test_image_embeddings.py's
-        # sibling tests) -- mirror that contract here rather than asserting
-        # the route re-sorts independently. It doesn't: matched_pairs is
-        # sorted once, and everything downstream (matched_ids, the DB call,
-        # the response) just follows that order through.
+        # The real db_get_images_by_ids preserves caller order, so mirror that
+        # contract: the route sorts matched_pairs once and everything follows.
         mock_get_images_by_ids.side_effect = lambda ids: [
             _image_row(img_id, f"/p/{img_id}.jpg") for img_id in ids
         ]
@@ -189,9 +181,7 @@ class TestSemanticSearchEndpoint:
         # Query must be stripped + lowercased before templating, so casing/
         # whitespace differences hit the calibration-validated regime.
         mock_tokenize.assert_called_once_with("This is a photo of beach.")
-        # The definitive proof of correct sorting: matched_ids (built from
-        # matched_pairs.sort(..., reverse=True)) must already be in
-        # descending-score order by the time it reaches this call.
+        # The proof the sort works: ids reach this call in descending-score order.
         mock_get_images_by_ids.assert_called_once_with(["img_highest", "img_high"])
 
     @patch("app.database.image_embeddings.db_get_all_embeddings")
@@ -207,9 +197,8 @@ class TestSemanticSearchEndpoint:
         mock_get_path,
         mock_get_all_embeddings,
     ):
-        # min_length=1 on the FastAPI Query param only checks raw string
-        # length, so a whitespace-only query slips past it -- the route's
-        # own strip().lower() + empty-check is what should catch this.
+        # min_length=1 checks the raw string, so a whitespace-only query gets past it;
+        # the route's own strip() and empty check must catch it.
         mock_registry_keys.return_value = ("siglip2_base_vision", "siglip2_base_text")
         mock_tok_key.return_value = "siglip2_base_tokenizer"
         mock_get_path.return_value = "/models/text.onnx"

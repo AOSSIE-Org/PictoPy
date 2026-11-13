@@ -33,7 +33,6 @@ export function AppSidebar() {
   }, []);
 
   const isActive = (path: string) => {
-    // Remove leading slash from both paths for comparison
     const currentPath = location.pathname.replace(/^\//, '');
     const menuPath = path.replace(/^\//, '');
 

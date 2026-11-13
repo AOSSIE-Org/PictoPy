@@ -91,14 +91,12 @@ def rename_cluster(
 ):
     """Rename a face cluster by its ID."""
     try:
-        # Step 1: Data Validation
         if not cluster_id.strip():
             raise ValueError("Cluster ID cannot be empty")
 
         if not request.cluster_name.strip():
             raise ValueError("Cluster name cannot be empty")
 
-        # Step 2: Check if cluster exists
         existing_cluster = db_get_cluster_by_id(cluster_id)
         if not existing_cluster:
             raise HTTPException(
@@ -110,7 +108,6 @@ def rename_cluster(
                 ).model_dump(),
             )
 
-        # Step 3: Update cluster name
         updated = db_update_cluster(
             cluster_id=cluster_id,
             cluster_name=request.cluster_name.strip(),
@@ -211,7 +208,6 @@ def get_all_clusters():
 def get_cluster_images(cluster_id: str):
     """Get all images that contain faces belonging to a specific cluster."""
     try:
-        # Step 1: Validate cluster exists
         cluster = db_get_cluster_by_id(cluster_id)
         if not cluster:
             raise HTTPException(
@@ -223,10 +219,8 @@ def get_cluster_images(cluster_id: str):
                 ).model_dump(),
             )
 
-        # Step 2: Get images for this cluster
         images_data = db_get_images_by_cluster_id(cluster_id)
 
-        # Step 3: Convert to response models
         images = [
             ImageInCluster(
                 id=img["image_id"],
@@ -240,8 +234,8 @@ def get_cluster_images(cluster_id: str):
             for img in images_data
         ]
 
-        # Step 4: Videos the same person appears in, as the videos routes
-        # return them, so the frontend renders them with the same card.
+        # Videos this person appears in, shaped like the videos routes return them so
+        # the frontend reuses the same card.
         videos = video_util_to_video_data(
             db_get_videos_by_ids(db_get_video_ids_by_cluster_id(cluster_id))
         )
@@ -323,7 +317,7 @@ def face_tagging(
                 ).model_dump(),
             )
 
-        MAX_B64_LEN = 14_000_000  # 10MB
+        MAX_B64_LEN = 14_000_000  # about 10MB once base64-decoded
         if len(base64_data) > MAX_B64_LEN:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

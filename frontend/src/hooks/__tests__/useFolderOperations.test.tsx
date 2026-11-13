@@ -69,8 +69,8 @@ describe('useFolderOperations - delete folder cache invalidation', () => {
   });
 
   it('invalidates the memories query when folder deletion succeeds', async () => {
-    // Invalidates the 5-minute frontend cache so the UI immediately reflects synchronous
-    // backend deletions without requiring the user to manually regenerate.
+    // Deleting invalidates the 5-minute cache, so the UI reflects the backend's
+    // synchronous delete straight away.
     deleteFolders.mockResolvedValueOnce({ success: true, data: {} });
     const { result, invalidateSpy } = renderUseFolderOperations();
 
@@ -90,10 +90,8 @@ describe('useFolderOperations - delete folder cache invalidation', () => {
 
     result.current.deleteFolder('folder-1');
 
-    // autoInvalidateTags still fires ['folders'] on settle regardless of
-    // outcome, so wait for that instead of an arbitrary timeout to know the
-    // mutation has actually settled before asserting clusters was skipped.
-    // retry: 2 with a 500ms retryDelay means settling can take >1s.
+    // Wait for the ['folders'] invalidation on settle, not a timeout. Two retries
+    // at 500ms can take over 1s.
     await waitFor(
       () => {
         expect(

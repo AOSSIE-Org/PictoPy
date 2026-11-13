@@ -2,13 +2,8 @@ import type { SyntheticEvent } from 'react';
 
 export const PLACEHOLDER_IMAGE_SRC = '/placeholder.svg';
 
-/**
- * Builds an `<img>` onError handler that swaps in a fallback image exactly once
- * and detaches itself, so a broken fallback cannot trigger an error loop.
- *
- * Centralizes the handler that was previously copy-pasted across the media and
- * memories components (each with its own fallback asset).
- */
+// The fallback has to be a local asset that cannot fail in turn: clearing
+// img.onerror does not detach the React onError prop callers attach this with.
 export const createImageErrorHandler =
   (fallbackSrc: string = PLACEHOLDER_IMAGE_SRC) =>
   (event: SyntheticEvent<HTMLImageElement>) => {

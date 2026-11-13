@@ -40,10 +40,8 @@ export const describeExportStatus = (
   return line;
 };
 
-/**
- * Writing PictoPy's tags, faces and embeddings into the image files, so a
- * reinstall can reuse them instead of running the AI again.
- */
+// Writes PictoPy's tags, faces and embeddings into the image files, so a
+// reinstall can reuse them instead of running the AI again.
 const MetadataExportCard: React.FC = () => {
   const { preferences, toggleMetadataExport } = useUserPreferences();
   const [starting, setStarting] = useState(false);

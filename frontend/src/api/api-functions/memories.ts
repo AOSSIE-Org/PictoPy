@@ -2,8 +2,6 @@ import { memoriesEndpoints } from '../apiEndpoints';
 import { apiClient } from '../axiosConfig';
 import type { BackendRes } from '@/hooks/useQueryExtension';
 
-// Data Types
-
 export type MemoryEventType = 'anniversary' | 'import_event' | 'semantic_event';
 
 export type MemoryStatus = 'pending' | 'complete' | 'failed' | 'empty';
@@ -63,10 +61,7 @@ export interface MemoryCard {
 /** A memory with its full image set, for the story viewer. */
 export interface MemoryStory extends MemoryCard {
   images: MemoryImage[];
-  /**
-   * Separate from images because they are separate tables. sort_order runs
-   * across both, so the viewer merges them into one sequence.
-   */
+  /** A separate table from images, but sort_order runs across both. */
   videos: MemoryVideo[];
   signals: Record<string, number> | null;
 }
@@ -101,8 +96,6 @@ export interface UpdateMemoryRequest {
   dismissed?: boolean;
   notified?: boolean;
 }
-
-// API Functions
 
 /** List memory cards, newest first. */
 export const getMemories = async (

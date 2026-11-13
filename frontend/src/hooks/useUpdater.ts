@@ -8,13 +8,11 @@ interface DownloadProgress {
 }
 
 interface UseUpdaterReturn {
-  // State
   updateAvailable: Update | null;
   isDownloading: boolean;
   downloadProgress: DownloadProgress;
   error: string | null;
 
-  // Functions
   checkForUpdates: () => Promise<boolean>;
   downloadAndInstall: () => Promise<void>;
   dismissUpdate: () => void;
@@ -123,13 +121,11 @@ export const useUpdater = (): UseUpdaterReturn => {
   }, []);
 
   return {
-    // State
     updateAvailable,
     isDownloading,
     downloadProgress,
     error,
 
-    // Functions
     checkForUpdates,
     downloadAndInstall,
     dismissUpdate,

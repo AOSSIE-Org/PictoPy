@@ -104,7 +104,6 @@ export const AITagging = () => {
       >
         <h1 className="mt-6 mb-6 text-2xl font-bold">AI Tagging</h1>
 
-        {/* Face Collections Section */}
         <div className="mb-8">
           <FaceCollections onSearchActivated={handleSearchActivated} />
         </div>
@@ -135,7 +134,6 @@ export const AITagging = () => {
           </div>
         )}
 
-        {/* Gallery Section */}
         <div className="flex-1">
           {taggedImages.length > 0 ? (
             searchState.active && sortMode === 'best_match' ? (

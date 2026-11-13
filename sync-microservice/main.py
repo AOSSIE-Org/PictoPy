@@ -13,20 +13,16 @@ from app.logging.setup_logging import (
 )
 from app.utils.logger_writer import redirect_stdout_stderr
 
-# Set up standard logging
 setup_logging("sync-microservice")
 
-# Configure Uvicorn logging to use our custom formatter
 configure_uvicorn_logging("sync-microservice")
 
 path = os.path.dirname(DATABASE_PATH)
 os.makedirs(path, exist_ok=True)
-# Use the sync-specific logger for this module
 logger = get_sync_logger(__name__)
 
 logger.info("Starting PictoPy Sync Microservice...")
 
-# Create FastAPI app with lifespan management
 app = FastAPI(
     title="PictoPy Sync Microservice",
     description="File system synchronization service for PictoPy",
@@ -35,12 +31,11 @@ app = FastAPI(
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# Include route modules
 app.include_router(health.router, tags=["Health"])
 app.include_router(watcher.router, prefix="/watcher", tags=["Watcher"])
 app.include_router(folders.router, prefix="/folders", tags=["Folders"])
@@ -58,7 +53,6 @@ if __name__ == "__main__":
     )
     server = Server(config)
 
-    # Use context manager for safe stdout/stderr redirection
     with redirect_stdout_stderr(
         logger, stdout_level=logging.INFO, stderr_level=logging.ERROR
     ):
