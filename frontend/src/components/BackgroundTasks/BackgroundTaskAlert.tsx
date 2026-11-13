@@ -15,7 +15,7 @@ export interface BackgroundTaskAlertProps {
   className?: string;
 }
 
-/** Purely presentational -- pair it with a status hook that decides when. */
+/** Presentational only. A status hook decides when it shows. */
 export const BackgroundTaskAlert: React.FC<BackgroundTaskAlertProps> = ({
   title,
   description,

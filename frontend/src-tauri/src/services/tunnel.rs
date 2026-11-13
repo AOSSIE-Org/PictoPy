@@ -117,8 +117,8 @@ impl<C: TunnelChild> TunnelStateOf<C> {
         Ok(())
     }
 
-    /// Reads the pid first because killing consumes the handle -- a failure has
-    /// to name the process, since it cannot be put back for a retry.
+    /// Reads the pid first because killing consumes the handle, so a failure can
+    /// still name the process.
     fn stop(&self) -> Result<(), String> {
         self.take_and_kill(false)
     }
@@ -167,9 +167,8 @@ impl<C: TunnelChild> Default for TunnelStateOf<C> {
     }
 }
 
-/// Splits on whitespace rather than matching the sentence around it -- the
-/// wording is the provider's to change, and one already differs from its docs.
-/// Each event is one line: the shell plugin frames output with read_line.
+/// Splits on whitespace instead of matching the provider's wording, which can change.
+/// Each event is one line because the shell plugin frames output with read_line.
 fn find_url(line: &str, suffix: &str) -> Option<String> {
     line.split_whitespace()
         .filter(|token| token.starts_with("https://"))

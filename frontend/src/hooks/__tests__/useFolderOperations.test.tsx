@@ -90,8 +90,8 @@ describe('useFolderOperations - delete folder cache invalidation', () => {
 
     result.current.deleteFolder('folder-1');
 
-    // autoInvalidateTags fires ['folders'] on settle either way, so wait for that
-    // rather than a timeout -- retry: 2 at 500ms means settling can exceed 1s.
+    // Wait for the ['folders'] invalidation on settle, not a timeout. Two retries
+    // at 500ms can take over 1s.
     await waitFor(
       () => {
         expect(

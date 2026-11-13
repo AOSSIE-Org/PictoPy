@@ -101,8 +101,7 @@ export type MemorySlide =
   | ({ kind: 'image' } & MemoryImage)
   | ({ kind: 'video' } & MemoryVideo);
 
-// Two arrays because they live in two tables, but sort_order is one sequence
-// across both -- so this merges rather than concatenates.
+// Images and videos live in two tables but share one sort_order, so merge them.
 export const buildMemorySlides = (
   memory: Pick<MemoryStory, 'images' | 'videos'> | null | undefined,
 ): MemorySlide[] => {

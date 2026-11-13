@@ -84,8 +84,8 @@ export const useMemoryStatus = (
   );
 };
 
-// /generate returns at queue time, so invalidating on the response refetches
-// what is already on screen -- why Refresh looked dead. This follows the run.
+// /generate returns at queue time, so refetch when the run finishes, not on
+// the response.
 export const useRefreshMemories = () => {
   const queryClient = useQueryClient();
   const [isAwaitingRun, setIsAwaitingRun] = useState(false);

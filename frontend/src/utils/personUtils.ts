@@ -23,8 +23,7 @@ export function getPhotoCountText(count: number, videoCount = 0): string {
   return `${photos} · ${videoCount} video${videoCount !== 1 ? 's' : ''}`;
 }
 
-// match_any reads "A or B", match_all reads "A and B" -- the title has to say
-// which query actually ran.
+// The title says which query ran: "A or B" for match_any, "A and B" for match_all.
 export function formatPeopleTitle(
   names: string[],
   matchMode: 'match_any' | 'match_all',
