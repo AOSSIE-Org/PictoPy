@@ -21,8 +21,8 @@ from duplicate_comment import MARKER
 from issue_corpus import (
     Closure,
     Transport,
+    closure_fields,
     fetch_issues,
-    in_repository,
     is_duplicate,
     post_graphql,
     resolve_canonical,
@@ -186,19 +186,16 @@ def parse_issue(node: dict, repository: str) -> FeedbackIssue:
         # Deleted accounts come back as a null author.
         return actor["login"] if actor else ""
 
-    reason = node.get("stateReason")
-    duplicate_of = node.get("duplicateOf")
     # The eval pairs hold numbers in this repository only.
-    if duplicate_of and not in_repository(duplicate_of, repository):
-        duplicate_of = None
+    state_reason, duplicate_of = closure_fields(node, repository)
     return {
         "number": node["number"],
         "created_at": node["createdAt"],
         "author": login(node.get("author")),
         "state": node["state"].lower(),
-        "state_reason": reason.lower() if reason else None,
+        "state_reason": state_reason,
         "labels": [label["name"] for label in node["labels"]["nodes"]],
-        "duplicate_of": duplicate_of["number"] if duplicate_of else None,
+        "duplicate_of": duplicate_of,
         "comments": [
             {"author": login(c.get("author")), "body": c["body"]}
             for c in node["comments"]["nodes"]

@@ -105,6 +105,20 @@ def test_parse_issue_drops_references_to_other_repositories() -> None:
     assert issue["closed_by"] == [731]
     assert is_duplicate(issue)
 
+    # GitHub does not document that such a closure always reports DUPLICATE.
+    other_reason = parse_issue(
+        make_node(
+            10,
+            state="CLOSED",
+            stateReason="COMPLETED",
+            duplicateOf=ref(3, "other/repo"),
+        ),
+        "o/r",
+    )
+    assert other_reason["duplicate_of"] is None
+    assert is_duplicate(other_reason)
+    assert status(other_reason) == "closed as duplicate"
+
 
 def test_fetch_issues_follows_cursor_until_last_page() -> None:
     pages = {

@@ -137,13 +137,20 @@ def in_repository(reference: dict, repository: str) -> bool:
     return reference["repository"]["nameWithOwner"].lower() == repository.lower()
 
 
-def parse_issue(node: dict, repository: str) -> Issue:
+def closure_fields(node: dict, repository: str) -> tuple[str | None, int | None]:
+    """state_reason and duplicate_of for a GraphQL issue node."""
     reason = node.get("stateReason")
-    duplicate_of = node.get("duplicateOf")
-    # A target in another repository would be looked up here by number and name an
-    # unrelated issue, so it is dropped; is_duplicate still holds via state_reason.
-    if duplicate_of and not in_repository(duplicate_of, repository):
-        duplicate_of = None
+    target = node.get("duplicateOf")
+    # A target in another repository would be looked up by number and name an
+    # unrelated local issue, so it is dropped. Keeping "duplicate" as the reason
+    # still classifies the issue as one, whatever reason GitHub reports.
+    if target and not in_repository(target, repository):
+        return "duplicate", None
+    return (reason.lower() if reason else None), (target["number"] if target else None)
+
+
+def parse_issue(node: dict, repository: str) -> Issue:
+    state_reason, duplicate_of = closure_fields(node, repository)
     closing_prs = node.get("closedByPullRequestsReferences") or {"nodes": []}
     return {
         "number": node["number"],
@@ -151,10 +158,10 @@ def parse_issue(node: dict, repository: str) -> Issue:
         "body": node.get("body") or "",
         "url": node["url"],
         "state": node["state"].lower(),
-        "state_reason": reason.lower() if reason else None,
+        "state_reason": state_reason,
         "created_at": node["createdAt"],
         "labels": [label["name"] for label in node["labels"]["nodes"]],
-        "duplicate_of": duplicate_of["number"] if duplicate_of else None,
+        "duplicate_of": duplicate_of,
         # Closed-but-unmerged pull requests also reference the issue; only merged
         # ones resolved it. Comments reference PRs as #N, so only this repository's.
         "closed_by": [

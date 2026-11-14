@@ -93,9 +93,11 @@ jobs:
     permissions:
       issues: write
     # One writer per issue at a time, so two runs cannot both create a comment.
+    # Writers queue rather than replace each other: GitHub does not guarantee they
+    # arrive in event order, and only the writer whose text is current posts.
     concurrency:
       group: duplicate-detection-comment-${{ github.event.issue.number }}
-      cancel-in-progress: false
+      queue: max
 
     steps:
       - name: Post or update the suggestion comment
