@@ -1,4 +1,5 @@
 import sqlite3
+import time
 from contextlib import closing
 
 import pytest
@@ -616,6 +617,21 @@ class TestFaceClusteringAlgo:
         # 2 elements
         assert estimate_eps(np.random.randn(2, 512), k=2) is None
 
+    def test_estimate_eps_sample_matches_the_full_set(self):
+        """Sampled eps tracks the full-set estimate on many tight groups"""
+        rng = np.random.default_rng(0)
+        centers = rng.normal(size=(400, 8))
+        embeddings = np.vstack(
+            [center + 0.02 * rng.normal(size=(6, 8)) for center in centers]
+        )
+
+        full = estimate_eps(embeddings, k=3, sample_size=len(embeddings))
+        sampled = estimate_eps(embeddings, k=3, sample_size=200)
+
+        # Fitting the sample instead of querying it measures k-distances inside the
+        # subsample, where the k-th neighbour is another person: orders of magnitude off.
+        assert abs(sampled - full) < 0.1 * full
+
     @patch("app.utils.face_clusters.db_get_all_faces_with_cluster_names")
     def test_adaptive_eps_clamping_regression(self, mock_db_get):
         """Test 4: Adaptive eps clamping under sparse datasets with singletons"""
@@ -897,6 +913,7 @@ class TestReclusterWithNoFaces:
         mock_delete.assert_called_once()
 
     @patch("app.utils.face_clusters.db_delete_all_clusters")
+    @patch("app.utils.face_clusters.cluster_util_cluster_unassigned_face_embeddings")
     @patch("app.utils.face_clusters.get_db_connection")
     @patch("app.utils.face_clusters.db_update_face_cluster_ids_batch")
     @patch(
@@ -911,6 +928,7 @@ class TestReclusterWithNoFaces:
         mock_assign,
         mock_update_batch,
         mock_conn,
+        mock_delta,
         mock_delete,
     ):
         """Only a full recluster rebuilds from scratch; the incremental path
@@ -918,10 +936,41 @@ class TestReclusterWithNoFaces:
         mock_metadata.return_value = {"user_preferences": {}}
         mock_needed.return_value = False
         mock_assign.return_value = ([{"face_id": 1, "cluster_id": "c1"}], 0)
+        mock_delta.return_value = ([], 0)
 
         cluster_util_face_clusters_sync()
 
         mock_delete.assert_not_called()
+
+
+class TestIncrementalDeltaClustering:
+    """A leftover that matches no existing person used to wait for the next full
+    pass. It now forms a new cluster on the incremental path instead."""
+
+    @patch("app.utils.face_clusters._generate_cluster_face_image", return_value=None)
+    @patch(
+        "app.utils.face_clusters.cluster_util_is_reclustering_needed",
+        return_value=False,
+    )
+    def test_leftovers_become_a_new_person_without_a_full_pass(
+        self, _needed, _avatar, people
+    ):
+        rng = np.random.default_rng(5)
+        first = photo_face(people, "img-n1", jitter(rng, 5))
+        second = photo_face(people, "img-n2", jitter(rng, 5))
+        alice_face = photo_face(people, "img-a3", axis(0), "alice")
+        stranger = keyframe_face(people, "frame-x", near(6, 0.9))
+
+        created, _ = cluster_util_face_clusters_sync()
+
+        new_id = cluster_of(people, first)
+        assert created == 2
+        assert new_id is not None
+        assert new_id not in ("alice", "bob")
+        assert cluster_of(people, second) == new_id
+        # Existing people and the keyframe pass are untouched.
+        assert cluster_of(people, alice_face) == "alice"
+        assert cluster_of(people, stranger) is None
 
 
 class TestReclusteringNeededBootstrap:
@@ -1016,6 +1065,29 @@ class TestReclusteringNeededBootstrap:
             bbox={"x": 0, "y": 0, "width": 10, "height": 10},
             cluster_id=None,
         )
+
+        assert cluster_util_is_reclustering_needed({"user_preferences": {}}) is False
+
+    @patch("app.utils.face_clusters.db_get_clusters_count")
+    @patch("app.utils.face_clusters.db_get_faces_unassigned_clusters")
+    def test_old_metadata_does_not_force_a_rebuild(self, mock_unassigned, mock_count):
+        """A periodic rebuild is what OOMed, so age alone must not trigger one."""
+        mock_unassigned.return_value = [{"face_id": i} for i in range(50)]
+        mock_count.return_value = 3
+
+        stale = {"user_preferences": {}, "reclustering_time": time.time() - 3 * 86400}
+
+        assert cluster_util_is_reclustering_needed(stale) is False
+
+    @patch("app.utils.face_clusters.db_get_clusters_count")
+    @patch("app.utils.face_clusters.db_get_faces_unassigned_clusters")
+    def test_a_backlog_of_faces_does_not_force_a_rebuild(
+        self, mock_unassigned, mock_count
+    ):
+        """A pile of unassigned faces is clustered incrementally now, so the old
+        ">100 unassigned" trigger must be gone."""
+        mock_unassigned.return_value = [{"face_id": i} for i in range(5000)]
+        mock_count.return_value = 3
 
         assert cluster_util_is_reclustering_needed({"user_preferences": {}}) is False
 
