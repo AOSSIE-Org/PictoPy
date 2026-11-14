@@ -1,6 +1,6 @@
 """Run with: python .github/scripts/test_detect_duplicate_issue.py"""
 
-from detect_duplicate_issue import dot_product, find_duplicates, title_text
+from detect_duplicate_issue import candidates, dot_product, find_duplicates, title_text
 from test_issue_corpus import make_issue
 
 
@@ -77,6 +77,20 @@ def test_find_duplicates_keeps_duplicate_without_known_target() -> None:
     assert matches[0]["status"] == "closed as duplicate"
 
 
+def test_candidates_are_issues_opened_before_the_current_one() -> None:
+    corpus = [
+        make_issue(5, created_at="2026-01-01T00:00:00Z"),
+        make_issue(9, created_at="2026-03-01T00:00:00Z"),
+        make_issue(12, created_at="2026-05-01T00:00:00Z"),
+    ]
+    current = {"number": 9, "created_at": "2026-03-01T00:00:00Z"}
+    assert [i["number"] for i in candidates(corpus, current)] == [5]
+
+    # A fork's issue #1 is newer than every upstream issue.
+    fork_issue = {"number": 1, "created_at": "2026-11-14T00:00:00Z"}
+    assert len(candidates(corpus, fork_issue)) == 3
+
+
 if __name__ == "__main__":
     test_dot_product_matches_cosine_similarity_for_normalized_vectors()
     test_title_text_is_the_cleaned_title()
@@ -85,4 +99,5 @@ if __name__ == "__main__":
     test_find_duplicates_respects_max_results()
     test_find_duplicates_reports_canonical_issue_for_duplicate_matches()
     test_find_duplicates_keeps_duplicate_without_known_target()
+    test_candidates_are_issues_opened_before_the_current_one()
     print("All tests passed.")

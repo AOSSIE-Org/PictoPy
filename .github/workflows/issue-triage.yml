@@ -79,7 +79,8 @@ jobs:
       - name: Find similar issues
         id: analyse
         run: |
-          python .github/scripts/detect_duplicate_issue.py corpus.json "$GITHUB_EVENT_PATH" matches.json comment.md
+          python .github/scripts/detect_duplicate_issue.py corpus.json "$GITHUB_EVENT_PATH" \
+            matches.json comment.md --corpus-repository AOSSIE-Org/PictoPy
           {
             echo "comment<<COMMENT_EOF"
             cat comment.md

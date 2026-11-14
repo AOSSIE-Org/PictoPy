@@ -30,20 +30,24 @@ SECTIONS = (
 )
 
 
-def _item(match: dict) -> str:
+def _item(match: dict, repository: str) -> str:
     # Issues are referenced by number only. GitHub renders the title itself, so text
     # from other issues is never echoed into the comment.
+    def ref(number: int) -> str:
+        return f"{repository}#{number}"
+
     notes = []
     if match["status"] == "closed as completed" and match["closed_by"]:
-        notes.append("fixed by " + ", ".join(f"#{n}" for n in match["closed_by"]))
+        notes.append("fixed by " + ", ".join(ref(n) for n in match["closed_by"]))
     if match["also_reported_as"]:
-        reported = ", ".join(f"#{n}" for n in match["also_reported_as"])
+        reported = ", ".join(ref(n) for n in match["also_reported_as"])
         notes.append(f"also reported as {reported}")
     suffix = f" ({'; '.join(notes)})" if notes else ""
-    return f"- #{match['number']}{suffix}"
+    return f"- {ref(match['number'])}{suffix}"
 
 
-def render_comment(matches: list[dict]) -> str | None:
+def render_comment(matches: list[dict], repository: str = "") -> str | None:
+    """repository is "OWNER/REPO" when the matches live in a different repository."""
     if not matches:
         return None
     lines = [
@@ -61,7 +65,7 @@ def render_comment(matches: list[dict]) -> str | None:
         if heading not in rendered:
             lines += ["", f"**{heading}**", ""]
             rendered.add(heading)
-        lines += [_item(m) for m in group]
+        lines += [_item(m, repository) for m in group]
         if advice:
             lines += ["", advice]
     return "\n".join(lines) + "\n"
