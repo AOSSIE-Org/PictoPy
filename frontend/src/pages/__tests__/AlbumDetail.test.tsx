@@ -127,6 +127,35 @@ describe('AlbumDetail', () => {
     expect(screen.queryByText('Verifying password...')).not.toBeInTheDocument();
   }, 30000);
 
+  // A 401 ends loading before the redirect effect runs, which used to leave
+  // one render where the album looked unlocked.
+  test('never renders the album for a rejected password', async () => {
+    mockGetAlbumImages.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 401 },
+    });
+
+    let albumShown = false;
+    const observer = new MutationObserver(() => {
+      if (document.body.textContent?.includes('Trip')) albumShown = true;
+    });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+
+    const { store } = render(<AlbumDetailWithLoader />, {
+      initialRoutes: [{ pathname: '/albums/a1', state: { password: 'wrong' } }],
+    });
+
+    await screen.findByText('Albums list');
+    observer.disconnect();
+
+    expect(albumShown).toBe(false);
+    expect(store.getState().loader.loading).toBe(false);
+  }, 30000);
+
   // Leaving while a request was in flight used to leave showLoader dispatched
   // with nothing to clear it, freezing the app behind the overlay.
   test('does not strand the global loader when leaving mid-load', async () => {

@@ -229,7 +229,9 @@ export const AlbumDetail = () => {
     navigate('/albums');
   };
 
-  if (isVerifyingPassword) {
+  // A failed load redirects to /albums from an effect, which runs after this
+  // render, so the album must not flash in between.
+  if (isVerifyingPassword || imagesError) {
     return null;
   }
 
