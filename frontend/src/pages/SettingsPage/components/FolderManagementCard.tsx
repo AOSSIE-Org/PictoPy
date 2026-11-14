@@ -154,7 +154,6 @@ const FolderManagementCard: React.FC = () => {
       // Invalidating targeted queries forces useLibraryProcessingStatus() and folder hooks
       // to fetch fresh data instantly without invalidating the entire app cache
       queryClient.invalidateQueries({ queryKey: ['models', 'status'] });
-      queryClient.invalidateQueries({ queryKey: ['folders'] });
       queryClient.invalidateQueries({
         queryKey: ['folders', 'tagging-status'],
       });

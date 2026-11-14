@@ -28,12 +28,20 @@ export const useFolderOperations = () => {
   const foldersQuery = usePictoQuery({
     queryKey: ['folders'],
     queryFn: getAllFolders,
-    refetchInterval: folders.some(
-      (f) => f.AI_Tagging && isIndexingPending(f.indexing_status),
-    )
-      ? 1000
-      : false,
+    refetchInterval: (query) => {
+      const hasPending = folders.some(
+        (f) => f.AI_Tagging && isIndexingPending(f.indexing_status),
+      );
+      if (!hasPending) return false;
+
+      // Back off after a failure instead of stopping, so progress
+      // recovers if the backend comes back during indexing.
+      return query.state.status === 'error' ? 10000 : 1000;
+    },
     refetchIntervalInBackground: true,
+    staleTime: 1000,
+    retryOnMount: false, // Don't retry on component mount
+    refetchOnWindowFocus: false, // Don't refetch when window gains focus
   });
 
   const taggingStatusQuery = usePictoQuery({
@@ -54,10 +62,12 @@ export const useFolderOperations = () => {
       isPending: foldersQuery.isLoading,
       isSuccess: foldersQuery.isSuccess,
       isError: foldersQuery.isError,
+      error: foldersQuery.error,
     },
     {
       loadingMessage: 'Loading folders',
       showSuccess: false,
+      errorMessage: 'Failed to load folders. Please try again.',
       onSuccess: () => {
         const folders = foldersQuery.data?.data?.folders as FolderDetails[];
         dispatch(setFolders(folders));
@@ -178,6 +188,7 @@ export const useFolderOperations = () => {
     // Data
     folders,
     isLoading: foldersQuery.isLoading,
+    isError: foldersQuery.isError,
 
     // Operations
     toggleAITagging,

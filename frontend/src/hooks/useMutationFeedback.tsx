@@ -82,6 +82,11 @@ export const useMutationFeedback = (
   onSuccessRef.current = onSuccess;
   onErrorRef.current = onError;
 
+  // Tracks the last error message actually shown, so a query that keeps
+  // failing with the same message (e.g. a background refetch retry) doesn't
+  // reopen the dialog on every poll. Cleared once the error clears.
+  const lastShownErrorRef = useRef<string | null>(null);
+
   const { isPending, isSuccess, isError, error } = mutationState;
 
   // Handle loading state. Gated on showLoading entirely -- not just for
@@ -120,17 +125,23 @@ export const useMutationFeedback = (
     if (isError && showError) {
       const errorMsg = getErrorMessage(error, errorMessage);
 
-      dispatch(
-        showInfoDialog({
-          title: errorTitle,
-          message: errorMsg,
-          variant: 'error',
-        }),
-      );
+      if (lastShownErrorRef.current !== errorMsg) {
+        lastShownErrorRef.current = errorMsg;
 
-      if (onErrorRef.current) {
-        onErrorRef.current(error);
+        dispatch(
+          showInfoDialog({
+            title: errorTitle,
+            message: errorMsg,
+            variant: 'error',
+          }),
+        );
+
+        if (onErrorRef.current) {
+          onErrorRef.current(error);
+        }
       }
+    } else if (!isError) {
+      lastShownErrorRef.current = null;
     }
   }, [isError, showError, errorTitle, errorMessage, error, dispatch]);
 
