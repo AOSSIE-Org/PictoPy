@@ -1,4 +1,6 @@
 import { Bot, Tags, Image as ImageIcon } from 'lucide-react';
+import { Link } from 'react-router';
+import { ROUTES } from '@/constants/routes';
 
 export const EmptyAITaggingState = () => {
   return (
@@ -11,7 +13,14 @@ export const EmptyAITaggingState = () => {
       </h2>
       <p className="mb-6 max-w-md text-justify text-gray-500 dark:text-gray-400">
         Your images haven't been processed by AI yet. Enable AI Tagging for a
-        folder from the settings page to see the tags assigned to the images.
+        folder from the{' '}
+        <Link
+          to={`/${ROUTES.SETTINGS}`}
+          className="rounded text-blue-500 hover:underline focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none"
+        >
+          settings page
+        </Link>{' '}
+        to see the tags assigned to the images.
       </p>
       <div className="flex flex-col gap-2 text-sm text-gray-400 dark:text-gray-500">
         <div className="flex items-center gap-2">
