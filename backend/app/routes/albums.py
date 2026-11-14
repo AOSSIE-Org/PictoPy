@@ -242,6 +242,16 @@ def update_album(
                     message="The current password is incorrect.",
                 ).model_dump(),
             )
+    else :
+        if body.is_locked and not body.password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Missing Password",
+                    message="A new password is required when locking an album.",
+                ).model_dump(),
+            )
 
     existing_album = db_get_album_by_name(body.name)
     if existing_album and existing_album["album_id"] != album_id:
