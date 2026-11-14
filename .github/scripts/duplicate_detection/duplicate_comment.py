@@ -2,8 +2,22 @@
 
 from __future__ import annotations
 
+from typing import TypedDict
+
 # Lets the workflow find and update its own comment instead of posting another.
 MARKER = "<!-- pictopy-duplicate-detection -->"
+
+
+class Match(TypedDict):
+    """One suggested issue, as detect_duplicate_issue.find_duplicates returns it."""
+
+    number: int
+    title: str
+    status: str
+    closed_by: list[int]
+    also_reported_as: list[int]
+    score: float
+
 
 # (status, heading, advice) in display order. Statuses come from issue_corpus.status.
 SECTIONS = (
@@ -36,7 +50,7 @@ SECTIONS = (
 )
 
 
-def _item(match: dict) -> str:
+def _item(match: Match) -> str:
     # Issues are referenced by number only. GitHub renders the title itself, so text
     # from other issues is never echoed into the comment.
     def ref(number: int) -> str:
@@ -52,7 +66,7 @@ def _item(match: dict) -> str:
     return f"- {ref(match['number'])}{suffix}"
 
 
-def render_comment(matches: list[dict]) -> str | None:
+def render_comment(matches: list[Match]) -> str | None:
     if not matches:
         return None
     lines = [

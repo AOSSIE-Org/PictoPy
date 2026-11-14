@@ -1,6 +1,6 @@
 """Report how the duplicate-detection comments fared once maintainers acted on issues.
 
-Run with: GITHUB_TOKEN=... python .github/scripts/duplicate_feedback.py OWNER/REPO
+Run with: GITHUB_TOKEN=... python .github/scripts/duplicate_detection/duplicate_feedback.py OWNER/REPO
           [--since YYYY-MM-DD]
 
 Prints a Markdown report: how often the bot commented, how often a suggestion was
@@ -15,17 +15,61 @@ import json
 import os
 import re
 from datetime import datetime, timedelta, timezone
-from typing import TypedDict
+from typing import Mapping, TypedDict
 
 from duplicate_comment import MARKER
-from issue_corpus import Transport, is_duplicate, post_graphql
+from issue_corpus import (
+    Closure,
+    Transport,
+    fetch_issues,
+    in_repository,
+    is_duplicate,
+    post_graphql,
+    resolve_canonical,
+)
 
 DEFAULT_DAYS = 90
 # The header the bot used before the comment carried MARKER.
 LEGACY_HEADER = "Potential Duplicate Issue (Semantic Match)"
 LEGACY_LABEL = "possible-duplicate"
+# GraphQL reports the Actions bot as "github-actions"; REST adds "[bot]".
+BOT_LOGINS = {"github-actions", "github-actions[bot]"}
 
-FEEDBACK_QUERY = """
+# GraphQL rejects a document with an unused fragment, so each query appends only
+# the ones it uses.
+COMMENT_PAGE = """
+fragment CommentPage on IssueCommentConnection {
+  pageInfo {
+    hasNextPage
+    endCursor
+  }
+  nodes {
+    author {
+      login
+    }
+    body
+  }
+}
+"""
+
+UNLABELED_PAGE = """
+fragment UnlabeledPage on IssueTimelineItemsConnection {
+  pageInfo {
+    hasNextPage
+    endCursor
+  }
+  nodes {
+    ... on UnlabeledEvent {
+      label {
+        name
+      }
+    }
+  }
+}
+"""
+
+FEEDBACK_QUERY = (
+    """
 query ($owner: String!, $name: String!, $after: String) {
   repository(owner: $owner, name: $name) {
     issues(first: 50, after: $after, orderBy: {field: CREATED_AT, direction: DESC}) {
@@ -34,6 +78,7 @@ query ($owner: String!, $name: String!, $after: String) {
         endCursor
       }
       nodes {
+        id
         number
         createdAt
         state
@@ -48,29 +93,55 @@ query ($owner: String!, $name: String!, $after: String) {
         }
         duplicateOf {
           number
-        }
-        comments(first: 50) {
-          nodes {
-            author {
-              login
-            }
-            body
+          repository {
+            nameWithOwner
           }
         }
-        timelineItems(first: 20, itemTypes: [UNLABELED_EVENT]) {
-          nodes {
-            ... on UnlabeledEvent {
-              label {
-                name
-              }
-            }
-          }
+        comments(first: 100) {
+          ...CommentPage
+        }
+        timelineItems(first: 100, itemTypes: [UNLABELED_EVENT]) {
+          ...UnlabeledPage
         }
       }
     }
   }
 }
 """
+    + COMMENT_PAGE
+    + UNLABELED_PAGE
+)
+
+# The rest of an issue's comments or label removals, when one page did not hold them.
+MORE_COMMENTS_QUERY = (
+    """
+query ($id: ID!, $after: String) {
+  node(id: $id) {
+    ... on Issue {
+      comments(first: 100, after: $after) {
+        ...CommentPage
+      }
+    }
+  }
+}
+"""
+    + COMMENT_PAGE
+)
+
+MORE_UNLABELED_QUERY = (
+    """
+query ($id: ID!, $after: String) {
+  node(id: $id) {
+    ... on Issue {
+      timelineItems(first: 100, after: $after, itemTypes: [UNLABELED_EVENT]) {
+        ...UnlabeledPage
+      }
+    }
+  }
+}
+"""
+    + UNLABELED_PAGE
+)
 
 # A primary suggestion is a list item starting with an issue number; references
 # inside "(fixed by ...)" or "(also reported as ...)" are not suggestions.
@@ -110,13 +181,16 @@ class FeedbackReport(TypedDict):
     label_removed: list[int]
 
 
-def parse_issue(node: dict) -> FeedbackIssue:
+def parse_issue(node: dict, repository: str) -> FeedbackIssue:
     def login(actor: dict | None) -> str:
         # Deleted accounts come back as a null author.
         return actor["login"] if actor else ""
 
     reason = node.get("stateReason")
     duplicate_of = node.get("duplicateOf")
+    # The eval pairs hold numbers in this repository only.
+    if duplicate_of and not in_repository(duplicate_of, repository):
+        duplicate_of = None
     return {
         "number": node["number"],
         "created_at": node["createdAt"],
@@ -135,6 +209,19 @@ def parse_issue(node: dict) -> FeedbackIssue:
     }
 
 
+def remaining_nodes(
+    query: str, field: str, issue_id: str, page: dict, token: str, transport: Transport
+) -> list[dict]:
+    nodes: list[dict] = []
+    page_info = page["pageInfo"]
+    while page_info["hasNextPage"]:
+        variables = {"id": issue_id, "after": page_info["endCursor"]}
+        connection = transport(query, variables, token)["node"][field]
+        nodes.extend(connection["nodes"])
+        page_info = connection["pageInfo"]
+    return nodes
+
+
 def fetch_issues_since(
     repository: str, token: str, since: str, transport: Transport = post_graphql
 ) -> list[FeedbackIssue]:
@@ -149,7 +236,14 @@ def fetch_issues_since(
         for node in connection["nodes"]:
             if node["createdAt"] < since:
                 return issues
-            issues.append(parse_issue(node))
+            for query, field in (
+                (MORE_COMMENTS_QUERY, "comments"),
+                (MORE_UNLABELED_QUERY, "timelineItems"),
+            ):
+                node[field]["nodes"] += remaining_nodes(
+                    query, field, node["id"], node[field], token, transport
+                )
+            issues.append(parse_issue(node, repository))
         if not connection["pageInfo"]["hasNextPage"]:
             return issues
         after = connection["pageInfo"]["endCursor"]
@@ -164,7 +258,12 @@ def suggested_numbers(body: str) -> list[int] | None:
     return None
 
 
-def summarise_feedback(issues: list[FeedbackIssue]) -> FeedbackReport:
+def summarise_feedback(
+    issues: list[FeedbackIssue], links: Mapping[int, Closure] | None = None
+) -> FeedbackReport:
+    """links holds every issue's duplicate link, so closures that point at an issue
+    which was itself closed as a duplicate resolve the way the detector does."""
+    links = links if links is not None else {i["number"]: i for i in issues}
     report: FeedbackReport = {
         "issues": len(issues),
         "commented": 0,
@@ -177,9 +276,14 @@ def summarise_feedback(issues: list[FeedbackIssue]) -> FeedbackReport:
     for issue in issues:
         suggested: list[int] = []
         commented = False
-        disputed: list[int] | None = None
+        disputed: list[int] = []
         for comment in issue["comments"]:
-            numbers = suggested_numbers(comment["body"])
+            # Only the bot's own comment counts; a person may quote it.
+            numbers = (
+                suggested_numbers(comment["body"])
+                if comment["author"] in BOT_LOGINS
+                else None
+            )
             if numbers is not None:
                 commented = True
                 suggested = numbers
@@ -188,22 +292,29 @@ def summarise_feedback(issues: list[FeedbackIssue]) -> FeedbackReport:
                 and comment["author"] == issue["author"]
                 and DISPUTE.search(comment["body"])
             ):
-                # Authors often dispute one suggestion and leave the rest alone.
-                named = [int(n) for n in re.findall(r"#(\d+)", comment["body"])]
-                disputed = [n for n in suggested if n in named] or suggested
+                # Authors often dispute one suggestion and leave the rest alone. A
+                # comment naming only other issues disputes none of the suggestions.
+                named = {int(n) for n in re.findall(r"#(\d+)", comment["body"])}
+                chosen = [n for n in suggested if n in named] if named else suggested
+                disputed += [n for n in chosen if n not in disputed]
         if commented:
             report["commented"] += 1
-        if disputed is not None:
+        if disputed:
             report["disputed"].append((issue["number"], disputed))
         if LEGACY_LABEL in issue["unlabeled"]:
             report["label_removed"].append(issue["number"])
 
         if issue["state"] == "closed" and is_duplicate(issue):
             report["closed_as_duplicate"] += 1
-            canonical = issue["duplicate_of"]
-            if canonical is not None and canonical in suggested:
+            target = issue["duplicate_of"]
+            if target is None:
+                continue
+            canonical = resolve_canonical(target, links) if target in links else target
+            # The detector suggests the canonical issue; older comments suggested
+            # whichever issue matched.
+            if canonical in suggested or target in suggested:
                 report["confirmed"].append(issue["number"])
-            elif canonical is not None:
+            else:
                 report["missed"].append((issue["number"], canonical))
     return report
 
@@ -285,8 +396,11 @@ def main() -> None:
     parser.add_argument("--since", default=default_since.strftime("%Y-%m-%d"))
     args = parser.parse_args()
 
-    issues = fetch_issues_since(args.repository, os.environ["GITHUB_TOKEN"], args.since)
-    report = summarise_feedback(issues)
+    token = os.environ["GITHUB_TOKEN"]
+    issues = fetch_issues_since(args.repository, token, args.since)
+    # Duplicate chains can run through issues opened before the window.
+    links = {i["number"]: i for i in fetch_issues(args.repository, token)}
+    report = summarise_feedback(issues, links)
     print(render_report(report, args.repository, args.since), end="")
 
 

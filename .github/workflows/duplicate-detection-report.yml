@@ -36,5 +36,5 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           SINCE: ${{ inputs.since }}
         run: |
-          python .github/scripts/duplicate_feedback.py "$GITHUB_REPOSITORY" \
+          python .github/scripts/duplicate_detection/duplicate_feedback.py "$GITHUB_REPOSITORY" \
             ${SINCE:+--since "$SINCE"} >> "$GITHUB_STEP_SUMMARY"

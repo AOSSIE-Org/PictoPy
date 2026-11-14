@@ -1,19 +1,23 @@
-"""Run with: python .github/scripts/test_duplicate_comment.py"""
+"""Run from .github/scripts/duplicate_detection with: python -m tests.test_duplicate_comment"""
 
-from duplicate_comment import MARKER, render_comment
+from duplicate_comment import MARKER, Match, render_comment
 
 
-def make_match(number: int, status: str, **fields) -> dict:
-    match = {
+def make_match(
+    number: int,
+    status: str,
+    *,
+    closed_by: list[int] | None = None,
+    also_reported_as: list[int] | None = None,
+) -> Match:
+    return {
         "number": number,
         "title": "@someone [click](https://example.com)",
         "status": status,
-        "closed_by": [],
-        "also_reported_as": [],
+        "closed_by": closed_by or [],
+        "also_reported_as": also_reported_as or [],
         "score": 0.8,
     }
-    match.update(fields)
-    return match
 
 
 def test_render_comment_returns_none_without_matches() -> None:

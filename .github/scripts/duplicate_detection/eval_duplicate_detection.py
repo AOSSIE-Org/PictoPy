@@ -3,7 +3,10 @@
 Replays the detector over a snapshot of the repository's issues. Each query issue is
 compared only with older issues, as it would have been on the day it was opened.
 
-Run with: python .github/scripts/eval_duplicate_detection.py [--refresh] [--json out]
+Run with: python .github/scripts/duplicate_detection/eval_duplicate_detection.py [--refresh] [--json out]
+
+Set GITHUB_TOKEN to fetch duplicate links, so matches resolve to canonical issues as
+they do in production. Without it the harness falls back to REST, which has none.
 """
 
 from __future__ import annotations
@@ -19,7 +22,8 @@ from pathlib import Path
 from typing import Callable, Iterable, Sequence, TypedDict
 
 import detect_duplicate_issue as detector
-from issue_corpus import TRACKING_LABEL, issue_text
+from issue_corpus import TRACKING_LABEL, Issue, issue_text, resolve_canonical
+from issue_corpus import fetch_issues as fetch_issues_graphql
 
 HERE = Path(__file__).parent
 PAIRS_PATH = HERE / "duplicate_eval_pairs.json"
@@ -31,19 +35,6 @@ GATE_TITLE_MINS = (0.60, 0.65, 0.70)
 GATE_BODY_MINS = (0.55, 0.65, 0.75)
 
 
-class Issue(TypedDict):
-    number: int
-    title: str
-    body: str
-    created_at: str
-    state: str
-    state_reason: str | None
-    url: str
-    labels: list[str]
-    duplicate_of: int | None
-    closed_by: list[int]
-
-
 class Pair(TypedDict, total=False):
     issue: int
     candidate: int
@@ -52,9 +43,14 @@ class Pair(TypedDict, total=False):
 
 
 class Outcome(TypedDict):
-    flag_rate: float
-    positives_shown: float
-    negatives_shown: float
+    # None when there was nothing to measure, such as no labelled negatives.
+    flag_rate: float | None
+    positives_shown: float | None
+    negatives_shown: float | None
+
+
+def ratio(part: float, whole: int) -> float | None:
+    return part / whole if whole else None
 
 
 def next_link(link_header: str) -> str | None:
@@ -64,8 +60,8 @@ def next_link(link_header: str) -> str | None:
 
 
 def fetch_issues(repository: str, token: str | None) -> list[Issue]:
-    # REST rather than issue_corpus's GraphQL fetch, so the harness runs without a
-    # token. REST has no duplicate links, so duplicates are scored as themselves.
+    # The fallback when there is no token. REST has no duplicate links, so
+    # duplicates are scored as themselves.
     url: str | None = (
         f"https://api.github.com/repos/{repository}/issues?state=all&per_page=100"
     )
@@ -101,14 +97,26 @@ def fetch_issues(repository: str, token: str | None) -> list[Issue]:
     return sorted(issues, key=lambda i: i["number"])
 
 
-def load_corpus(repository: str, refresh: bool) -> list[Issue]:
-    path = CACHE_DIR / "issues_v2.json"
-    if refresh or not path.exists():
-        print(f"Fetching issues from {repository}...", file=sys.stderr)
-        issues = fetch_issues(repository, os.environ.get("GITHUB_TOKEN"))
+def load_corpus(repository: str, refresh: bool) -> tuple[list[Issue], bool]:
+    """The issues, and whether they carry duplicate links."""
+    linked = CACHE_DIR / "issues_graphql.json"
+    unlinked = CACHE_DIR / "issues_v2.json"
+    token = os.environ.get("GITHUB_TOKEN")
+    if token and (refresh or not linked.exists()):
+        print(f"Fetching issues from {repository} over GraphQL...", file=sys.stderr)
+        issues = sorted(
+            fetch_issues_graphql(repository, token), key=lambda i: i["number"]
+        )
         CACHE_DIR.mkdir(exist_ok=True)
-        path.write_text(json.dumps(issues), encoding="utf-8")
-    return json.loads(path.read_text(encoding="utf-8"))
+        linked.write_text(json.dumps(issues), encoding="utf-8")
+    if linked.exists():
+        return json.loads(linked.read_text(encoding="utf-8")), True
+    if refresh or not unlinked.exists():
+        print(f"Fetching issues from {repository} over REST...", file=sys.stderr)
+        issues = fetch_issues(repository, token)
+        CACHE_DIR.mkdir(exist_ok=True)
+        unlinked.write_text(json.dumps(issues), encoding="utf-8")
+    return json.loads(unlinked.read_text(encoding="utf-8")), False
 
 
 def load_pairs(path: Path = PAIRS_PATH) -> tuple[str, list[Pair], list[Pair]]:
@@ -140,8 +148,10 @@ def similarity_rows(texts: list[str]) -> list[list[float]]:
     return (embeddings @ embeddings.T).tolist()
 
 
-def percentile(values: Sequence[float], pct: float) -> float:
+def percentile(values: Sequence[float], pct: float) -> float | None:
     # Linear interpolation between closest ranks, the same as numpy's default.
+    if not values:
+        return None
     ordered = sorted(values)
     position = (len(ordered) - 1) * pct / 100
     low = int(position)
@@ -150,7 +160,11 @@ def percentile(values: Sequence[float], pct: float) -> float:
 
 
 def rank_of(scores: Sequence[float], index: int) -> int:
-    return 1 + sum(1 for s in scores if s > scores[index])
+    # Ties go to the earlier issue, as in top_matches' stable sort.
+    score = scores[index]
+    return 1 + sum(
+        1 for j, s in enumerate(scores) if s > score or (s == score and j < index)
+    )
 
 
 def top_matches(
@@ -174,14 +188,17 @@ def summarise(
     eval_queries: Sequence[int],
     positives: Sequence[Pair],
     negatives: Sequence[Pair],
+    canonical: Callable[[int], int] = lambda number: number,
 ) -> Outcome:
-    def share(pairs: Sequence[Pair]) -> float:
-        hits = sum(1 for p in pairs if p["candidate"] in shown[p["issue"]])
-        return hits / len(pairs) if pairs else 0.0
+    """canonical maps a labelled candidate to the issue the detector would show."""
+
+    def share(pairs: Sequence[Pair]) -> float | None:
+        hits = sum(1 for p in pairs if canonical(p["candidate"]) in shown[p["issue"]])
+        return ratio(hits, len(pairs))
 
     flagged = sum(1 for q in eval_queries if shown[q])
     return {
-        "flag_rate": flagged / len(eval_queries) if eval_queries else 0.0,
+        "flag_rate": ratio(flagged, len(eval_queries)),
         "positives_shown": share(positives),
         "negatives_shown": share(negatives),
     }
@@ -203,10 +220,15 @@ def usable_pairs(
 
 
 def evaluate(
-    corpus: list[Issue], positives: list[Pair], negatives: list[Pair], since: str
+    corpus: list[Issue],
+    positives: list[Pair],
+    negatives: list[Pair],
+    since: str,
+    linked: bool = False,
 ) -> dict:
     numbers = [i["number"] for i in corpus]
     position = {n: k for k, n in enumerate(numbers)}
+    by_number = {i["number"]: i for i in corpus}
     positives = usable_pairs(positives, position, "positive")
     negatives = usable_pairs(negatives, position, "negative")
     eval_queries = [
@@ -214,6 +236,8 @@ def evaluate(
         for i in corpus
         if i["created_at"] >= since and position[i["number"]]
     ]
+    if not eval_queries:
+        raise SystemExit(f"No issues created since {since}; pick an earlier --since.")
     queries = sorted(set(eval_queries) | {p["issue"] for p in positives + negatives})
 
     # Row q holds similarities to older issues only, indexed like `numbers`.
@@ -240,15 +264,25 @@ def evaluate(
         ]
         for q in queries
     }
+
+    # The detector shows a duplicate's canonical issue, so labels resolve the same way.
+    def canonical(number: int) -> int:
+        return resolve_canonical(number, by_number)
+
     results: dict = {
         "eval_queries": len(eval_queries),
         "since": since,
         "positives": len(positives),
         "negatives": len(negatives),
-        "detector": summarise(shipped, eval_queries, positives, negatives),
+        "linked": linked,
+        "detector": summarise(shipped, eval_queries, positives, negatives, canonical),
         "detector_by_kind": {
             kind: summarise(
-                shipped, eval_queries, [p for p in positives if p["kind"] == kind], []
+                shipped,
+                eval_queries,
+                [p for p in positives if p["kind"] == kind],
+                [],
+                canonical,
             )["positives_shown"]
             for kind in sorted({p["kind"] for p in positives})
         },
@@ -271,14 +305,15 @@ def evaluate(
         equal_flag_rate = {}
         for rate in FLAG_RATES:
             threshold = percentile(top1, 100 * (1 - rate))
-            equal_flag_rate[f"{rate:.2f}"] = {
-                "threshold": threshold,
-                **run(name, threshold),
-            }
+            if threshold is not None:
+                equal_flag_rate[f"{rate:.2f}"] = {
+                    "threshold": threshold,
+                    **run(name, threshold),
+                }
         k = detector.MAX_RESULTS
         results["variants"][name] = {
-            "recall_at_1": sum(r <= 1 for r in pos_ranks) / len(pos_ranks),
-            f"recall_at_{k}": sum(r <= k for r in pos_ranks) / len(pos_ranks),
+            "recall_at_1": ratio(sum(r <= 1 for r in pos_ranks), len(pos_ranks)),
+            f"recall_at_{k}": ratio(sum(r <= k for r in pos_ranks), len(pos_ranks)),
             "positive_score_median": percentile(pos_scores, 50),
             "negative_score_median": percentile(neg_scores, 50),
             "fixed_thresholds": {f"{t:.2f}": run(name, t) for t in FIXED_THRESHOLDS},
@@ -308,11 +343,15 @@ def evaluate(
     return results
 
 
+def fmt(value: float | None, spec: str) -> str:
+    return "n/a" if value is None else format(value, spec)
+
+
 def row(label: str, o: Outcome) -> str:
     return (
-        f"  {label:<38} flagged {o['flag_rate']:6.1%}   "
-        f"duplicates shown {o['positives_shown']:5.0%}   "
-        f"hard negatives shown {o['negatives_shown']:5.0%}"
+        f"  {label:<38} flagged {fmt(o['flag_rate'], '6.1%')}   "
+        f"duplicates shown {fmt(o['positives_shown'], '5.0%')}   "
+        f"hard negatives shown {fmt(o['negatives_shown'], '5.0%')}"
     )
 
 
@@ -326,17 +365,26 @@ def print_report(results: dict) -> None:
         f"A pair counts as shown when the candidate is in the top {k} and passes the "
         "threshold or gate.\n"
     )
-    print(row("DETECTOR AS SHIPPED", results["detector"]))
-    by_kind = ", ".join(f"{k} {v:.0%}" for k, v in results["detector_by_kind"].items())
+    if results["linked"]:
+        print(row("DETECTOR AS SHIPPED", results["detector"]))
+    else:
+        print(row("DETECTOR, NO DUPLICATE LINKS", results["detector"]))
+        print(
+            f"  {'':<38} set GITHUB_TOKEN and pass --refresh to resolve duplicates "
+            "to their canonical issue, as production does"
+        )
+    by_kind = ", ".join(
+        f"{k} {fmt(v, '.0%')}" for k, v in results["detector_by_kind"].items()
+    )
     print(f"  {'':<38} duplicates shown by kind: {by_kind}")
     print()
 
     for name, v in results["variants"].items():
         print(
-            f"== {name}: recall@1 {v['recall_at_1']:.2f}, recall@{k} "
-            f"{v[f'recall_at_{k}']:.2f}; median score duplicates "
-            f"{v['positive_score_median']:.2f}, hard negatives "
-            f"{v['negative_score_median']:.2f}"
+            f"== {name}: recall@1 {fmt(v['recall_at_1'], '.2f')}, recall@{k} "
+            f"{fmt(v[f'recall_at_{k}'], '.2f')}; median score duplicates "
+            f"{fmt(v['positive_score_median'], '.2f')}, hard negatives "
+            f"{fmt(v['negative_score_median'], '.2f')}"
         )
         for t, o in v["fixed_thresholds"].items():
             print(row(f"threshold {t}", o))
@@ -363,13 +411,13 @@ def main() -> None:
     args = parser.parse_args()
 
     repository, positives, negatives = load_pairs()
-    corpus = load_corpus(repository, args.refresh)
+    corpus, linked = load_corpus(repository, args.refresh)
     # Lets maintainers measure a proposed set of tracking issues before labelling.
     assumed = {int(n) for n in args.assume_tracking.split(",") if n.strip()}
     for issue in corpus:
         if issue["number"] in assumed:
             issue["labels"] = [*issue["labels"], TRACKING_LABEL]
-    results = evaluate(corpus, positives, negatives, args.since)
+    results = evaluate(corpus, positives, negatives, args.since, linked)
     print_report(results)
     if args.json:
         args.json.write_text(json.dumps(results, indent=2), encoding="utf-8")

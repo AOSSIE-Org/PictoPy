@@ -32,6 +32,7 @@ images_cache.txt
 videos_cache.txt
 venv/
 __pycache__/
+*.py[cod]
 frontend/dist
 env/
 
@@ -44,4 +45,4 @@ backend/scripts/vocabulary/sources/
 backend/scripts/vocabulary/eval_images/
 
 # issue snapshot and embeddings cached by .github/scripts/eval_duplicate_detection.py
-.github/scripts/.duplicate_eval_cache/
+.github/scripts/duplicate_detection/.duplicate_eval_cache/

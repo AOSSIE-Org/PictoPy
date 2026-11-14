@@ -1,6 +1,6 @@
 """Fetch and normalise a repository's issues for duplicate detection.
 
-Run with: GITHUB_TOKEN=... python .github/scripts/issue_corpus.py OWNER/REPO out.json
+Run with: GITHUB_TOKEN=... python .github/scripts/duplicate_detection/issue_corpus.py OWNER/REPO out.json
 
 Uses only the standard library, so the workflow can fetch issues with a token before
 it installs any third-party packages.
@@ -46,11 +46,17 @@ query ($owner: String!, $name: String!, $after: String) {
         }
         duplicateOf {
           number
+          repository {
+            nameWithOwner
+          }
         }
         closedByPullRequestsReferences(first: 5, includeClosedPrs: true) {
           nodes {
             number
             merged
+            repository {
+              nameWithOwner
+            }
           }
         }
       }
@@ -127,9 +133,17 @@ def post_graphql(query: str, variables: dict, token: str) -> dict:
     return payload["data"]
 
 
-def parse_issue(node: dict) -> Issue:
+def in_repository(reference: dict, repository: str) -> bool:
+    return reference["repository"]["nameWithOwner"].lower() == repository.lower()
+
+
+def parse_issue(node: dict, repository: str) -> Issue:
     reason = node.get("stateReason")
     duplicate_of = node.get("duplicateOf")
+    # A target in another repository would be looked up here by number and name an
+    # unrelated issue, so it is dropped; is_duplicate still holds via state_reason.
+    if duplicate_of and not in_repository(duplicate_of, repository):
+        duplicate_of = None
     closing_prs = node.get("closedByPullRequestsReferences") or {"nodes": []}
     return {
         "number": node["number"],
@@ -142,8 +156,12 @@ def parse_issue(node: dict) -> Issue:
         "labels": [label["name"] for label in node["labels"]["nodes"]],
         "duplicate_of": duplicate_of["number"] if duplicate_of else None,
         # Closed-but-unmerged pull requests also reference the issue; only merged
-        # ones resolved it.
-        "closed_by": [pr["number"] for pr in closing_prs["nodes"] if pr["merged"]],
+        # ones resolved it. Comments reference PRs as #N, so only this repository's.
+        "closed_by": [
+            pr["number"]
+            for pr in closing_prs["nodes"]
+            if pr["merged"] and in_repository(pr, repository)
+        ],
     }
 
 
@@ -156,7 +174,7 @@ def fetch_issues(
     while True:
         variables = {"owner": owner, "name": name, "after": after}
         connection = transport(ISSUES_QUERY, variables, token)["repository"]["issues"]
-        issues.extend(parse_issue(node) for node in connection["nodes"])
+        issues.extend(parse_issue(node, repository) for node in connection["nodes"])
         if not connection["pageInfo"]["hasNextPage"]:
             return issues
         after = connection["pageInfo"]["endCursor"]
@@ -191,7 +209,7 @@ def status(issue: Issue) -> str:
 
 
 def resolve_canonical(
-    number: int, by_number: dict[int, Issue], max_depth: int = MAX_DUPLICATE_DEPTH
+    number: int, by_number: Mapping[int, Closure], max_depth: int = MAX_DUPLICATE_DEPTH
 ) -> int:
     """Follow duplicate_of links to the issue that was kept, stopping on a cycle."""
     seen = {number}

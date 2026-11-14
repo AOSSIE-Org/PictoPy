@@ -44,12 +44,10 @@ jobs:
 
       - name: Duplicate issue detector tests
         run: |
-          cd .github/scripts
-          python test_issue_corpus.py
-          python test_detect_duplicate_issue.py
-          python test_duplicate_comment.py
-          python test_duplicate_feedback.py
-          python test_eval_duplicate_detection.py
+          cd .github/scripts/duplicate_detection
+          for test in tests/test_*.py; do
+            python -m "tests.$(basename "$test" .py)"
+          done
 
       - name: Install frontend dependencies
         run: |

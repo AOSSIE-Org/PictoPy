@@ -19,7 +19,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
-from duplicate_comment import render_comment
+from duplicate_comment import Match, render_comment
 from issue_corpus import (
     Issue,
     clean_title,
@@ -67,8 +67,12 @@ def _load_model() -> Any:
 
 def embed(texts: list[str]) -> list[list[float]]:
     """Unit-length embeddings, so a dot product is a cosine similarity."""
-    vectors = [vector.tolist() for vector in _load_model().embed(texts)]
-    return [[x / math.sqrt(dot_product(v, v)) for x in v] for v in vectors]
+    unit = []
+    for vector in _load_model().embed(texts):
+        v = vector.tolist()
+        norm = math.sqrt(dot_product(v, v))
+        unit.append([x / norm for x in v])
+    return unit
 
 
 def find_duplicates(
@@ -78,7 +82,7 @@ def find_duplicates(
     title_threshold: float = TITLE_THRESHOLD,
     body_threshold: float = BODY_THRESHOLD,
     max_results: int = MAX_RESULTS,
-) -> list[dict]:
+) -> list[Match]:
     """Rank others[i] by its title and title-plus-body similarity, on a 0-1 scale."""
     by_number = {issue["number"]: issue for issue in others}
     # A match on an issue closed as a duplicate counts for the issue it duplicates,
@@ -136,7 +140,7 @@ def main() -> None:
     print(f"Current issue: #{current['number']}")
     print(f"Candidate issues: {len(others)}")
 
-    matches: list[dict] = []
+    matches: list[Match] = []
     if others:
 
         def similarities(to_text: Callable[[Mapping[str, Any]], str]) -> list[float]:

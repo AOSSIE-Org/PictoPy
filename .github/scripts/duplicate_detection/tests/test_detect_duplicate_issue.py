@@ -1,7 +1,7 @@
-"""Run with: python .github/scripts/test_detect_duplicate_issue.py"""
+"""Run from .github/scripts/duplicate_detection with: python -m tests.test_detect_duplicate_issue"""
 
 from detect_duplicate_issue import candidates, dot_product, find_duplicates, title_text
-from test_issue_corpus import make_issue
+from tests.test_issue_corpus import make_issue
 
 
 def test_dot_product_matches_cosine_similarity_for_normalized_vectors() -> None:
@@ -88,10 +88,9 @@ def test_candidates_are_issues_opened_before_the_current_one() -> None:
 
 
 def test_find_duplicates_uses_lower_bar_for_tracking_issues() -> None:
-    tracking = {"state": "open", "state_reason": None, "labels": ["tracking"]}
     others = [
-        make_issue(1, **tracking),
-        make_issue(2, **tracking),
+        make_issue(1, state="open", state_reason=None, labels=["tracking"]),
+        make_issue(2, state="open", state_reason=None, labels=["tracking"]),
         make_issue(3, labels=["tracking"]),
         make_issue(4),
         make_issue(5),

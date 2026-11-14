@@ -1,6 +1,7 @@
-"""Run with: python .github/scripts/test_issue_corpus.py"""
+"""Run from .github/scripts/duplicate_detection with: python -m tests.test_issue_corpus"""
 
 from issue_corpus import (
+    Issue,
     clean_body,
     clean_title,
     fetch_issues,
@@ -12,24 +13,38 @@ from issue_corpus import (
 )
 
 
-def make_issue(number: int, **fields) -> dict:
-    issue = {
+def make_issue(
+    number: int,
+    *,
+    title: str = "",
+    body: str = "",
+    state: str = "closed",
+    state_reason: str | None = "completed",
+    created_at: str = "2026-01-01T00:00:00Z",
+    labels: list[str] | None = None,
+    duplicate_of: int | None = None,
+    closed_by: list[int] | None = None,
+) -> Issue:
+    return {
         "number": number,
-        "title": f"Issue {number}",
-        "body": "",
+        "title": title or f"Issue {number}",
+        "body": body,
         "url": f"https://github.com/o/r/issues/{number}",
-        "state": "closed",
-        "state_reason": "completed",
-        "created_at": "2026-01-01T00:00:00Z",
-        "labels": [],
-        "duplicate_of": None,
-        "closed_by": [],
+        "state": state,
+        "state_reason": state_reason,
+        "created_at": created_at,
+        "labels": labels or [],
+        "duplicate_of": duplicate_of,
+        "closed_by": closed_by or [],
     }
-    issue.update(fields)
-    return issue
 
 
-def make_node(number: int, **fields) -> dict:
+def ref(number: int, repository: str = "o/r", **fields: object) -> dict:
+    """A GraphQL issue or pull request reference."""
+    return {"number": number, "repository": {"nameWithOwner": repository}, **fields}
+
+
+def make_node(number: int, **fields: object) -> dict:
     node = {
         "number": number,
         "title": f"Issue {number}",
@@ -53,14 +68,12 @@ def test_parse_issue_normalises_graphql_node() -> None:
             state="CLOSED",
             stateReason="DUPLICATE",
             labels={"nodes": [{"name": "bug"}, {"name": "duplicate"}]},
-            duplicateOf={"number": 693},
+            duplicateOf=ref(693),
             closedByPullRequestsReferences={
-                "nodes": [
-                    {"number": 699, "merged": False},
-                    {"number": 701, "merged": True},
-                ]
+                "nodes": [ref(699, merged=False), ref(701, merged=True)]
             },
-        )
+        ),
+        "o/r",
     )
     assert issue["state"] == "closed"
     assert issue["state_reason"] == "duplicate"
@@ -68,10 +81,29 @@ def test_parse_issue_normalises_graphql_node() -> None:
     assert issue["duplicate_of"] == 693
     assert issue["closed_by"] == [701]
 
-    open_issue = parse_issue(make_node(5, body=None))
+    open_issue = parse_issue(make_node(5, body=None), "o/r")
     assert open_issue["state_reason"] is None
     assert open_issue["duplicate_of"] is None
     assert open_issue["body"] == ""
+
+
+def test_parse_issue_drops_references_to_other_repositories() -> None:
+    issue = parse_issue(
+        make_node(
+            9,
+            state="CLOSED",
+            stateReason="DUPLICATE",
+            duplicateOf=ref(3, "other/repo"),
+            closedByPullRequestsReferences={
+                "nodes": [ref(730, "other/repo", merged=True), ref(731, merged=True)]
+            },
+        ),
+        "O/R",
+    )
+    # Local #3 and #730 are unrelated, so neither may be named.
+    assert issue["duplicate_of"] is None
+    assert issue["closed_by"] == [731]
+    assert is_duplicate(issue)
 
 
 def test_fetch_issues_follows_cursor_until_last_page() -> None:
@@ -167,6 +199,7 @@ def test_clean_body_strips_issue_template_scaffolding() -> None:
 
 if __name__ == "__main__":
     test_parse_issue_normalises_graphql_node()
+    test_parse_issue_drops_references_to_other_repositories()
     test_fetch_issues_follows_cursor_until_last_page()
     test_is_duplicate_covers_reason_link_and_legacy_label()
     test_status_names_closure_reason()

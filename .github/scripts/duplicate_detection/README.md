@@ -1,4 +1,4 @@
-# Issue triage scripts
+# Duplicate issue detection
 
 `.github/workflows/issue-triage.yml` runs these when an issue is opened, or when its
 title or body is edited:
@@ -12,9 +12,17 @@ title or body is edited:
    `BODY_THRESHOLD`. A match on an issue closed as a duplicate is reported as the issue
    it duplicates, following chains such as #700 -> #693 -> #638.
 3. `duplicate_comment.py` renders up to three matches, grouped by whether they are open,
-   resolved, or closed as not planned, plus at most one tracking issue. The workflow keeps one comment per issue,
-   updating it on edits and deleting it if nothing matches any more. Issues are
-   referenced by number only, so no text from other issues is copied into the comment.
+   resolved, or closed as not planned, plus at most one tracking issue. The workflow
+   keeps one comment per issue, updating it on edits and deleting it if nothing matches
+   any more. Issues are referenced by number only, so no text from other issues is
+   copied into the comment.
+
+The tests live in `tests/` and run in `pr-check.yml`. To run one locally:
+
+```bash
+cd .github/scripts/duplicate_detection
+python -m tests.test_detect_duplicate_issue
+```
 
 ## Tracking issues
 
@@ -34,13 +42,14 @@ repository's real issues. Each issue is compared only with issues older than it,
 would have been on the day it was opened.
 
 ```bash
-pip install --only-binary :all: -r .github/scripts/requirements.txt
-python .github/scripts/eval_duplicate_detection.py --json eval.json
+pip install --only-binary :all: -r .github/scripts/duplicate_detection/requirements.txt
+python .github/scripts/duplicate_detection/eval_duplicate_detection.py --json eval.json
 ```
 
-The first run fetches every issue and caches it in `.github/scripts/.duplicate_eval_cache/`.
-Pass `--refresh` to re-fetch. Set `GITHUB_TOKEN` to avoid the 60-requests-per-hour
-unauthenticated limit.
+The first run fetches every issue and caches it in `.duplicate_eval_cache/` beside the
+script. Pass `--refresh` to re-fetch. Set `GITHUB_TOKEN` so the harness fetches over
+GraphQL, which carries duplicate links; without a token it falls back to REST, which has
+none.
 
 ### Dependencies and the model
 
@@ -52,11 +61,12 @@ places, without installing torch. Changing the model or its revision changes eve
 score, so re-run the harness and retune the thresholds when you do.
 
 The first line, **detector as shipped**, runs the detector's own `find_duplicates`, and
-breaks duplicates shown down by pair `kind`. Pass `--assume-tracking 546,555` to treat
-those issues as labelled `tracking` for the run. The
-rest sweep each text the detector scores (`title`, `body`) and `raw`, the uncleaned text
-it used before, across thresholds. The harness fetches through REST, which has no
-duplicate links, so it does not redirect duplicates to the issue they duplicate.
+breaks duplicates shown down by pair `kind`. A labelled candidate that was itself closed
+as a duplicate counts as its canonical issue, the one the detector shows. Without
+duplicate links (no token) that line reads **detector, no duplicate links** instead.
+Pass `--assume-tracking 546,555` to treat those issues as labelled `tracking` for the
+run. The rest sweep each text the detector scores (`title`, `body`) and `raw`, the
+uncleaned text it used before, across thresholds, without canonical resolution.
 
 The report shows, for each text variant and threshold:
 
@@ -81,7 +91,7 @@ duplicates the bot missed and disputed suggestions, formatted as entries for
 To run it locally, set `GITHUB_TOKEN`; the GraphQL API needs one even for public data:
 
 ```bash
-python .github/scripts/duplicate_feedback.py AOSSIE-Org/PictoPy --since 2026-09-01
+python .github/scripts/duplicate_detection/duplicate_feedback.py AOSSIE-Org/PictoPy --since 2026-09-01
 ```
 
 ### Labelled pairs
