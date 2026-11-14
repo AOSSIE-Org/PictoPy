@@ -18,6 +18,7 @@ from pathlib import Path
 
 THRESHOLD = 0.55
 MAX_RESULTS = 3
+MODEL_NAME = "all-MiniLM-L6-v2"
 
 
 def issue_text(issue: dict) -> str:
@@ -79,7 +80,7 @@ def main() -> None:
 
     from sentence_transformers import SentenceTransformer
 
-    model = SentenceTransformer("all-MiniLM-L6-v2")
+    model = SentenceTransformer(MODEL_NAME)
     embeddings = model.encode(
         [issue_text(current)] + [issue_text(o) for o in others],
         normalize_embeddings=True,

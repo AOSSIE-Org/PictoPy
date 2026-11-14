@@ -46,6 +46,7 @@ jobs:
         run: |
           cd .github/scripts
           python test_detect_duplicate_issue.py
+          python test_eval_duplicate_detection.py
 
       - name: Install frontend dependencies
         run: |

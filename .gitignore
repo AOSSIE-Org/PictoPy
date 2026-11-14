@@ -41,3 +41,6 @@ CLAUDE.local.md
 # semantic vocabulary source downloads (cache for scripts/build_semantic_vocabulary.py)
 backend/scripts/vocabulary/sources/
 backend/scripts/vocabulary/eval_images/
+
+# issue snapshot and embeddings cached by .github/scripts/eval_duplicate_detection.py
+.github/scripts/.duplicate_eval_cache/

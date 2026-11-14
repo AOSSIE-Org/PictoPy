@@ -1,0 +1,372 @@
+"""Offline evaluation of duplicate issue detection against labelled issue pairs.
+
+Replays the detector over a snapshot of the repository's issues. Each query issue is
+compared only with older issues, as it would have been on the day it was opened.
+
+Run with: python .github/scripts/eval_duplicate_detection.py [--refresh] [--json out]
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import sys
+import urllib.request
+from pathlib import Path
+from typing import Callable, Iterable, Sequence, TypedDict
+
+import detect_duplicate_issue as detector
+
+HERE = Path(__file__).parent
+PAIRS_PATH = HERE / "duplicate_eval_pairs.json"
+CACHE_DIR = HERE / ".duplicate_eval_cache"
+DEFAULT_SINCE = "2026-01-01"
+FIXED_THRESHOLDS = (0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85)
+FLAG_RATES = (0.05, 0.10, 0.20)
+GATE_TITLE_MINS = (0.60, 0.65, 0.70)
+GATE_BODY_MINS = (0.55, 0.65, 0.75)
+
+# Issue-template scaffolding shared by every issue of a type; it inflates similarity
+# between unrelated issues. Patterns follow .github/ISSUE_TEMPLATE/*.yml.
+TEMPLATE_NOISE = [
+    re.compile(p)
+    for p in (
+        r"### Is there an existing issue for this\?",
+        r"- \[[xX ]\] I have searched the existing issues",
+        r"### What happened\?",
+        r"### Record",
+        r"- \[[xX ]\] I agree to follow this project's Code of Conduct",
+        r"- \[[xX ]\] I want to work on this issue",
+        r"### Describe the feature",
+        r"### Add ScreenShots",
+        r"### What's wrong with the existing documentation",
+        r"_No response_",
+        r"<img[^>]*>",
+        r"!\[[^\]]*\]\([^)]*\)",
+        r"https?://\S+",
+    )
+]
+# Only bracketed or colon-terminated prefixes, so "Bug in search" keeps its first word.
+_PREFIX_WORD = r"(?:bug|feat|feature|docs?|enhancement)"
+TITLE_PREFIX = re.compile(
+    rf"^\s*(?:(?:\[{_PREFIX_WORD}\]|{_PREFIX_WORD}\s*:)\s*:?\s*)+", re.IGNORECASE
+)
+
+
+class Issue(TypedDict):
+    number: int
+    title: str
+    body: str
+    created_at: str
+    state: str
+    state_reason: str | None
+
+
+class Pair(TypedDict):
+    issue: int
+    candidate: int
+    source: str
+
+
+class Outcome(TypedDict):
+    flag_rate: float
+    positives_shown: float
+    negatives_shown: float
+
+
+def next_link(link_header: str) -> str | None:
+    # REST page numbers stop at page 10 for large repos; the Link cursor does not.
+    match = re.search(r'<([^>]+)>;\s*rel="next"', link_header)
+    return match.group(1) if match else None
+
+
+def fetch_issues(repository: str, token: str | None) -> list[Issue]:
+    url: str | None = (
+        f"https://api.github.com/repos/{repository}/issues?state=all&per_page=100"
+    )
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "duplicate-detection-eval",
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    issues: list[Issue] = []
+    while url:
+        request = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(request, timeout=30) as response:
+            page = json.loads(response.read().decode("utf-8"))
+            url = next_link(response.headers.get("Link", ""))
+        for item in page:
+            if "pull_request" in item:
+                continue
+            issues.append(
+                {
+                    "number": item["number"],
+                    "title": item["title"],
+                    "body": item["body"] or "",
+                    "created_at": item["created_at"],
+                    "state": item["state"],
+                    "state_reason": item.get("state_reason"),
+                }
+            )
+    return sorted(issues, key=lambda i: i["number"])
+
+
+def load_corpus(repository: str, refresh: bool) -> list[Issue]:
+    path = CACHE_DIR / "issues.json"
+    if refresh or not path.exists():
+        print(f"Fetching issues from {repository}...", file=sys.stderr)
+        issues = fetch_issues(repository, os.environ.get("GITHUB_TOKEN"))
+        CACHE_DIR.mkdir(exist_ok=True)
+        path.write_text(json.dumps(issues), encoding="utf-8")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def load_pairs(path: Path = PAIRS_PATH) -> tuple[str, list[Pair], list[Pair]]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return data["repository"], data["positives"], data["negatives"]
+
+
+def clean_title(title: str) -> str:
+    return TITLE_PREFIX.sub("", title).strip()
+
+
+def clean_body(body: str) -> str:
+    for pattern in TEMPLATE_NOISE:
+        body = pattern.sub(" ", body)
+    return re.sub(r"\s+", " ", body).strip()
+
+
+VARIANTS: dict[str, Callable[[Issue], str]] = {
+    "current": lambda i: detector.issue_text(dict(i)),
+    "cleaned": lambda i: f"{clean_title(i['title'])}. {clean_body(i['body'])}",
+    "title": lambda i: clean_title(i["title"]),
+}
+
+
+def similarity_rows(texts: list[str]) -> list[list[float]]:
+    import numpy as np
+
+    digest = hashlib.sha1(
+        "\x00".join([detector.MODEL_NAME, *texts]).encode("utf-8")
+    ).hexdigest()[:16]
+    path = CACHE_DIR / f"embeddings_{digest}.npy"
+    if path.exists():
+        embeddings = np.load(path)
+    else:
+        from sentence_transformers import SentenceTransformer
+
+        model = SentenceTransformer(detector.MODEL_NAME)
+        embeddings = model.encode(
+            texts, normalize_embeddings=True, batch_size=32, show_progress_bar=False
+        )
+        CACHE_DIR.mkdir(exist_ok=True)
+        np.save(path, embeddings)
+    return (embeddings @ embeddings.T).tolist()
+
+
+def percentile(values: Sequence[float], pct: float) -> float:
+    # Linear interpolation between closest ranks, the same as numpy's default.
+    ordered = sorted(values)
+    position = (len(ordered) - 1) * pct / 100
+    low = int(position)
+    high = min(low + 1, len(ordered) - 1)
+    return ordered[low] + (ordered[high] - ordered[low]) * (position - low)
+
+
+def rank_of(scores: Sequence[float], index: int) -> int:
+    return 1 + sum(1 for s in scores if s > scores[index])
+
+
+def top_matches(
+    rank_scores: Sequence[float],
+    gates: Iterable[tuple[Sequence[float], float]],
+    max_results: int = detector.MAX_RESULTS,
+) -> list[int]:
+    """Indices that pass every (scores, minimum) gate, best rank_scores first."""
+    gates = list(gates)
+    kept = [
+        j
+        for j in range(len(rank_scores))
+        if all(scores[j] >= minimum for scores, minimum in gates)
+    ]
+    kept.sort(key=lambda j: -rank_scores[j])
+    return kept[:max_results]
+
+
+def summarise(
+    shown: dict[int, list[int]],
+    eval_queries: Sequence[int],
+    positives: Sequence[Pair],
+    negatives: Sequence[Pair],
+) -> Outcome:
+    def share(pairs: Sequence[Pair]) -> float:
+        hits = sum(1 for p in pairs if p["candidate"] in shown[p["issue"]])
+        return hits / len(pairs) if pairs else 0.0
+
+    flagged = sum(1 for q in eval_queries if shown[q])
+    return {
+        "flag_rate": flagged / len(eval_queries) if eval_queries else 0.0,
+        "positives_shown": share(positives),
+        "negatives_shown": share(negatives),
+    }
+
+
+def usable_pairs(
+    pairs: Sequence[Pair], position: dict[int, int], label: str
+) -> list[Pair]:
+    usable = []
+    for pair in pairs:
+        issue, candidate = pair["issue"], pair["candidate"]
+        if issue not in position or candidate not in position:
+            print(f"skipping {label} #{issue} -> #{candidate}: not an issue in corpus")
+        elif candidate > issue:
+            print(f"skipping {label} #{issue} -> #{candidate}: candidate is newer")
+        else:
+            usable.append(pair)
+    return usable
+
+
+def evaluate(
+    corpus: list[Issue], positives: list[Pair], negatives: list[Pair], since: str
+) -> dict:
+    numbers = [i["number"] for i in corpus]
+    position = {n: k for k, n in enumerate(numbers)}
+    positives = usable_pairs(positives, position, "positive")
+    negatives = usable_pairs(negatives, position, "negative")
+    eval_queries = [
+        i["number"]
+        for i in corpus
+        if i["created_at"] >= since and position[i["number"]]
+    ]
+    queries = sorted(set(eval_queries) | {p["issue"] for p in positives + negatives})
+
+    # Row q holds similarities to older issues only, indexed like `numbers`.
+    rows: dict[str, dict[int, list[float]]] = {}
+    for name, to_text in VARIANTS.items():
+        print(f"Embedding corpus for variant '{name}'...", file=sys.stderr)
+        sim = similarity_rows([to_text(i) for i in corpus])
+        rows[name] = {q: sim[position[q]][: position[q]] for q in queries}
+
+    def run(variant: str, threshold: float) -> Outcome:
+        shown = {
+            q: [numbers[j] for j in top_matches(r, [(r, threshold)])]
+            for q, r in rows[variant].items()
+        }
+        return summarise(shown, eval_queries, positives, negatives)
+
+    results: dict = {
+        "eval_queries": len(eval_queries),
+        "since": since,
+        "positives": len(positives),
+        "negatives": len(negatives),
+        "variants": {},
+    }
+    for name, variant_rows in rows.items():
+        pos_scores = [
+            variant_rows[p["issue"]][position[p["candidate"]]] for p in positives
+        ]
+        pos_ranks = [
+            rank_of(variant_rows[p["issue"]], position[p["candidate"]])
+            for p in positives
+        ]
+        neg_scores = [
+            variant_rows[p["issue"]][position[p["candidate"]]] for p in negatives
+        ]
+        # Thresholds that flag a fixed share of issues compare variants fairly even
+        # when their score scales differ.
+        top1 = [max(variant_rows[q]) for q in eval_queries]
+        equal_flag_rate = {}
+        for rate in FLAG_RATES:
+            threshold = percentile(top1, 100 * (1 - rate))
+            equal_flag_rate[f"{rate:.2f}"] = {
+                "threshold": threshold,
+                **run(name, threshold),
+            }
+        k = detector.MAX_RESULTS
+        results["variants"][name] = {
+            "recall_at_1": sum(r <= 1 for r in pos_ranks) / len(pos_ranks),
+            f"recall_at_{k}": sum(r <= k for r in pos_ranks) / len(pos_ranks),
+            "positive_score_median": percentile(pos_scores, 50),
+            "negative_score_median": percentile(neg_scores, 50),
+            "fixed_thresholds": {f"{t:.2f}": run(name, t) for t in FIXED_THRESHOLDS},
+            "equal_flag_rate": equal_flag_rate,
+        }
+
+    gates = {}
+    for title_min in GATE_TITLE_MINS:
+        for body_min in GATE_BODY_MINS:
+            shown = {
+                q: [
+                    numbers[j]
+                    for j in top_matches(
+                        rows["cleaned"][q],
+                        [(rows["title"][q], title_min), (rows["cleaned"][q], body_min)],
+                    )
+                ]
+                for q in queries
+            }
+            gates[f"title>={title_min:.2f} and cleaned>={body_min:.2f}"] = summarise(
+                shown, eval_queries, positives, negatives
+            )
+    results["gates"] = gates
+    return results
+
+
+def print_report(results: dict) -> None:
+    k = detector.MAX_RESULTS
+    print(
+        f"\nQueries: {results['eval_queries']} issues created since {results['since']}; "
+        f"{results['positives']} duplicate pairs, {results['negatives']} hard negatives."
+    )
+    print(
+        f"A pair counts as shown when the candidate is in the top {k} and passes the "
+        "threshold or gate.\n"
+    )
+
+    def row(label: str, o: Outcome) -> str:
+        return (
+            f"  {label:<38} flagged {o['flag_rate']:6.1%}   "
+            f"duplicates shown {o['positives_shown']:5.0%}   "
+            f"hard negatives shown {o['negatives_shown']:5.0%}"
+        )
+
+    for name, v in results["variants"].items():
+        print(
+            f"== {name}: recall@1 {v['recall_at_1']:.2f}, recall@{k} "
+            f"{v[f'recall_at_{k}']:.2f}; median score duplicates "
+            f"{v['positive_score_median']:.2f}, hard negatives "
+            f"{v['negative_score_median']:.2f}"
+        )
+        for t, o in v["fixed_thresholds"].items():
+            print(row(f"threshold {t}", o))
+        for rate, o in v["equal_flag_rate"].items():
+            print(
+                row(f"target flag rate {float(rate):.0%} (t={o['threshold']:.2f})", o)
+            )
+        print()
+    print("== combined gate (ranked by cleaned score)")
+    for label, o in results["gates"].items():
+        print(row(label, o))
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--since", default=DEFAULT_SINCE, help="eval window start")
+    parser.add_argument("--refresh", action="store_true", help="re-fetch issues")
+    parser.add_argument("--json", type=Path, help="also write results here")
+    args = parser.parse_args()
+
+    repository, positives, negatives = load_pairs()
+    corpus = load_corpus(repository, args.refresh)
+    results = evaluate(corpus, positives, negatives, args.since)
+    print_report(results)
+    if args.json:
+        args.json.write_text(json.dumps(results, indent=2), encoding="utf-8")
+
+
+if __name__ == "__main__":
+    main()
