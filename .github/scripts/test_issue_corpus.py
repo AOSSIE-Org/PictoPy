@@ -5,6 +5,7 @@ from issue_corpus import (
     clean_title,
     fetch_issues,
     is_duplicate,
+    is_tracking,
     parse_issue,
     resolve_canonical,
     status,
@@ -113,6 +114,14 @@ def test_status_names_closure_reason() -> None:
     assert status(make_issue(5, state_reason=None)) == "closed"
 
 
+def test_is_tracking_needs_an_open_issue_with_the_label() -> None:
+    assert is_tracking(make_issue(1, state="open", labels=["Tracking"]))
+    assert not is_tracking(make_issue(2, state="open", labels=["enhancement"]))
+    assert not is_tracking(make_issue(3, labels=["tracking"]))
+    assert status(make_issue(4, state="open", labels=["tracking"])) == "tracking"
+    assert status(make_issue(5, labels=["tracking"])) == "closed as completed"
+
+
 def test_resolve_canonical_follows_chain() -> None:
     by_number = {
         638: make_issue(638),
@@ -161,6 +170,7 @@ if __name__ == "__main__":
     test_fetch_issues_follows_cursor_until_last_page()
     test_is_duplicate_covers_reason_link_and_legacy_label()
     test_status_names_closure_reason()
+    test_is_tracking_needs_an_open_issue_with_the_label()
     test_resolve_canonical_follows_chain()
     test_resolve_canonical_stops_on_cycle_missing_target_and_depth()
     test_clean_title_strips_template_prefixes()

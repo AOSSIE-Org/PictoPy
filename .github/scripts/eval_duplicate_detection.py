@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Callable, Iterable, Sequence, TypedDict
 
 import detect_duplicate_issue as detector
-from issue_corpus import issue_text
+from issue_corpus import TRACKING_LABEL, issue_text
 
 HERE = Path(__file__).parent
 PAIRS_PATH = HERE / "duplicate_eval_pairs.json"
@@ -44,10 +44,11 @@ class Issue(TypedDict):
     closed_by: list[int]
 
 
-class Pair(TypedDict):
+class Pair(TypedDict, total=False):
     issue: int
     candidate: int
     source: str
+    kind: str  # positives only
 
 
 class Outcome(TypedDict):
@@ -245,6 +246,12 @@ def evaluate(
         "positives": len(positives),
         "negatives": len(negatives),
         "detector": summarise(shipped, eval_queries, positives, negatives),
+        "detector_by_kind": {
+            kind: summarise(
+                shipped, eval_queries, [p for p in positives if p["kind"] == kind], []
+            )["positives_shown"]
+            for kind in sorted({p["kind"] for p in positives})
+        },
         "variants": {},
     }
     for name, variant_rows in rows.items():
@@ -320,6 +327,8 @@ def print_report(results: dict) -> None:
         "threshold or gate.\n"
     )
     print(row("DETECTOR AS SHIPPED", results["detector"]))
+    by_kind = ", ".join(f"{k} {v:.0%}" for k, v in results["detector_by_kind"].items())
+    print(f"  {'':<38} duplicates shown by kind: {by_kind}")
     print()
 
     for name, v in results["variants"].items():
@@ -346,10 +355,20 @@ def main() -> None:
     parser.add_argument("--since", default=DEFAULT_SINCE, help="eval window start")
     parser.add_argument("--refresh", action="store_true", help="re-fetch issues")
     parser.add_argument("--json", type=Path, help="also write results here")
+    parser.add_argument(
+        "--assume-tracking",
+        default="",
+        help=f"comma-separated issue numbers to treat as labelled {TRACKING_LABEL!r}",
+    )
     args = parser.parse_args()
 
     repository, positives, negatives = load_pairs()
     corpus = load_corpus(repository, args.refresh)
+    # Lets maintainers measure a proposed set of tracking issues before labelling.
+    assumed = {int(n) for n in args.assume_tracking.split(",") if n.strip()}
+    for issue in corpus:
+        if issue["number"] in assumed:
+            issue["labels"] = [*issue["labels"], TRACKING_LABEL]
     results = evaluate(corpus, positives, negatives, args.since)
     print_report(results)
     if args.json:

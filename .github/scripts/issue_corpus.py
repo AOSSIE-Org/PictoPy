@@ -19,6 +19,8 @@ from typing import Callable, TypedDict
 GRAPHQL_URL = "https://api.github.com/graphql"
 # Chains like #700 -> #693 -> #638 exist; the cap stops a malformed chain early.
 MAX_DUPLICATE_DEPTH = 5
+# Maintainers put this label on open issues that collect a whole area of work.
+TRACKING_LABEL = "tracking"
 
 # The issues connection never returns pull requests, unlike the REST issues list.
 ISSUES_QUERY = """
@@ -162,7 +164,15 @@ def is_duplicate(issue: Issue) -> bool:
     )
 
 
+def is_tracking(issue: Issue) -> bool:
+    return issue["state"] == "open" and any(
+        label.lower() == TRACKING_LABEL for label in issue["labels"]
+    )
+
+
 def status(issue: Issue) -> str:
+    if is_tracking(issue):
+        return "tracking"
     if issue["state"] == "open":
         return "open"
     if is_duplicate(issue):

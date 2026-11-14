@@ -8,6 +8,12 @@ MARKER = "<!-- pictopy-duplicate-detection -->"
 # (status, heading, advice) in display order. Statuses come from issue_corpus.status.
 SECTIONS = (
     (
+        "tracking",
+        "Tracked in",
+        "This tracks a wider area of work. If your issue is part of it, the "
+        "discussion there may already cover it.",
+    ),
+    (
         "open",
         "Open",
         "If one of these describes the same problem, consider adding your details "

@@ -12,9 +12,19 @@ title or body is edited:
    `BODY_THRESHOLD`. A match on an issue closed as a duplicate is reported as the issue
    it duplicates, following chains such as #700 -> #693 -> #638.
 3. `duplicate_comment.py` renders up to three matches, grouped by whether they are open,
-   resolved, or closed as not planned. The workflow keeps one comment per issue,
+   resolved, or closed as not planned, plus at most one tracking issue. The workflow keeps one comment per issue,
    updating it on edits and deleting it if nothing matches any more. Issues are
    referenced by number only, so no text from other issues is copied into the comment.
+
+## Tracking issues
+
+Maintainers often fold a narrow issue into a broader one, such as a logout button into
+"Implement Settings UI". Their text differs too much for normal matching, so open issues
+labelled `tracking` are matched with lower thresholds (`TRACKING_TITLE_THRESHOLD`,
+`TRACKING_BODY_THRESHOLD`) and shown in their own section. Label an issue `tracking` when
+it collects a whole area of work and narrower requests should be discussed there.
+Labelling too many issues this way adds noise, so measure a proposed set first with
+`--assume-tracking`, described below.
 
 ## Measuring a change to duplicate detection
 
@@ -41,7 +51,9 @@ ONNX export of `all-MiniLM-L6-v2`, pinned by `MODEL_REVISION` in
 places, without installing torch. Changing the model or its revision changes every
 score, so re-run the harness and retune the thresholds when you do.
 
-The first line, **detector as shipped**, runs the detector's own `find_duplicates`. The
+The first line, **detector as shipped**, runs the detector's own `find_duplicates`, and
+breaks duplicates shown down by pair `kind`. Pass `--assume-tracking 546,555` to treat
+those issues as labelled `tracking` for the run. The
 rest sweep each text the detector scores (`title`, `body`) and `raw`, the uncleaned text
 it used before, across thresholds. The harness fetches through REST, which has no
 duplicate links, so it does not redirect duplicates to the issue they duplicate.

@@ -20,13 +20,26 @@ from pathlib import Path
 from typing import Any, Callable
 
 from duplicate_comment import render_comment
-from issue_corpus import clean_title, issue_text, resolve_canonical, status
+from issue_corpus import (
+    clean_title,
+    is_tracking,
+    issue_text,
+    resolve_canonical,
+    status,
+)
 
 # Together these flagged 16% of 2026 issues, showed 36% of labelled duplicates, and
 # showed none of the labelled non-duplicates.
 TITLE_THRESHOLD = 0.70
 BODY_THRESHOLD = 0.80
 MAX_RESULTS = 3
+# Narrower issues are often folded into a tracking issue whose text differs a lot
+# (a logout button into "Settings UI"), so tracking issues get a lower bar and their
+# own section. Against a stand-in set of tracking issues, this pointed 8% of 2026
+# issues at one, and showed none of the labelled non-duplicates.
+TRACKING_TITLE_THRESHOLD = 0.50
+TRACKING_BODY_THRESHOLD = 0.60
+MAX_TRACKING_RESULTS = 1
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 # fastembed's ONNX export of MODEL_NAME, which scores identically to the PyTorch model
 # without installing torch. Pinned so the thresholds above stay calibrated.
@@ -72,7 +85,10 @@ def find_duplicates(
     best: dict[int, float] = {}
     reported_as: dict[int, list[int]] = {}
     for issue, title_score, body_score in zip(others, title_scores, body_scores):
-        if title_score < title_threshold and body_score < body_threshold:
+        tracking = is_tracking(issue)
+        title_min = TRACKING_TITLE_THRESHOLD if tracking else title_threshold
+        body_min = TRACKING_BODY_THRESHOLD if tracking else body_threshold
+        if title_score < title_min and body_score < body_min:
             continue
         score = max(title_score, body_score)
         target = resolve_canonical(issue["number"], by_number)
@@ -80,7 +96,10 @@ def find_duplicates(
             reported_as.setdefault(target, []).append(issue["number"])
         best[target] = max(score, best.get(target, score))
 
-    ranked = sorted(best, key=lambda number: -best[number])[:max_results]
+    ranked = sorted(best, key=lambda number: -best[number])
+    tracked = [n for n in ranked if is_tracking(by_number[n])]
+    others_ranked = [n for n in ranked if not is_tracking(by_number[n])]
+    ranked = tracked[:MAX_TRACKING_RESULTS] + others_ranked[:max_results]
     return [
         {
             "number": number,

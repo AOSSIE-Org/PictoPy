@@ -91,6 +91,26 @@ def test_candidates_are_issues_opened_before_the_current_one() -> None:
     assert len(candidates(corpus, fork_issue)) == 3
 
 
+def test_find_duplicates_uses_lower_bar_for_tracking_issues() -> None:
+    tracking = {"state": "open", "state_reason": None, "labels": ["tracking"]}
+    others = [
+        make_issue(1, **tracking),
+        make_issue(2, **tracking),
+        make_issue(3, labels=["tracking"]),
+        make_issue(4),
+        make_issue(5),
+        make_issue(6),
+    ]
+    title_scores = [0.55, 0.52, 0.55, 0.9, 0.8, 0.75]
+
+    matches = find_duplicates(title_scores, [0.0] * 6, others)
+
+    # One tracking match at most, on top of the usual three; a closed issue with
+    # the label is held to the normal bar.
+    assert [m["number"] for m in matches] == [1, 4, 5, 6]
+    assert matches[0]["status"] == "tracking"
+
+
 if __name__ == "__main__":
     test_dot_product_matches_cosine_similarity_for_normalized_vectors()
     test_title_text_is_the_cleaned_title()
@@ -100,4 +120,5 @@ if __name__ == "__main__":
     test_find_duplicates_reports_canonical_issue_for_duplicate_matches()
     test_find_duplicates_keeps_duplicate_without_known_target()
     test_candidates_are_issues_opened_before_the_current_one()
+    test_find_duplicates_uses_lower_bar_for_tracking_issues()
     print("All tests passed.")

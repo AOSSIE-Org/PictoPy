@@ -40,6 +40,13 @@ def test_render_comment_groups_by_lifecycle_in_fixed_order() -> None:
     assert "- #640\n" in body
 
 
+def test_render_comment_puts_tracking_issues_first() -> None:
+    body = render_comment([make_match(1496, "open"), make_match(566, "tracking")])
+    assert body is not None
+    assert body.index("**Tracked in**") < body.index("**Open**")
+    assert "- #566\n" in body
+
+
 def test_render_comment_notes_duplicates_and_merges_closed_groups() -> None:
     body = render_comment(
         [
@@ -72,6 +79,7 @@ def test_render_comment_qualifies_references_to_another_repository() -> None:
 if __name__ == "__main__":
     test_render_comment_returns_none_without_matches()
     test_render_comment_groups_by_lifecycle_in_fixed_order()
+    test_render_comment_puts_tracking_issues_first()
     test_render_comment_notes_duplicates_and_merges_closed_groups()
     test_render_comment_never_echoes_other_issue_text_or_scores()
     test_render_comment_qualifies_references_to_another_repository()
