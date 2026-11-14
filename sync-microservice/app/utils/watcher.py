@@ -59,6 +59,8 @@ def watcher_util_handle_file_changes(changes: set) -> None:
     deleted_folder_ids = []
 
     affected_folders = {}  # folder_path -> folder_id mapping
+    # Folders that lost something, synced last so a move's destination goes first
+    lost_folders = {}
 
     # First pass - count changes and identify affected folders
     for change, file_path in changes:
@@ -66,7 +68,13 @@ def watcher_util_handle_file_changes(changes: set) -> None:
         if change == Change.deleted:
             deleted_folder_id = watcher_util_get_folder_id_if_watched(file_path)
             if deleted_folder_id:
-                deleted_folder_ids.append(deleted_folder_id)
+                # Let the parent's sync tell a rename or move from a deletion
+                parent = watcher_util_find_surviving_parent_folder(file_path)
+                if parent:
+                    parent_id, parent_path = parent
+                    lost_folders[parent_path] = parent_id
+                else:
+                    deleted_folder_ids.append(deleted_folder_id)
                 continue
 
         # Find affected folder
@@ -75,11 +83,22 @@ def watcher_util_handle_file_changes(changes: set) -> None:
         )
         if closest_folder:
             folder_id, folder_path = closest_folder
-            affected_folders[folder_path] = folder_id
+            if change == Change.deleted:
+                lost_folders[folder_path] = folder_id
+            else:
+                affected_folders[folder_path] = folder_id
 
-    # Process affected folders
+    # Process affected folders: those that only gained something, then those
+    # that gained and lost, then those that only lost
     for folder_path, folder_id in affected_folders.items():
-        watcher_util_call_sync_folder_api(folder_id, folder_path)
+        if folder_path not in lost_folders:
+            watcher_util_call_sync_folder_api(folder_id, folder_path)
+    for folder_path, folder_id in lost_folders.items():
+        if folder_path in affected_folders:
+            watcher_util_call_sync_folder_api(folder_id, folder_path)
+    for folder_path, folder_id in lost_folders.items():
+        if folder_path not in affected_folders:
+            watcher_util_call_sync_folder_api(folder_id, folder_path)
 
     # Handle deleted folders
     if deleted_folder_ids:
@@ -121,6 +140,29 @@ def watcher_util_find_closest_parent_folder(
                     best_match = (folder_id, folder_path)
 
     return best_match
+
+
+def watcher_util_find_surviving_parent_folder(
+    folder_path: str,
+) -> Optional[Tuple[str, str]]:
+    """
+    Find the closest watched parent folder of a deleted folder that still exists.
+
+    Args:
+        folder_path: Path of the deleted folder
+
+    Returns:
+        Tuple of (folder_id, folder_path) if found, None otherwise
+    """
+    parent_path = os.path.dirname(os.path.abspath(folder_path))
+    while True:
+        match = watcher_util_find_closest_parent_folder(parent_path, watched_folders)
+        if match is None or os.path.isdir(match[1]):
+            return match
+        next_parent_path = os.path.dirname(match[1])
+        if next_parent_path == match[1]:
+            return None
+        parent_path = next_parent_path
 
 
 def watcher_util_call_sync_folder_api(folder_id: str, folder_path: str) -> None:

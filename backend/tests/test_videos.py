@@ -17,6 +17,7 @@ from app.database.videos import (
     db_delete_videos_by_ids,
     db_toggle_video_favourite_status,
     db_get_video_by_id,
+    db_relocate_videos,
 )
 from app.utils.videos import (
     video_util_is_valid_video,
@@ -391,6 +392,72 @@ class TestProcessFolderVideos:
         assert refreshed["thumbnailPath"] is not None
         assert os.path.exists(refreshed["thumbnailPath"])
 
+    def test_a_renamed_video_keeps_its_row(
+        self, test_db, test_folder_id, real_video_file, temp_media_dir, monkeypatch
+    ):
+        """Delete-and-reimport would drop its favourite, memories and faces."""
+        thumb_dir = os.path.join(temp_media_dir, "thumbs")
+        monkeypatch.setattr("app.utils.videos.THUMBNAIL_IMAGES_PATH", thumb_dir)
+        video_path = os.path.join(temp_media_dir, "clip.mp4")
+        shutil.copyfile(real_video_file, video_path)
+        os.remove(real_video_file)
+
+        folder_data = [(temp_media_dir, test_folder_id, False)]
+        video_util_process_folder_videos(folder_data)
+        video_id = db_get_all_videos()[0]["id"]
+        db_toggle_video_favourite_status(video_id)
+
+        renamed = os.path.join(temp_media_dir, "holiday.mp4")
+        os.rename(video_path, renamed)
+        assert video_util_process_folder_videos(folder_data) is True
+
+        video = db_get_video_by_id(video_id)
+        assert video is not None, "the renamed video was deleted and re-imported"
+        assert video["path"] == renamed
+        assert video["isFavourite"] is True
+        # The poster made while reading the new path is not left behind.
+        assert len(os.listdir(thumb_dir)) == 1
+
+    def test_a_different_video_does_not_take_over_a_deleted_ones_row(
+        self, test_db, test_folder_id, real_video_file, temp_media_dir, monkeypatch
+    ):
+        import numpy as np
+
+        thumb_dir = os.path.join(temp_media_dir, "thumbs")
+        monkeypatch.setattr("app.utils.videos.THUMBNAIL_IMAGES_PATH", thumb_dir)
+        video_path = os.path.join(temp_media_dir, "clip.mp4")
+        shutil.copyfile(real_video_file, video_path)
+
+        folder_data = [(temp_media_dir, test_folder_id, False)]
+        video_util_process_folder_videos(folder_data)
+        video_id = db_get_all_videos()[0]["id"]
+        stats = os.stat(video_path)
+
+        # Same size and mtime, different picture: padded past the end of the
+        # container, which the decoder ignores.
+        writer = cv2.VideoWriter(
+            real_video_file, cv2.VideoWriter_fourcc(*"MJPG"), 10.0, (64, 64)
+        )
+        for i in range(10):
+            writer.write(np.full((64, 64, 3), 250 - i * 20, dtype=np.uint8))
+        writer.release()
+        os.remove(video_path)
+        replacement = os.path.join(temp_media_dir, "other.mp4")
+        shutil.copyfile(real_video_file, replacement)
+        os.remove(real_video_file)
+        padding = stats.st_size - os.path.getsize(replacement)
+        assert padding >= 0
+        with open(replacement, "ab") as f:
+            f.write(b"\0" * padding)
+        os.utime(replacement, ns=(stats.st_atime_ns, stats.st_mtime_ns))
+        assert video_util_process_folder_videos(folder_data) is True
+
+        assert db_get_video_by_id(video_id) is None
+        replaced = db_get_all_videos()[0]
+        assert replaced["path"] == replacement
+        # Decoded, so it was the picture that told them apart.
+        assert replaced["thumbnailPath"] is not None
+
 
 # ##############################
 # Database
@@ -398,6 +465,10 @@ class TestProcessFolderVideos:
 
 
 class TestVideosDatabase:
+    def test_relocating_a_deleted_row_fails(self, test_db, test_folder_id):
+        record = make_video_record("gone", "/videos/moved.mp4", test_folder_id)
+        assert db_relocate_videos([record]) is False
+
     def test_bulk_insert_and_get_all(self, test_db, test_folder_id):
         records = [
             make_video_record("vid-1", "/videos/a.mp4", test_folder_id),

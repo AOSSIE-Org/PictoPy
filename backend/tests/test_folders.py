@@ -1,3 +1,4 @@
+import json
 import sqlite3
 import uuid
 from typing import Iterator
@@ -10,6 +11,7 @@ import tempfile
 import os
 import shutil
 from concurrent.futures import Future, ProcessPoolExecutor
+from pathlib import Path
 
 
 from app.routes.folders import router as folders_router
@@ -36,7 +38,20 @@ from app.database.folders import (
     db_get_all_folders,
     db_find_parent_folder_id,
 )
-from app.database.images import db_create_images_table
+from app.database.albums import (
+    db_add_images_to_album,
+    db_create_album_images_table,
+    db_create_albums_table,
+    db_get_album_images,
+    db_insert_album,
+)
+from app.database.images import (
+    db_bulk_insert_images,
+    db_create_images_table,
+    db_exclude_image_paths,
+    db_get_image_by_id,
+    db_toggle_image_favourite_status,
+)
 from app.database.videos import db_create_videos_table
 from app.database.yolo_mapping import db_create_YOLO_classes_table
 
@@ -1470,3 +1485,261 @@ class TestFoldersIntegration:
 
         mock_enable_batch.assert_called_once_with(folder_ids)
         mock_delete_batch.assert_called_once_with(folder_ids)
+
+
+# ##############################
+# Renamed and moved folders
+# ##############################
+
+
+@pytest.fixture
+def library_db(test_db, monkeypatch):
+    """The folder test database plus the album tables a library's photos join."""
+    monkeypatch.setattr("app.database.albums.DATABASE_PATH", test_db)
+    # Adding to an album goes through the shared connection helper.
+    monkeypatch.setattr("app.database.connection.DATABASE_PATH", test_db)
+    db_create_albums_table()
+    db_create_album_images_table()
+    return test_db
+
+
+def _index_photo(folder_id: str, path: str) -> str:
+    """Write a photo and record it the way a folder scan does."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "wb") as f:
+        f.write(b"photo")
+    image_id = str(uuid.uuid4())
+    db_bulk_insert_images(
+        [
+            {
+                "id": image_id,
+                "path": path,
+                "folder_id": folder_id,
+                "thumbnailPath": f"{path}.thumbnail.jpg",
+                "metadata": json.dumps({"file_size": os.path.getsize(path)}),
+                "isTagged": True,
+                "isEmbedded": False,
+                "latitude": None,
+                "longitude": None,
+                "captured_at": None,
+            }
+        ]
+    )
+    return image_id
+
+
+def _folder_row(db_path: str, folder_id: str):
+    conn = sqlite3.connect(db_path)
+    try:
+        return conn.execute(
+            "SELECT folder_path, parent_folder_id, AI_Tagging FROM folders "
+            "WHERE folder_id = ?",
+            (folder_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+
+
+class TestSyncFolderRenames:
+    def test_renamed_folder_keeps_its_photos_albums_and_settings(
+        self, client, library_db, tmp_path
+    ):
+        photos = str(tmp_path / "Photos")
+        trip = os.path.join(photos, "Trip")
+        db_insert_folders_batch(
+            [
+                ("root-id", photos, None, 0, False, None),
+                ("trip-id", trip, "root-id", 0, True, True),
+            ]
+        )
+        image_id = _index_photo("trip-id", os.path.join(trip, "beach.jpg"))
+        db_toggle_image_favourite_status(image_id)
+        db_insert_album("album-id", "Trip album")
+        db_add_images_to_album("album-id", [image_id])
+
+        renamed = os.path.join(photos, "Goa Trip 2026")
+        os.rename(trip, renamed)
+        response = client.post(
+            "/folders/sync-folder",
+            json={"folder_path": photos, "folder_id": "root-id"},
+        )
+
+        assert response.status_code == 200
+        image = db_get_image_by_id(image_id)
+        assert image is not None, "the renamed folder's photo was deleted"
+        assert image["path"] == os.path.join(renamed, "beach.jpg")
+        assert image["isFavourite"] is True
+        assert db_get_album_images("album-id") == [image_id]
+        assert _folder_row(library_db, "trip-id") == (renamed, "root-id", 1)
+        submitted = client.app.state.executor.submit.call_args.args
+        assert ("trip-id", renamed) in submitted[3]
+
+    def test_folder_moved_to_another_parent_keeps_its_subtree(
+        self, client, library_db, tmp_path
+    ):
+        photos = str(tmp_path / "Photos")
+        source = os.path.join(photos, "2024")
+        destination = os.path.join(photos, "2025")
+        trip = os.path.join(source, "Trip")
+        day_one = os.path.join(trip, "Day 1")
+        os.makedirs(destination)
+        db_insert_folders_batch(
+            [
+                ("root-id", photos, None, 0, False, None),
+                ("2024-id", source, "root-id", 0, False, None),
+                ("2025-id", destination, "root-id", 0, False, None),
+                ("trip-id", trip, "2024-id", 0, True, True),
+                ("day-id", day_one, "trip-id", 0, True, True),
+            ]
+        )
+        beach = _index_photo("trip-id", os.path.join(trip, "beach.jpg"))
+        sunrise = _index_photo("day-id", os.path.join(day_one, "sunrise.jpg"))
+        db_insert_album("album-id", "Trip album")
+        db_add_images_to_album("album-id", [beach, sunrise])
+
+        moved = os.path.join(destination, "Trip")
+        shutil.move(trip, moved)
+        # The watcher syncs the folder that gained the move before the one
+        # that lost it.
+        for folder_id, folder_path in (("2025-id", destination), ("2024-id", source)):
+            response = client.post(
+                "/folders/sync-folder",
+                json={"folder_path": folder_path, "folder_id": folder_id},
+            )
+            assert response.status_code == 200
+
+        assert sorted(db_get_album_images("album-id")) == sorted([beach, sunrise])
+        beach_image = db_get_image_by_id(beach)
+        sunrise_image = db_get_image_by_id(sunrise)
+        assert beach_image is not None and sunrise_image is not None
+        assert beach_image["path"] == os.path.join(moved, "beach.jpg")
+        assert sunrise_image["path"] == os.path.join(moved, "Day 1", "sunrise.jpg")
+        assert _folder_row(library_db, "trip-id") == (moved, "2025-id", 1)
+        assert _folder_row(library_db, "day-id") == (
+            os.path.join(moved, "Day 1"),
+            "trip-id",
+            1,
+        )
+
+    def test_deleted_folder_is_not_matched_to_a_different_one(
+        self, client, library_db, tmp_path
+    ):
+        photos = str(tmp_path / "Photos")
+        old = os.path.join(photos, "Old")
+        db_insert_folders_batch(
+            [
+                ("root-id", photos, None, 0, False, None),
+                ("old-id", old, "root-id", 0, True, True),
+            ]
+        )
+        image_id = _index_photo("old-id", os.path.join(old, "a.jpg"))
+
+        shutil.rmtree(old)
+        # Same file name, different photo: a new folder, not the old one moved.
+        os.makedirs(os.path.join(photos, "New"))
+        with open(os.path.join(photos, "New", "a.jpg"), "wb") as f:
+            f.write(b"a different photo")
+        response = client.post(
+            "/folders/sync-folder",
+            json={"folder_path": photos, "folder_id": "root-id"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["data"]["deleted_count"] == 1
+        assert response.json()["data"]["added_count"] == 1
+        assert db_get_image_by_id(image_id) is None
+        assert _folder_row(library_db, "old-id") is None
+
+    def test_hidden_photo_stays_hidden_after_its_folder_is_renamed(
+        self, client, library_db, tmp_path
+    ):
+        photos = str(tmp_path / "Photos")
+        trip = os.path.join(photos, "Trip")
+        db_insert_folders_batch(
+            [
+                ("root-id", photos, None, 0, False, None),
+                ("trip-id", trip, "root-id", 0, True, True),
+            ]
+        )
+        _index_photo("trip-id", os.path.join(trip, "beach.jpg"))
+        hidden = os.path.join(trip, "hidden.jpg")
+        with open(hidden, "wb") as f:
+            f.write(b"hidden photo")
+        db_exclude_image_paths([(hidden, "trip-id")])
+
+        renamed = os.path.join(photos, "Goa Trip 2026")
+        os.rename(trip, renamed)
+        response = client.post(
+            "/folders/sync-folder",
+            json={"folder_path": photos, "folder_id": "root-id"},
+        )
+
+        assert response.status_code == 200
+        conn = sqlite3.connect(library_db)
+        try:
+            excluded = [
+                row[0] for row in conn.execute("SELECT path FROM excluded_image_paths")
+            ]
+        finally:
+            conn.close()
+        assert excluded == [os.path.normcase(os.path.join(renamed, "hidden.jpg"))]
+
+    def test_folder_with_an_unknown_file_size_is_not_matched(
+        self, client, library_db, tmp_path
+    ):
+        photos = str(tmp_path / "Photos")
+        trip = os.path.join(photos, "Trip")
+        db_insert_folders_batch(
+            [
+                ("root-id", photos, None, 0, False, None),
+                ("trip-id", trip, "root-id", 0, True, True),
+            ]
+        )
+        image_id = _index_photo("trip-id", os.path.join(trip, "beach.jpg"))
+        conn = sqlite3.connect(library_db)
+        conn.execute("UPDATE images SET metadata = '{}' WHERE id = ?", (image_id,))
+        conn.commit()
+        conn.close()
+
+        os.rename(trip, os.path.join(photos, "Goa Trip 2026"))
+        response = client.post(
+            "/folders/sync-folder",
+            json={"folder_path": photos, "folder_id": "root-id"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["data"]["deleted_count"] == 1
+        assert db_get_image_by_id(image_id) is None
+
+    def test_stale_folder_path_is_rejected(
+        self, client: TestClient, library_db: str, tmp_path: Path
+    ) -> None:
+        photos = str(tmp_path / "Photos")
+        trip = os.path.join(photos, "Trip")
+        day_one = os.path.join(trip, "Day 1")
+        db_insert_folders_batch(
+            [
+                ("root-id", photos, None, 0, False, None),
+                ("trip-id", trip, "root-id", 0, True, True),
+                ("day-id", day_one, "trip-id", 0, True, True),
+            ]
+        )
+        image_id = _index_photo("day-id", os.path.join(day_one, "sunrise.jpg"))
+
+        os.rename(trip, os.path.join(photos, "Goa Trip 2026"))
+        response = client.post(
+            "/folders/sync-folder",
+            json={"folder_path": photos, "folder_id": "root-id"},
+        )
+        assert response.status_code == 200
+
+        # A new folder at the old path, synced with the moved folder's id
+        os.makedirs(trip)
+        response = client.post(
+            "/folders/sync-folder",
+            json={"folder_path": trip, "folder_id": "trip-id"},
+        )
+
+        assert response.status_code == 409
+        assert db_get_image_by_id(image_id) is not None
+        assert _folder_row(library_db, "day-id") is not None

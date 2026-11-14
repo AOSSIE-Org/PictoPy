@@ -596,6 +596,79 @@ def db_get_image_sync_state_by_folder_ids(
         conn.close()
 
 
+def db_get_images_by_file_keys(
+    keys: Set[Tuple[int, int]],
+) -> List[Tuple[ImageId, ImagePath, Optional[str], Tuple[int, int]]]:
+    """
+    Get the images whose recorded (file_size, file_mtime) is one of keys.
+
+    Returns:
+        List of tuples containing (image_id, image_path, thumbnail_path, key)
+    """
+    if not keys:
+        return []
+
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            SELECT id, path, thumbnailPath,
+                   json_extract(metadata, '$.file_size'),
+                   json_extract(metadata, '$.file_mtime')
+            FROM images
+            WHERE json_valid(metadata)
+            """
+        )
+        return [
+            (image_id, path, thumbnail_path, (size, mtime))
+            for image_id, path, thumbnail_path, size, mtime in cursor.fetchall()
+            if (size, mtime) in keys
+        ]
+    except sqlite3.Error as e:
+        logger.error(f"Error getting images by file keys: {e}")
+        return []
+    finally:
+        conn.close()
+
+
+def db_relocate_images(image_records: List[ImageRecord]) -> bool:
+    """
+    Update the path, folder and metadata of existing images, matched by id.
+
+    Returns:
+        True if the update was successful, False otherwise
+    """
+    if not image_records:
+        return True
+
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        cursor.executemany(
+            """
+            UPDATE images
+            SET path = :path, folder_id = :folder_id, metadata = :metadata
+            WHERE id = :id
+            """,
+            image_records,
+        )
+        # A row deleted since it was looked up leaves the record to be inserted
+        if cursor.rowcount != len(image_records):
+            conn.rollback()
+            return False
+        conn.commit()
+        return True
+    except sqlite3.Error as e:
+        logger.error(f"Error relocating images: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
 def db_delete_images_by_ids(image_ids: List[ImageId]) -> bool:
     """
     Delete multiple images from the database by their IDs.

@@ -27,6 +27,8 @@ from app.database.images import (
     db_delete_images_by_ids,
     db_exclude_and_delete_images,
     db_get_excluded_image_paths,
+    db_get_images_by_file_keys,
+    db_relocate_images,
 )
 from app.database.faces import db_insert_face_embeddings_by_image_id
 from app.models.FaceDetector import FaceDetector
@@ -108,6 +110,12 @@ def image_util_process_folder_images(
             except Exception as e:
                 logger.error(f"Error processing folder {folder_path}: {e}")
                 continue  # Continue with other folders even if one fails
+
+        # Renamed or moved images keep their rows, so the cleanup below must not
+        # see them as obsolete
+        all_image_records = image_util_relocate_moved_images(
+            all_image_records, known_state
+        )
 
         # Step 4: Remove obsolete images that no longer exist in filesystem
         if all_folder_ids:
@@ -490,6 +498,63 @@ def image_util_remove_files(file_paths: Iterable[Optional[str]]) -> List[str]:
             failed.append(file_path)
 
     return failed
+
+
+def image_util_files_identical(first: Optional[str], second: Optional[str]) -> bool:
+    """Whether both files exist and hold the same bytes."""
+    if not first or not second:
+        return False
+    try:
+        with open(first, "rb") as a, open(second, "rb") as b:
+            return a.read() == b.read()
+    except OSError:
+        return False
+
+
+def image_util_relocate_moved_images(
+    image_records: List[ImageRecord], known_state: Mapping[str, ImageSyncState]
+) -> List[ImageRecord]:
+    """
+    Move the existing rows of renamed or moved images to their new paths.
+
+    A new record matches a row whose file no longer exists when they are the only
+    pair with that file size and mtime and their thumbnails are identical.
+
+    Returns:
+        The records that still need inserting
+    """
+    new_records: Dict[Tuple[int, int], List[ImageRecord]] = {}
+    for record in image_records:
+        # Known paths are updated in place by the insert
+        if os.path.normcase(os.path.abspath(record["path"])) in known_state:
+            continue
+        metadata = image_util_parse_metadata(record["metadata"])
+        size, mtime = metadata.get("file_size"), metadata.get("file_mtime")
+        if size and mtime:
+            new_records.setdefault((size, mtime), []).append(record)
+
+    missing_images: Dict[Tuple[int, int], List[Tuple[str, Optional[str]]]] = {}
+    for image_id, image_path, thumbnail_path, key in db_get_images_by_file_keys(
+        set(new_records)
+    ):
+        if not os.path.exists(image_path):
+            missing_images.setdefault(key, []).append((image_id, thumbnail_path))
+
+    relocated_records: List[ImageRecord] = []
+    for key, missing in missing_images.items():
+        if len(missing) != 1 or len(new_records[key]) != 1:
+            continue
+        (image_id, thumbnail_path), record = missing[0], new_records[key][0]
+        if image_util_files_identical(thumbnail_path, record["thumbnailPath"]):
+            relocated_records.append({**record, "id": image_id})
+
+    if not relocated_records or not db_relocate_images(relocated_records):
+        return image_records
+
+    # The rows keep their own thumbnails
+    image_util_remove_files(record["thumbnailPath"] for record in relocated_records)
+    relocated_paths = {record["path"] for record in relocated_records}
+    return [record for record in image_records if record["path"] not in relocated_paths]
 
 
 def image_util_remove_obsolete_images(folder_id_list: List[FolderId]) -> int:

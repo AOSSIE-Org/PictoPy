@@ -16,6 +16,7 @@ from app.database.folders import (
     db_get_all_folder_details,
     db_get_direct_child_folders,
     db_get_folder_ids_by_path_prefix,
+    db_get_folder_path_from_id,
     db_set_tagging_completed,
     db_update_folder_indexing_status,
     db_update_parent_ids_for_subtree,
@@ -50,6 +51,7 @@ from app.utils.folders import (
     folder_util_add_multiple_folder_trees,
     folder_util_delete_obsolete_folders,
     folder_util_get_filesystem_direct_child_folders,
+    folder_util_relocate_moved_folders,
 )
 from app.utils.images import (
     image_util_process_folder_images,
@@ -504,11 +506,25 @@ def delete_folders(
 @router.post(
     "/sync-folder",
     response_model=SyncFolderResponse,
-    responses={code: {"model": ErrorResponse} for code in [400, 404, 500]},
+    responses={code: {"model": ErrorResponse} for code in [400, 404, 409, 500]},
 )
 def sync_folder(request: SyncFolderRequest, app_state: State = Depends(get_state)):
     """Sync a folder by comparing filesystem folders with database entries and removing extra DB entries."""
     try:
+        # The watcher can still hold a folder's old path after it was moved,
+        # and syncing that path would delete the moved folder's children
+        if db_get_folder_path_from_id(request.folder_id) != os.path.abspath(
+            request.folder_path
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Folder Moved",
+                    message="The folder id no longer matches this path.",
+                ).model_dump(),
+            )
+
         # Step 1: Get current state from both sources
         db_child_folders = db_get_direct_child_folders(request.folder_id)
         filesystem_folders = folder_util_get_filesystem_direct_child_folders(
@@ -518,6 +534,17 @@ def sync_folder(request: SyncFolderRequest, app_state: State = Depends(get_state
         # Step 2: Compare and identify differences
         filesystem_folder_set = set(filesystem_folders)
         db_folder_paths = {folder_path for folder_id, folder_path in db_child_folders}
+
+        # Renamed or moved folders keep their rows, and with them their albums,
+        # favourites and faces, instead of being deleted and added again
+        relocated_folders = folder_util_relocate_moved_folders(
+            filesystem_folder_set - db_folder_paths, request.folder_id
+        )
+        if relocated_folders:
+            db_child_folders = db_get_direct_child_folders(request.folder_id)
+            db_folder_paths = {
+                folder_path for folder_id, folder_path in db_child_folders
+            }
 
         folders_to_delete = db_folder_paths - filesystem_folder_set
         folders_to_add = filesystem_folder_set - db_folder_paths
@@ -540,7 +567,8 @@ def sync_folder(request: SyncFolderRequest, app_state: State = Depends(get_state
             post_sync_folder_sequence,
             request.folder_path,
             request.folder_id,
-            added_folders_with_ids,
+            # Moved folders are scanned too, for files added while they moved
+            added_folders_with_ids + relocated_folders,
         )
         # Step 4: Return comprehensive response
         return SyncFolderResponse(
