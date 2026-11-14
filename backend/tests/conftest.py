@@ -34,9 +34,6 @@ from app.database.xmp_export_state import db_create_image_xmp_state_table
 def setup_before_all_tests():
     print("\n=== Running manual setup fixture ===")
 
-    # Set test environment
-    os.environ["TEST_MODE"] = "true"
-
     # Create all database tables in the same order as main.py
     print("Creating database tables...")
     try:
@@ -63,7 +60,3 @@ def setup_before_all_tests():
 
     # Teardown code runs after all tests
     print("\n=== Running cleanup after all tests ===")
-
-    # Cleanup code here
-    if "TEST_MODE" in os.environ:
-        del os.environ["TEST_MODE"]
