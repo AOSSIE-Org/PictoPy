@@ -36,11 +36,11 @@ SECTIONS = (
 )
 
 
-def _item(match: dict, repository: str) -> str:
+def _item(match: dict) -> str:
     # Issues are referenced by number only. GitHub renders the title itself, so text
     # from other issues is never echoed into the comment.
     def ref(number: int) -> str:
-        return f"{repository}#{number}"
+        return f"#{number}"
 
     notes = []
     if match["status"] == "closed as completed" and match["closed_by"]:
@@ -52,8 +52,7 @@ def _item(match: dict, repository: str) -> str:
     return f"- {ref(match['number'])}{suffix}"
 
 
-def render_comment(matches: list[dict], repository: str = "") -> str | None:
-    """repository is "OWNER/REPO" when the matches live in a different repository."""
+def render_comment(matches: list[dict]) -> str | None:
     if not matches:
         return None
     lines = [
@@ -71,7 +70,7 @@ def render_comment(matches: list[dict], repository: str = "") -> str | None:
         if heading not in rendered:
             lines += ["", f"**{heading}**", ""]
             rendered.add(heading)
-        lines += [_item(m, repository) for m in group]
+        lines += [_item(m) for m in group]
         if advice:
             lines += ["", advice]
     return "\n".join(lines) + "\n"

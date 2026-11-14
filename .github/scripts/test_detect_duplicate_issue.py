@@ -86,10 +86,6 @@ def test_candidates_are_issues_opened_before_the_current_one() -> None:
     current = {"number": 9, "created_at": "2026-03-01T00:00:00Z"}
     assert [i["number"] for i in candidates(corpus, current)] == [5]
 
-    # A fork's issue #1 is newer than every upstream issue.
-    fork_issue = {"number": 1, "created_at": "2026-11-14T00:00:00Z"}
-    assert len(candidates(corpus, fork_issue)) == 3
-
 
 def test_find_duplicates_uses_lower_bar_for_tracking_issues() -> None:
     tracking = {"state": "open", "state_reason": None, "labels": ["tracking"]}

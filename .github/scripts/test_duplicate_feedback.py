@@ -54,15 +54,6 @@ def test_suggested_numbers_reads_both_comment_formats() -> None:
     assert suggested_numbers("Thanks for opening this issue!") is None
 
 
-def test_suggested_numbers_reads_cross_repository_references() -> None:
-    body = render_comment(
-        [{"number": 5, "status": "open", "closed_by": [], "also_reported_as": [6]}],
-        "o/r",
-    )
-    assert body is not None
-    assert suggested_numbers(body) == [5]
-
-
 def test_summarise_feedback_counts_outcomes() -> None:
     bot = "github-actions"
     issues = [
@@ -185,7 +176,6 @@ def test_render_report_prints_pairs_ready_for_the_eval_file() -> None:
 
 if __name__ == "__main__":
     test_suggested_numbers_reads_both_comment_formats()
-    test_suggested_numbers_reads_cross_repository_references()
     test_summarise_feedback_counts_outcomes()
     test_dispute_naming_one_suggestion_only_counts_that_one()
     test_fetch_issues_since_stops_at_the_cutoff()

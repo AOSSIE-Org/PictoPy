@@ -115,8 +115,7 @@ def find_duplicates(
 
 
 def candidates(corpus: list[Issue], current: dict) -> list[Issue]:
-    # Issues opened after this one cannot be what it duplicates. Dates rather than
-    # numbers, so a fork can be checked against upstream issues.
+    # Issues opened after this one cannot be what it duplicates.
     return [issue for issue in corpus if issue["created_at"] < current["created_at"]]
 
 
@@ -126,14 +125,12 @@ def main() -> None:
     parser.add_argument("event_json", type=Path, help="the issues event payload")
     parser.add_argument("matches_json", type=Path)
     parser.add_argument("comment_md", type=Path)
-    parser.add_argument("--corpus-repository", default="", help="OWNER/REPO of corpus")
     args = parser.parse_args()
 
     corpus = json.loads(args.corpus_json.read_text(encoding="utf-8"))
     event = json.loads(args.event_json.read_text(encoding="utf-8"))
     current = event["issue"]
     others = candidates(corpus, current)
-    same_repository = args.corpus_repository in ("", event["repository"]["full_name"])
 
     print(f"Thresholds: title {TITLE_THRESHOLD}, body {BODY_THRESHOLD}")
     print(f"Current issue: #{current['number']}")
@@ -153,7 +150,7 @@ def main() -> None:
         matches = find_duplicates(title_scores, body_scores, others)
 
     args.matches_json.write_text(json.dumps(matches), encoding="utf-8")
-    comment = render_comment(matches, "" if same_repository else args.corpus_repository)
+    comment = render_comment(matches)
     args.comment_md.write_text(comment or "", encoding="utf-8")
 
 

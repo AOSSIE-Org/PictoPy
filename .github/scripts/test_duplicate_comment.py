@@ -68,19 +68,10 @@ def test_render_comment_never_echoes_other_issue_text_or_scores() -> None:
     assert "%" not in body and "0.8" not in body
 
 
-def test_render_comment_qualifies_references_to_another_repository() -> None:
-    body = render_comment(
-        [make_match(722, "closed as completed", closed_by=[730])], "o/r"
-    )
-    assert body is not None
-    assert "- o/r#722 (fixed by o/r#730)" in body
-
-
 if __name__ == "__main__":
     test_render_comment_returns_none_without_matches()
     test_render_comment_groups_by_lifecycle_in_fixed_order()
     test_render_comment_puts_tracking_issues_first()
     test_render_comment_notes_duplicates_and_merges_closed_groups()
     test_render_comment_never_echoes_other_issue_text_or_scores()
-    test_render_comment_qualifies_references_to_another_repository()
     print("All tests passed.")

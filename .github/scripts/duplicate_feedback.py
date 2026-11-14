@@ -72,9 +72,9 @@ query ($owner: String!, $name: String!, $after: String) {
 }
 """
 
-# A primary suggestion is a list item starting with an issue reference; references
+# A primary suggestion is a list item starting with an issue number; references
 # inside "(fixed by ...)" or "(also reported as ...)" are not suggestions.
-SUGGESTION = re.compile(r"^- (?:[\w.-]+/[\w.-]+)?#(\d+)", re.MULTILINE)
+SUGGESTION = re.compile(r"^- #(\d+)", re.MULTILINE)
 LEGACY_SUGGESTION = re.compile(r"\(#(\d+), ")
 DISPUTE = re.compile(
     r"not (?:a )?duplicate|isn't a duplicate|is not the same|different issue"

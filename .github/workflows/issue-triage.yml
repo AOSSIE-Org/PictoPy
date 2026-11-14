@@ -59,10 +59,10 @@ jobs:
           cache-dependency-path: .github/scripts/requirements.txt
 
       # Fetch before installing third-party packages, so the token never reaches them.
-      - name: Fetch upstream issues (AOSSIE-Org/PictoPy)
+      - name: Fetch existing issues
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: python .github/scripts/issue_corpus.py AOSSIE-Org/PictoPy corpus.json
+        run: python .github/scripts/issue_corpus.py "$GITHUB_REPOSITORY" corpus.json
 
       # Hash-pinned wheels only, so no package can run build code during install.
       - name: Install dependencies
@@ -80,7 +80,7 @@ jobs:
         id: analyse
         run: |
           python .github/scripts/detect_duplicate_issue.py corpus.json "$GITHUB_EVENT_PATH" \
-            matches.json comment.md --corpus-repository AOSSIE-Org/PictoPy
+            matches.json comment.md
           {
             echo "comment<<COMMENT_EOF"
             cat comment.md
