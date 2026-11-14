@@ -31,6 +31,7 @@ import {
 } from '@/features/albumSelectors';
 import { selectIsImageViewOpen } from '@/features/imageSelectors';
 import { showInfoDialog } from '@/features/infoDialogSlice';
+import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { Album } from '@/types/Album';
 import { Image } from '@/types/Media';
@@ -180,6 +181,18 @@ export const AlbumDetail = () => {
     navigate,
   ]);
 
+  // Until the password is accepted, showing the album's header would suggest
+  // it is already unlocked.
+  const isVerifyingPassword = !!password && (isLoadingAlbum || isLoadingImages);
+
+  useEffect(() => {
+    if (!isVerifyingPassword) return;
+    dispatch(showLoader('Verifying password...'));
+    return () => {
+      dispatch(hideLoader());
+    };
+  }, [isVerifyingPassword, dispatch]);
+
   useEffect(() => {
     return () => {
       dispatch(clearAlbumImages());
@@ -215,6 +228,10 @@ export const AlbumDetail = () => {
   const handleBack = () => {
     navigate('/albums');
   };
+
+  if (isVerifyingPassword) {
+    return null;
+  }
 
   if (isLoadingAlbum) {
     return (

@@ -97,6 +97,36 @@ describe('AlbumDetail', () => {
     );
   }, 30000);
 
+  // The header used to render while the password was still being checked,
+  // so the album looked unlocked before the backend had answered.
+  test('shows only a spinner while a locked album password is verified', async () => {
+    let releaseImages: (value: unknown) => void = () => {};
+    mockGetAlbumImages.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          releaseImages = resolve;
+        }),
+    );
+
+    const { store } = render(<AlbumDetailWithLoader />, {
+      initialRoutes: [{ pathname: '/albums/a1', state: { password: 'pw' } }],
+    });
+
+    await waitFor(() => expect(mockGetAlbumImages).toHaveBeenCalled());
+    expect(store.getState().loader.loading).toBe(true);
+    expect(screen.getByText('Verifying password...')).toBeInTheDocument();
+    expect(screen.queryByText('Trip')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /add images/i }),
+    ).not.toBeInTheDocument();
+
+    releaseImages({ success: true, image_ids: ['i1'] });
+
+    await screen.findByText('Trip');
+    expect(store.getState().loader.loading).toBe(false);
+    expect(screen.queryByText('Verifying password...')).not.toBeInTheDocument();
+  }, 30000);
+
   // Leaving while a request was in flight used to leave showLoader dispatched
   // with nothing to clear it, freezing the app behind the overlay.
   test('does not strand the global loader when leaving mid-load', async () => {
