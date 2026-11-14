@@ -79,14 +79,27 @@ export const useMutationFeedback = (
 
   const { isPending, isSuccess, isError, error, errorMessage: stateErrorMessage } = mutationState;
 
+  const isShowingLoaderRef = useRef(false);
+
   // Handle loading state
   useEffect(() => {
     if (showLoading && isPending) {
+      isShowingLoaderRef.current = true;
       dispatch(showLoader(loadingMessage));
-    } else if (!isPending) {
+    } else if (!isPending && isShowingLoaderRef.current) {
+      isShowingLoaderRef.current = false;
       dispatch(hideLoader());
     }
   }, [isPending, showLoading, loadingMessage, dispatch]);
+
+  // Cleanup on unmount if loader was triggered
+  useEffect(() => {
+    return () => {
+      if (isShowingLoaderRef.current) {
+        dispatch(hideLoader());
+      }
+    };
+  }, [dispatch]);
 
   // Handle success state
   useEffect(() => {
