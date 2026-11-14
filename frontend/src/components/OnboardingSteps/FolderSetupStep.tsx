@@ -125,7 +125,7 @@ export function FolderSetupStep({
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">
-                      {folder.split('/').pop()}
+                      {folder.split(/[/\\]/).pop()}
                     </p>
                     <p className="text-muted-foreground truncate text-xs">
                       {folder}
