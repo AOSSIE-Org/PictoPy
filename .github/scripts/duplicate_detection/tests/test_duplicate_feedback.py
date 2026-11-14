@@ -144,6 +144,17 @@ def test_disputes_accumulate_and_ignore_unrelated_issues() -> None:
     )
     assert summarise_feedback([unrelated])["disputed"] == []
 
+    mixed = make_issue(
+        25,
+        [(bot, new_comment(3, 4)), ("alice", "Not a duplicate of #3. #4 looks right.")],
+    )
+    assert summarise_feedback([mixed])["disputed"] == [(25, [3])]
+
+    unclear = make_issue(
+        26, [(bot, new_comment(3, 4)), ("alice", "Not a duplicate.\n#4 is close.")]
+    )
+    assert summarise_feedback([unclear])["disputed"] == []
+
 
 def test_only_the_bot_comment_counts_as_a_suggestion() -> None:
     quoted = make_issue(23, [("bob", new_comment(3))])
@@ -185,6 +196,17 @@ def test_closure_on_a_duplicate_resolves_to_its_canonical_issue() -> None:
         duplicate_of=20,
     )
     assert summarise_feedback([missed], links)["missed"] == [(31, 10)]
+
+    # The other direction: the bot suggested #20, which later became a duplicate of
+    # #10, and the issue was closed as a duplicate of #10.
+    later = make_issue(
+        32,
+        [("github-actions", new_comment(20))],
+        state="closed",
+        state_reason="duplicate",
+        duplicate_of=10,
+    )
+    assert summarise_feedback([later], links)["confirmed"] == [32]
 
 
 def test_fetch_issues_since_stops_at_the_cutoff() -> None:

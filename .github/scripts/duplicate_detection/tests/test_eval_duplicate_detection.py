@@ -1,10 +1,13 @@
 """Run from .github/scripts/duplicate_detection with: python -m tests.test_eval_duplicate_detection"""
 
+from tests.test_issue_corpus import make_issue
+
 from eval_duplicate_detection import (
     Pair,
     load_pairs,
     next_link,
     percentile,
+    prefix_resolver,
     rank_of,
     summarise,
     top_matches,
@@ -68,8 +71,22 @@ def test_summarise_resolves_labelled_candidates_like_the_detector() -> None:
     positives: list[Pair] = [{"issue": 20, "candidate": 1, "source": "s"}]
     assert summarise(shown, [20], positives, [])["positives_shown"] == 0.0
     canonical = {1: 0}.get
-    outcome = summarise(shown, [20], positives, [], lambda n: canonical(n, n))
+    outcome = summarise(shown, [20], positives, [], lambda q, n: canonical(n, n))
     assert outcome["positives_shown"] == 1.0
+
+
+def test_prefix_resolver_only_follows_links_to_older_issues() -> None:
+    corpus = [
+        make_issue(1, duplicate_of=30),
+        make_issue(5, duplicate_of=2),
+        make_issue(2),
+        make_issue(20),
+        make_issue(30),
+    ]
+    canonical = prefix_resolver(corpus)
+    # Query #20 cannot see #30, so the detector shows #1 itself.
+    assert canonical(20, 1) == 1
+    assert canonical(20, 5) == 2
 
 
 def test_labelled_pairs_are_well_formed() -> None:
@@ -88,5 +105,6 @@ if __name__ == "__main__":
     test_top_matches_applies_every_gate_and_ranks_by_rank_scores()
     test_summarise_counts_flags_and_shown_pairs()
     test_summarise_resolves_labelled_candidates_like_the_detector()
+    test_prefix_resolver_only_follows_links_to_older_issues()
     test_labelled_pairs_are_well_formed()
     print("All tests passed.")

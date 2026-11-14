@@ -18,6 +18,7 @@ import os
 import re
 import sys
 import urllib.request
+from functools import lru_cache
 from pathlib import Path
 from typing import Callable, Iterable, Sequence, TypedDict
 
@@ -102,6 +103,11 @@ def load_corpus(repository: str, refresh: bool) -> tuple[list[Issue], bool]:
     linked = CACHE_DIR / "issues_graphql.json"
     unlinked = CACHE_DIR / "issues_v2.json"
     token = os.environ.get("GITHUB_TOKEN")
+    if refresh and not token and linked.exists():
+        raise SystemExit(
+            f"--refresh needs GITHUB_TOKEN to refresh {linked.name}. Set it, or "
+            f"delete {linked} to evaluate REST data without duplicate links."
+        )
     if token and (refresh or not linked.exists()):
         print(f"Fetching issues from {repository} over GraphQL...", file=sys.stderr)
         issues = sorted(
@@ -188,12 +194,16 @@ def summarise(
     eval_queries: Sequence[int],
     positives: Sequence[Pair],
     negatives: Sequence[Pair],
-    canonical: Callable[[int], int] = lambda number: number,
+    canonical: Callable[[int, int], int] = lambda query, number: number,
 ) -> Outcome:
-    """canonical maps a labelled candidate to the issue the detector would show."""
+    """canonical(query, candidate) is the issue the detector would show for it."""
 
     def share(pairs: Sequence[Pair]) -> float | None:
-        hits = sum(1 for p in pairs if canonical(p["candidate"]) in shown[p["issue"]])
+        hits = sum(
+            1
+            for p in pairs
+            if canonical(p["issue"], p["candidate"]) in shown[p["issue"]]
+        )
         return ratio(hits, len(pairs))
 
     flagged = sum(1 for q in eval_queries if shown[q])
@@ -202,6 +212,20 @@ def summarise(
         "positives_shown": share(positives),
         "negatives_shown": share(negatives),
     }
+
+
+def prefix_resolver(corpus: list[Issue]) -> Callable[[int, int], int]:
+    """Resolve a candidate as the detector does for a query: through older issues."""
+    position = {issue["number"]: k for k, issue in enumerate(corpus)}
+
+    @lru_cache(maxsize=None)
+    def older(query: int) -> dict[int, Issue]:
+        return {i["number"]: i for i in corpus[: position[query]]}
+
+    def canonical(query: int, number: int) -> int:
+        return resolve_canonical(number, older(query))
+
+    return canonical
 
 
 def usable_pairs(
@@ -228,7 +252,6 @@ def evaluate(
 ) -> dict:
     numbers = [i["number"] for i in corpus]
     position = {n: k for k, n in enumerate(numbers)}
-    by_number = {i["number"]: i for i in corpus}
     positives = usable_pairs(positives, position, "positive")
     negatives = usable_pairs(negatives, position, "negative")
     eval_queries = [
@@ -266,8 +289,7 @@ def evaluate(
     }
 
     # The detector shows a duplicate's canonical issue, so labels resolve the same way.
-    def canonical(number: int) -> int:
-        return resolve_canonical(number, by_number)
+    canonical = prefix_resolver(corpus)
 
     results: dict = {
         "eval_queries": len(eval_queries),

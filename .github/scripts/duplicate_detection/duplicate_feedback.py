@@ -255,6 +255,20 @@ def suggested_numbers(body: str) -> list[int] | None:
     return None
 
 
+def disputed_suggestions(body: str, suggested: list[int]) -> list[int]:
+    """The suggestions an author's comment disputes, or none when it is unclear."""
+    # "Not a duplicate of #3. #4 looks right." disputes #3 only, so numbers count
+    # only when they share a sentence with the dispute.
+    sentences = re.split(r"(?<=[.!?])\s+|\n+", body)
+    disputing = " ".join(s for s in sentences if DISPUTE.search(s))
+    named_in_dispute = {int(n) for n in re.findall(r"#(\d+)", disputing)}
+    if named_in_dispute:
+        return [n for n in suggested if n in named_in_dispute]
+    # A bare "not a duplicate" disputes them all; one that names issues only in
+    # other sentences is ambiguous, and an ambiguous negative is worse than none.
+    return [] if re.search(r"#\d+", body) else list(suggested)
+
+
 def summarise_feedback(
     issues: list[FeedbackIssue], links: Mapping[int, Closure] | None = None
 ) -> FeedbackReport:
@@ -289,10 +303,7 @@ def summarise_feedback(
                 and comment["author"] == issue["author"]
                 and DISPUTE.search(comment["body"])
             ):
-                # Authors often dispute one suggestion and leave the rest alone. A
-                # comment naming only other issues disputes none of the suggestions.
-                named = {int(n) for n in re.findall(r"#(\d+)", comment["body"])}
-                chosen = [n for n in suggested if n in named] if named else suggested
+                chosen = disputed_suggestions(comment["body"], suggested)
                 disputed += [n for n in chosen if n not in disputed]
         if commented:
             report["commented"] += 1
@@ -306,10 +317,14 @@ def summarise_feedback(
             target = issue["duplicate_of"]
             if target is None:
                 continue
-            canonical = resolve_canonical(target, links) if target in links else target
-            # The detector suggests the canonical issue; older comments suggested
-            # whichever issue matched.
-            if canonical in suggested or target in suggested:
+
+            def resolve(number: int) -> int:
+                return resolve_canonical(number, links) if number in links else number
+
+            canonical = resolve(target)
+            # Either side may have been closed as a duplicate after the bot
+            # commented, so both are compared as canonical issues.
+            if canonical in {resolve(n) for n in suggested} or target in suggested:
                 report["confirmed"].append(issue["number"])
             else:
                 report["missed"].append((issue["number"], canonical))
