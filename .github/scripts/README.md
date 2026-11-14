@@ -68,6 +68,22 @@ The report shows, for each text variant and threshold:
 Compare variants at the same flag rate, not the same threshold, because models and text
 variants put scores on different scales.
 
+### Feedback from real outcomes
+
+`duplicate_feedback.py` checks the bot's comments against what maintainers and authors
+did next. `.github/workflows/duplicate-detection-report.yml` runs it on the first of
+each month, and on demand from the Actions tab, and writes the report to the run's
+summary page. It reports how often the bot commented, how often a suggestion was
+confirmed by a duplicate closure, and how often an author disputed one. It also lists
+duplicates the bot missed and disputed suggestions, formatted as entries for
+`duplicate_eval_pairs.json`, so the labelled pairs grow with every report.
+
+To run it locally, set `GITHUB_TOKEN`; the GraphQL API needs one even for public data:
+
+```bash
+python .github/scripts/duplicate_feedback.py AOSSIE-Org/PictoPy --since 2026-09-01
+```
+
 ### Labelled pairs
 
 `duplicate_eval_pairs.json` holds the ground truth.

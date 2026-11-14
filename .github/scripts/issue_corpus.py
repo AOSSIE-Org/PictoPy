@@ -14,7 +14,7 @@ import os
 import re
 import urllib.request
 from pathlib import Path
-from typing import Callable, TypedDict
+from typing import Any, Callable, Mapping, TypedDict
 
 GRAPHQL_URL = "https://api.github.com/graphql"
 # Chains like #700 -> #693 -> #638 exist; the cap stops a malformed chain early.
@@ -102,6 +102,14 @@ class Issue(TypedDict):
 Transport = Callable[[str, dict, str], dict]
 
 
+class Closure(TypedDict):
+    """The fields that say how an issue was closed; Issue and others carry them."""
+
+    state_reason: str | None
+    labels: list[str]
+    duplicate_of: int | None
+
+
 def post_graphql(query: str, variables: dict, token: str) -> dict:
     request = urllib.request.Request(
         GRAPHQL_URL,
@@ -154,7 +162,7 @@ def fetch_issues(
         after = connection["pageInfo"]["endCursor"]
 
 
-def is_duplicate(issue: Issue) -> bool:
+def is_duplicate(issue: Closure) -> bool:
     # Before GitHub added the duplicate close reason (Oct 2025), maintainers closed
     # duplicates as completed and added a "duplicate" label instead.
     return (
@@ -207,7 +215,7 @@ def clean_body(body: str) -> str:
     return re.sub(r"\s+", " ", body).strip()
 
 
-def issue_text(issue: dict) -> str:
+def issue_text(issue: Mapping[str, Any]) -> str:
     return f"{clean_title(issue['title'])}. {clean_body(issue['body'] or '')}"
 
 

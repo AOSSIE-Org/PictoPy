@@ -17,10 +17,11 @@ import json
 import math
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 
 from duplicate_comment import render_comment
 from issue_corpus import (
+    Issue,
     clean_title,
     is_tracking,
     issue_text,
@@ -47,7 +48,7 @@ MODEL_REPO = "Qdrant/all-MiniLM-L6-v2-onnx"
 MODEL_REVISION = "d13954661f83248295ba75c1ed411eef3b7b936e"
 
 
-def title_text(issue: dict) -> str:
+def title_text(issue: Mapping[str, Any]) -> str:
     return clean_title(issue["title"])
 
 
@@ -73,7 +74,7 @@ def embed(texts: list[str]) -> list[list[float]]:
 def find_duplicates(
     title_scores: list[float],
     body_scores: list[float],
-    others: list[dict],
+    others: list[Issue],
     title_threshold: float = TITLE_THRESHOLD,
     body_threshold: float = BODY_THRESHOLD,
     max_results: int = MAX_RESULTS,
@@ -113,7 +114,7 @@ def find_duplicates(
     ]
 
 
-def candidates(corpus: list[dict], current: dict) -> list[dict]:
+def candidates(corpus: list[Issue], current: dict) -> list[Issue]:
     # Issues opened after this one cannot be what it duplicates. Dates rather than
     # numbers, so a fork can be checked against upstream issues.
     return [issue for issue in corpus if issue["created_at"] < current["created_at"]]
@@ -141,7 +142,7 @@ def main() -> None:
     matches: list[dict] = []
     if others:
 
-        def similarities(to_text: Callable[[dict], str]) -> list[float]:
+        def similarities(to_text: Callable[[Mapping[str, Any]], str]) -> list[float]:
             embeddings = embed([to_text(current)] + [to_text(o) for o in others])
             return [dot_product(embeddings[0], e) for e in embeddings[1:]]
 
