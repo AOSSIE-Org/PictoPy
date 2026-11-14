@@ -24,13 +24,22 @@ repository's real issues. Each issue is compared only with issues older than it,
 would have been on the day it was opened.
 
 ```bash
-pip install sentence-transformers
+pip install --only-binary :all: -r .github/scripts/requirements.txt
 python .github/scripts/eval_duplicate_detection.py --json eval.json
 ```
 
 The first run fetches every issue and caches it in `.github/scripts/.duplicate_eval_cache/`.
 Pass `--refresh` to re-fetch. Set `GITHUB_TOKEN` to avoid the 60-requests-per-hour
 unauthenticated limit.
+
+### Dependencies and the model
+
+`requirements.txt` is a hash-pinned lock generated from `requirements.in`; the command
+to regenerate it is at the top of `requirements.in`. Embeddings come from fastembed's
+ONNX export of `all-MiniLM-L6-v2`, pinned by `MODEL_REVISION` in
+`detect_duplicate_issue.py`. It scores the same as the PyTorch model to four decimal
+places, without installing torch. Changing the model or its revision changes every
+score, so re-run the harness and retune the thresholds when you do.
 
 The first line, **detector as shipped**, runs the detector's own `find_duplicates`. The
 rest sweep each text the detector scores (`title`, `body`) and `raw`, the uncleaned text

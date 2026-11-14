@@ -31,6 +31,7 @@ videos_cache.txt
 images_cache.txt
 videos_cache.txt
 venv/
+__pycache__/
 frontend/dist
 env/
 

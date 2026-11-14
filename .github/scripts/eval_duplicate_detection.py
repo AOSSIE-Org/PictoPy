@@ -127,19 +127,13 @@ VARIANTS: dict[str, Callable[[Issue], str]] = {
 def similarity_rows(texts: list[str]) -> list[list[float]]:
     import numpy as np
 
-    digest = hashlib.sha1(
-        "\x00".join([detector.MODEL_NAME, *texts]).encode("utf-8")
-    ).hexdigest()[:16]
-    path = CACHE_DIR / f"embeddings_{digest}.npy"
+    model_id = [detector.MODEL_REPO, detector.MODEL_REVISION]
+    digest = hashlib.sha1("\x00".join(model_id + texts).encode("utf-8")).hexdigest()
+    path = CACHE_DIR / f"embeddings_{digest[:16]}.npy"
     if path.exists():
         embeddings = np.load(path)
     else:
-        from sentence_transformers import SentenceTransformer
-
-        model = SentenceTransformer(detector.MODEL_NAME)
-        embeddings = model.encode(
-            texts, normalize_embeddings=True, batch_size=32, show_progress_bar=False
-        )
+        embeddings = np.array(detector.embed(texts), dtype=np.float32)
         CACHE_DIR.mkdir(exist_ok=True)
         np.save(path, embeddings)
     return (embeddings @ embeddings.T).tolist()

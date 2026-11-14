@@ -5,16 +5,19 @@ event payload, writes the ranked matches to matches_json, and writes the comment
 post to comment_md (empty when there is nothing to suggest).
 
 Titles carry most of the signal: on the labelled pairs, long bodies pulled unrelated
-issues together, so the body only counts when it is a very close match. Measure any change to the text, model, threshold or ranking with
-eval_duplicate_detection.py before shipping it; see README.md in this directory.
+issues together, so the body only counts when it is a very close match. Measure any
+change to the text, model, threshold or ranking with eval_duplicate_detection.py
+before shipping it; see README.md in this directory.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import math
+from functools import lru_cache
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 from duplicate_comment import render_comment
 from issue_corpus import clean_title, issue_text, resolve_canonical, status
@@ -24,7 +27,11 @@ from issue_corpus import clean_title, issue_text, resolve_canonical, status
 TITLE_THRESHOLD = 0.70
 BODY_THRESHOLD = 0.80
 MAX_RESULTS = 3
-MODEL_NAME = "all-MiniLM-L6-v2"
+MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+# fastembed's ONNX export of MODEL_NAME, which scores identically to the PyTorch model
+# without installing torch. Pinned so the thresholds above stay calibrated.
+MODEL_REPO = "Qdrant/all-MiniLM-L6-v2-onnx"
+MODEL_REVISION = "d13954661f83248295ba75c1ed411eef3b7b936e"
 
 
 def title_text(issue: dict) -> str:
@@ -33,6 +40,21 @@ def title_text(issue: dict) -> str:
 
 def dot_product(a: list[float], b: list[float]) -> float:
     return sum(x * y for x, y in zip(a, b))
+
+
+@lru_cache(maxsize=1)
+def _load_model() -> Any:
+    from fastembed import TextEmbedding
+    from huggingface_hub import snapshot_download
+
+    path = snapshot_download(MODEL_REPO, revision=MODEL_REVISION)
+    return TextEmbedding(MODEL_NAME, specific_model_path=path)
+
+
+def embed(texts: list[str]) -> list[list[float]]:
+    """Unit-length embeddings, so a dot product is a cosine similarity."""
+    vectors = [vector.tolist() for vector in _load_model().embed(texts)]
+    return [[x / math.sqrt(dot_product(v, v)) for x in v] for v in vectors]
 
 
 def find_duplicates(
@@ -91,16 +113,9 @@ def main() -> None:
 
     matches: list[dict] = []
     if others:
-        from sentence_transformers import SentenceTransformer
-
-        model = SentenceTransformer(MODEL_NAME)
 
         def similarities(to_text: Callable[[dict], str]) -> list[float]:
-            embeddings = model.encode(
-                [to_text(current)] + [to_text(o) for o in others],
-                normalize_embeddings=True,
-            ).tolist()
-            # Embeddings are normalized, so dot product equals cosine similarity.
+            embeddings = embed([to_text(current)] + [to_text(o) for o in others])
             return [dot_product(embeddings[0], e) for e in embeddings[1:]]
 
         title_scores = similarities(title_text)
