@@ -3,7 +3,7 @@ import { render, RenderOptions } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, InitialEntry } from 'react-router';
 import { configureStore, EnhancedStore, UnknownAction } from '@reduxjs/toolkit';
 import { rootReducer, RootState } from '@/app/store';
 
@@ -12,7 +12,7 @@ type TestStore = EnhancedStore<RootState, UnknownAction>;
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   preloadedState?: Partial<RootState>;
   store?: TestStore;
-  initialRoutes?: string[];
+  initialRoutes?: InitialEntry[];
 }
 
 const AllTheProviders = ({
@@ -24,7 +24,7 @@ const AllTheProviders = ({
   children: React.ReactNode;
   store: TestStore;
   queryClient: QueryClient;
-  initialRoutes?: string[];
+  initialRoutes?: InitialEntry[];
 }) => {
   return (
     <Provider store={store}>

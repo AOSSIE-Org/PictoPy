@@ -97,6 +97,65 @@ describe('AlbumDetail', () => {
     );
   }, 30000);
 
+  // The header used to render while the password was still being checked,
+  // so the album looked unlocked before the backend had answered.
+  test('shows only a spinner while a locked album password is verified', async () => {
+    let releaseImages: (value: unknown) => void = () => {};
+    mockGetAlbumImages.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          releaseImages = resolve;
+        }),
+    );
+
+    const { store } = render(<AlbumDetailWithLoader />, {
+      initialRoutes: [{ pathname: '/albums/a1', state: { password: 'pw' } }],
+    });
+
+    await waitFor(() => expect(mockGetAlbumImages).toHaveBeenCalled());
+    expect(store.getState().loader.loading).toBe(true);
+    expect(screen.getByText('Verifying password...')).toBeInTheDocument();
+    expect(screen.queryByText('Trip')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /add images/i }),
+    ).not.toBeInTheDocument();
+
+    releaseImages({ success: true, image_ids: ['i1'] });
+
+    await screen.findByText('Trip');
+    expect(store.getState().loader.loading).toBe(false);
+    expect(screen.queryByText('Verifying password...')).not.toBeInTheDocument();
+  }, 30000);
+
+  // A 401 ends loading before the redirect effect runs, which used to leave
+  // one render where the album looked unlocked.
+  test('never renders the album for a rejected password', async () => {
+    mockGetAlbumImages.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 401 },
+    });
+
+    let albumShown = false;
+    const observer = new MutationObserver(() => {
+      if (document.body.textContent?.includes('Trip')) albumShown = true;
+    });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+
+    const { store } = render(<AlbumDetailWithLoader />, {
+      initialRoutes: [{ pathname: '/albums/a1', state: { password: 'wrong' } }],
+    });
+
+    await screen.findByText('Albums list');
+    observer.disconnect();
+
+    expect(albumShown).toBe(false);
+    expect(store.getState().loader.loading).toBe(false);
+  }, 30000);
+
   // Leaving while a request was in flight used to leave showLoader dispatched
   // with nothing to clear it, freezing the app behind the overlay.
   test('does not strand the global loader when leaving mid-load', async () => {
