@@ -1139,6 +1139,68 @@
         }
       }
     },
+    "/images/delete-images": {
+      "delete": {
+        "tags": [
+          "Images"
+        ],
+        "summary": "Delete Images",
+        "description": "Delete images from the gallery, optionally from the device as well.",
+        "operationId": "delete_images_images_delete_images_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteImagesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteImagesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__images__ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/videos/": {
       "get": {
         "tags": [
@@ -3358,6 +3420,73 @@
           "success"
         ],
         "title": "DeleteFoldersResponse"
+      },
+      "DeleteImagesData": {
+        "properties": {
+          "deleted_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Deleted Ids"
+          },
+          "failed_paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Failed Paths"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deleted_ids",
+          "failed_paths"
+        ],
+        "title": "DeleteImagesData"
+      },
+      "DeleteImagesRequest": {
+        "properties": {
+          "image_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Image Ids"
+          },
+          "delete_from_device": {
+            "type": "boolean",
+            "title": "Delete From Device",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "image_ids"
+        ],
+        "title": "DeleteImagesRequest"
+      },
+      "DeleteImagesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "$ref": "#/components/schemas/DeleteImagesData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "title": "DeleteImagesResponse"
       },
       "DeleteMemoryData": {
         "properties": {

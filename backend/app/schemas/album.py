@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional, List
 from pydantic_core.core_schema import ValidationInfo
 
@@ -27,7 +27,7 @@ class CreateAlbumRequest(BaseModel):
     is_locked: bool = False
     password: Optional[str] = None
 
-    @field_validator("password")
+    @model_validator(mode = "after")
     def check_password(cls, value, info: ValidationInfo):
         if info.data.get("is_locked") and not value:
             raise ValueError("Password is required for locked albums")
