@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Callable, Iterable, Sequence, TypedDict
 
 import detect_duplicate_issue as detector
-from issue_corpus import clean_title
+from issue_corpus import issue_text
 
 HERE = Path(__file__).parent
 PAIRS_PATH = HERE / "duplicate_eval_pairs.json"
@@ -38,6 +38,10 @@ class Issue(TypedDict):
     created_at: str
     state: str
     state_reason: str | None
+    url: str
+    labels: list[str]
+    duplicate_of: int | None
+    closed_by: list[int]
 
 
 class Pair(TypedDict):
@@ -60,7 +64,7 @@ def next_link(link_header: str) -> str | None:
 
 def fetch_issues(repository: str, token: str | None) -> list[Issue]:
     # REST rather than issue_corpus's GraphQL fetch, so the harness runs without a
-    # token; it only needs issue text and dates.
+    # token. REST has no duplicate links, so duplicates are scored as themselves.
     url: str | None = (
         f"https://api.github.com/repos/{repository}/issues?state=all&per_page=100"
     )
@@ -87,13 +91,17 @@ def fetch_issues(repository: str, token: str | None) -> list[Issue]:
                     "created_at": item["created_at"],
                     "state": item["state"],
                     "state_reason": item.get("state_reason"),
+                    "url": item["html_url"],
+                    "labels": [label["name"] for label in item["labels"]],
+                    "duplicate_of": None,
+                    "closed_by": [],
                 }
             )
     return sorted(issues, key=lambda i: i["number"])
 
 
 def load_corpus(repository: str, refresh: bool) -> list[Issue]:
-    path = CACHE_DIR / "issues.json"
+    path = CACHE_DIR / "issues_v2.json"
     if refresh or not path.exists():
         print(f"Fetching issues from {repository}...", file=sys.stderr)
         issues = fetch_issues(repository, os.environ.get("GITHUB_TOKEN"))
@@ -107,11 +115,12 @@ def load_pairs(path: Path = PAIRS_PATH) -> tuple[str, list[Pair], list[Pair]]:
     return data["repository"], data["positives"], data["negatives"]
 
 
-# "raw" is the detector's text before template cleaning, kept as a baseline.
+# "title" and "body" are the two texts the detector scores; "raw" is the uncleaned
+# title and body the detector used before.
 VARIANTS: dict[str, Callable[[Issue], str]] = {
-    "detector": lambda i: detector.issue_text(dict(i)),
+    "title": lambda i: detector.title_text(dict(i)),
+    "body": lambda i: issue_text(dict(i)),
     "raw": lambda i: f"{i['title']} {i['body']}".strip(),
-    "title": lambda i: clean_title(i["title"]),
 }
 
 
@@ -226,11 +235,22 @@ def evaluate(
         }
         return summarise(shown, eval_queries, positives, negatives)
 
+    # The detector's own selection, so the headline number is what ships.
+    shipped = {
+        q: [
+            m["number"]
+            for m in detector.find_duplicates(
+                rows["title"][q], rows["body"][q], list(corpus[: position[q]])
+            )
+        ]
+        for q in queries
+    }
     results: dict = {
         "eval_queries": len(eval_queries),
         "since": since,
         "positives": len(positives),
         "negatives": len(negatives),
+        "detector": summarise(shipped, eval_queries, positives, negatives),
         "variants": {},
     }
     for name, variant_rows in rows.items():
@@ -271,20 +291,28 @@ def evaluate(
                 q: [
                     numbers[j]
                     for j in top_matches(
-                        rows["detector"][q],
+                        rows["title"][q],
                         [
                             (rows["title"][q], title_min),
-                            (rows["detector"][q], body_min),
+                            (rows["body"][q], body_min),
                         ],
                     )
                 ]
                 for q in queries
             }
-            gates[f"title>={title_min:.2f} and detector>={body_min:.2f}"] = summarise(
+            gates[f"title>={title_min:.2f} and body>={body_min:.2f}"] = summarise(
                 shown, eval_queries, positives, negatives
             )
     results["gates"] = gates
     return results
+
+
+def row(label: str, o: Outcome) -> str:
+    return (
+        f"  {label:<38} flagged {o['flag_rate']:6.1%}   "
+        f"duplicates shown {o['positives_shown']:5.0%}   "
+        f"hard negatives shown {o['negatives_shown']:5.0%}"
+    )
 
 
 def print_report(results: dict) -> None:
@@ -297,13 +325,8 @@ def print_report(results: dict) -> None:
         f"A pair counts as shown when the candidate is in the top {k} and passes the "
         "threshold or gate.\n"
     )
-
-    def row(label: str, o: Outcome) -> str:
-        return (
-            f"  {label:<38} flagged {o['flag_rate']:6.1%}   "
-            f"duplicates shown {o['positives_shown']:5.0%}   "
-            f"hard negatives shown {o['negatives_shown']:5.0%}"
-        )
+    print(row("DETECTOR AS SHIPPED", results["detector"]))
+    print()
 
     for name, v in results["variants"].items():
         print(
@@ -319,7 +342,7 @@ def print_report(results: dict) -> None:
                 row(f"target flag rate {float(rate):.0%} (t={o['threshold']:.2f})", o)
             )
         print()
-    print("== combined gate (ranked by detector score)")
+    print("== combined gate (ranked by title score)")
     for label, o in results["gates"].items():
         print(row(label, o))
 

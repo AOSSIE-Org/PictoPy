@@ -47,6 +47,7 @@ jobs:
           cd .github/scripts
           python test_issue_corpus.py
           python test_detect_duplicate_issue.py
+          python test_duplicate_comment.py
           python test_eval_duplicate_detection.py
 
       - name: Install frontend dependencies

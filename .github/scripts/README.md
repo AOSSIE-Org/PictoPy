@@ -1,14 +1,20 @@
 # Issue triage scripts
 
-`.github/workflows/issue-triage.yml` runs these when an issue is opened:
+`.github/workflows/issue-triage.yml` runs these when an issue is opened, or when its
+title or body is edited:
 
 1. `issue_corpus.py` fetches every issue through the GraphQL API, with its close reason,
    labels, the issue it duplicates, and the pull requests that closed it. It uses only
    the standard library, so it runs before any third-party package is installed.
-2. `detect_duplicate_issue.py` embeds each issue's title and body, with issue-template
-   scaffolding removed, and suggests up to three similar issues. A match on an issue
-   closed as a duplicate is reported as the issue it duplicates, following chains such
-   as #700 -> #693 -> #638.
+2. `detect_duplicate_issue.py` compares the issue with every older issue, by cleaned
+   title and by cleaned title plus body. An issue matches when its title similarity is at
+   least `TITLE_THRESHOLD` or its title-plus-body similarity is at least
+   `BODY_THRESHOLD`. A match on an issue closed as a duplicate is reported as the issue
+   it duplicates, following chains such as #700 -> #693 -> #638.
+3. `duplicate_comment.py` renders up to three matches, grouped by whether they are open,
+   resolved, or closed as not planned. The workflow keeps one comment per issue,
+   updating it on edits and deleting it if nothing matches any more. Issues are
+   referenced by number only, so no text from other issues is copied into the comment.
 
 ## Measuring a change to duplicate detection
 
@@ -26,9 +32,10 @@ The first run fetches every issue and caches it in `.github/scripts/.duplicate_e
 Pass `--refresh` to re-fetch. Set `GITHUB_TOKEN` to avoid the 60-requests-per-hour
 unauthenticated limit.
 
-Text variants: `detector` is what the detector embeds today, `raw` is the title and body
-before template cleaning, and `title` is the cleaned title alone. The harness scores
-candidates directly and does not yet redirect duplicates to the issue they duplicate.
+The first line, **detector as shipped**, runs the detector's own `find_duplicates`. The
+rest sweep each text the detector scores (`title`, `body`) and `raw`, the uncleaned text
+it used before, across thresholds. The harness fetches through REST, which has no
+duplicate links, so it does not redirect duplicates to the issue they duplicate.
 
 The report shows, for each text variant and threshold:
 

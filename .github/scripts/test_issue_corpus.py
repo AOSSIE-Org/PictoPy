@@ -53,7 +53,12 @@ def test_parse_issue_normalises_graphql_node() -> None:
             stateReason="DUPLICATE",
             labels={"nodes": [{"name": "bug"}, {"name": "duplicate"}]},
             duplicateOf={"number": 693},
-            closedByPullRequestsReferences={"nodes": [{"number": 701}]},
+            closedByPullRequestsReferences={
+                "nodes": [
+                    {"number": 699, "merged": False},
+                    {"number": 701, "merged": True},
+                ]
+            },
         )
     )
     assert issue["state"] == "closed"

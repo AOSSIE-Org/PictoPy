@@ -48,6 +48,7 @@ query ($owner: String!, $name: String!, $after: String) {
         closedByPullRequestsReferences(first: 5, includeClosedPrs: true) {
           nodes {
             number
+            merged
           }
         }
       }
@@ -130,7 +131,9 @@ def parse_issue(node: dict) -> Issue:
         "created_at": node["createdAt"],
         "labels": [label["name"] for label in node["labels"]["nodes"]],
         "duplicate_of": duplicate_of["number"] if duplicate_of else None,
-        "closed_by": [pr["number"] for pr in closing_prs["nodes"]],
+        # Closed-but-unmerged pull requests also reference the issue; only merged
+        # ones resolved it.
+        "closed_by": [pr["number"] for pr in closing_prs["nodes"] if pr["merged"]],
     }
 
 
