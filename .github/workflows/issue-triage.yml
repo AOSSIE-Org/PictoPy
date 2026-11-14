@@ -33,54 +33,27 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
+      # Fetch before installing third-party packages, so only standard-library code
+      # runs with the token.
+      - name: Fetch upstream issues (AOSSIE-Org/PictoPy)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python .github/scripts/issue_corpus.py AOSSIE-Org/PictoPy corpus.json
+
       - name: Install dependencies
         run: |
           pip install --no-cache-dir sentence-transformers
 
-      - name: Fetch upstream issues (AOSSIE-Org/PictoPy)
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const issue = context.payload.issue;
-
-            const upstreamIssues = await github.paginate(
-              github.rest.issues.listForRepo,
-              {
-                owner: "AOSSIE-Org",
-                repo: "PictoPy",
-                state: "all",
-                per_page: 100
-              }
-            );
-
-            const data = {
-              current: {
-                number: issue.number,
-                title: issue.title,
-                body: issue.body || ""
-              },
-              others: upstreamIssues
-                .filter(i => !i.pull_request && i.number !== issue.number)
-                .map(i => ({
-                  number: i.number,
-                  title: i.title,
-                  body: i.body || "",
-                  url: i.html_url,
-                  state: i.state
-                }))
-            };
-
-            fs.writeFileSync("issues.json", JSON.stringify(data));
-
       - name: Run semantic similarity analysis
-        run: python .github/scripts/detect_duplicate_issue.py issues.json matches.json
+        run: python .github/scripts/detect_duplicate_issue.py corpus.json "$GITHUB_EVENT_PATH" matches.json
 
       - name: Comment and soft-label in fork (non-blocking)
         uses: actions/github-script@v7
@@ -94,12 +67,17 @@ jobs:
               return;
             }
 
-            const list = matches.map(
-              (m, i) =>
-                `${i + 1}. **${m.title}** (#${m.number}, ${m.state})\n` +
+            const list = matches.map((m, i) => {
+              const alsoReported = m.also_reported_as.length
+                ? `\n   Also reported as ${m.also_reported_as.map(n => `#${n}`).join(", ")}`
+                : "";
+              return (
+                `${i + 1}. **${m.title}** (#${m.number}, ${m.status})\n` +
                 `   ${m.url}\n` +
-                `   Similarity: ${m.score}%`
-            ).join("\n\n");
+                `   Similarity: ${m.score}%` +
+                alsoReported
+              );
+            }).join("\n\n");
 
             const safe = async (fn) => {
               try { await fn(); }

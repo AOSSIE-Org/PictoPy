@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Callable, Iterable, Sequence, TypedDict
 
 import detect_duplicate_issue as detector
+from issue_corpus import clean_title
 
 HERE = Path(__file__).parent
 PAIRS_PATH = HERE / "duplicate_eval_pairs.json"
@@ -28,32 +29,6 @@ FIXED_THRESHOLDS = (0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85)
 FLAG_RATES = (0.05, 0.10, 0.20)
 GATE_TITLE_MINS = (0.60, 0.65, 0.70)
 GATE_BODY_MINS = (0.55, 0.65, 0.75)
-
-# Issue-template scaffolding shared by every issue of a type; it inflates similarity
-# between unrelated issues. Patterns follow .github/ISSUE_TEMPLATE/*.yml.
-TEMPLATE_NOISE = [
-    re.compile(p)
-    for p in (
-        r"### Is there an existing issue for this\?",
-        r"- \[[xX ]\] I have searched the existing issues",
-        r"### What happened\?",
-        r"### Record",
-        r"- \[[xX ]\] I agree to follow this project's Code of Conduct",
-        r"- \[[xX ]\] I want to work on this issue",
-        r"### Describe the feature",
-        r"### Add ScreenShots",
-        r"### What's wrong with the existing documentation",
-        r"_No response_",
-        r"<img[^>]*>",
-        r"!\[[^\]]*\]\([^)]*\)",
-        r"https?://\S+",
-    )
-]
-# Only bracketed or colon-terminated prefixes, so "Bug in search" keeps its first word.
-_PREFIX_WORD = r"(?:bug|feat|feature|docs?|enhancement)"
-TITLE_PREFIX = re.compile(
-    rf"^\s*(?:(?:\[{_PREFIX_WORD}\]|{_PREFIX_WORD}\s*:)\s*:?\s*)+", re.IGNORECASE
-)
 
 
 class Issue(TypedDict):
@@ -84,6 +59,8 @@ def next_link(link_header: str) -> str | None:
 
 
 def fetch_issues(repository: str, token: str | None) -> list[Issue]:
+    # REST rather than issue_corpus's GraphQL fetch, so the harness runs without a
+    # token; it only needs issue text and dates.
     url: str | None = (
         f"https://api.github.com/repos/{repository}/issues?state=all&per_page=100"
     )
@@ -130,19 +107,10 @@ def load_pairs(path: Path = PAIRS_PATH) -> tuple[str, list[Pair], list[Pair]]:
     return data["repository"], data["positives"], data["negatives"]
 
 
-def clean_title(title: str) -> str:
-    return TITLE_PREFIX.sub("", title).strip()
-
-
-def clean_body(body: str) -> str:
-    for pattern in TEMPLATE_NOISE:
-        body = pattern.sub(" ", body)
-    return re.sub(r"\s+", " ", body).strip()
-
-
+# "raw" is the detector's text before template cleaning, kept as a baseline.
 VARIANTS: dict[str, Callable[[Issue], str]] = {
-    "current": lambda i: detector.issue_text(dict(i)),
-    "cleaned": lambda i: f"{clean_title(i['title'])}. {clean_body(i['body'])}",
+    "detector": lambda i: detector.issue_text(dict(i)),
+    "raw": lambda i: f"{i['title']} {i['body']}".strip(),
     "title": lambda i: clean_title(i["title"]),
 }
 
@@ -303,13 +271,16 @@ def evaluate(
                 q: [
                     numbers[j]
                     for j in top_matches(
-                        rows["cleaned"][q],
-                        [(rows["title"][q], title_min), (rows["cleaned"][q], body_min)],
+                        rows["detector"][q],
+                        [
+                            (rows["title"][q], title_min),
+                            (rows["detector"][q], body_min),
+                        ],
                     )
                 ]
                 for q in queries
             }
-            gates[f"title>={title_min:.2f} and cleaned>={body_min:.2f}"] = summarise(
+            gates[f"title>={title_min:.2f} and detector>={body_min:.2f}"] = summarise(
                 shown, eval_queries, positives, negatives
             )
     results["gates"] = gates
@@ -348,7 +319,7 @@ def print_report(results: dict) -> None:
                 row(f"target flag rate {float(rate):.0%} (t={o['threshold']:.2f})", o)
             )
         print()
-    print("== combined gate (ranked by cleaned score)")
+    print("== combined gate (ranked by detector score)")
     for label, o in results["gates"].items():
         print(row(label, o))
 

@@ -1,7 +1,14 @@
 # Issue triage scripts
 
-`detect_duplicate_issue.py` is called by `.github/workflows/issue-triage.yml` when an
-issue is opened. It suggests up to three similar existing issues.
+`.github/workflows/issue-triage.yml` runs these when an issue is opened:
+
+1. `issue_corpus.py` fetches every issue through the GraphQL API, with its close reason,
+   labels, the issue it duplicates, and the pull requests that closed it. It uses only
+   the standard library, so it runs before any third-party package is installed.
+2. `detect_duplicate_issue.py` embeds each issue's title and body, with issue-template
+   scaffolding removed, and suggests up to three similar issues. A match on an issue
+   closed as a duplicate is reported as the issue it duplicates, following chains such
+   as #700 -> #693 -> #638.
 
 ## Measuring a change to duplicate detection
 
@@ -18,6 +25,10 @@ python .github/scripts/eval_duplicate_detection.py --json eval.json
 The first run fetches every issue and caches it in `.github/scripts/.duplicate_eval_cache/`.
 Pass `--refresh` to re-fetch. Set `GITHUB_TOKEN` to avoid the 60-requests-per-hour
 unauthenticated limit.
+
+Text variants: `detector` is what the detector embeds today, `raw` is the title and body
+before template cleaning, and `title` is the cleaned title alone. The harness scores
+candidates directly and does not yet redirect duplicates to the issue they duplicate.
 
 The report shows, for each text variant and threshold:
 

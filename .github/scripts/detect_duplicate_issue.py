@@ -1,13 +1,10 @@
 """Semantic duplicate detection for a newly opened GitHub issue.
 
-Reads {"current": {...}, "others": [...]} from issues_json (written by the
-calling workflow via the GitHub API) and writes a ranked list of likely
-duplicates to matches_json.
+Reads the issue corpus written by issue_corpus.py and the issue from the workflow's
+event payload, and writes a ranked list of likely duplicates to matches_json.
 
-THRESHOLD was empirically calibrated against confirmed duplicate/non-duplicate
-issue pairs in AOSSIE-Org/PictoPy: real duplicates scored 0.56-0.85, unrelated
-issues (including ones sharing identical issue-template boilerplate) scored
-<= 0.31. 0.55 sits in the gap with margin on both sides.
+Measure any change to the text, model, threshold or ranking with
+eval_duplicate_detection.py before shipping it; see README.md in this directory.
 """
 
 from __future__ import annotations
@@ -16,13 +13,11 @@ import argparse
 import json
 from pathlib import Path
 
+from issue_corpus import issue_text, resolve_canonical, status
+
 THRESHOLD = 0.55
 MAX_RESULTS = 3
 MODEL_NAME = "all-MiniLM-L6-v2"
-
-
-def issue_text(issue: dict) -> str:
-    return f"{issue['title']} {issue['body']}".strip()
 
 
 def dot_product(a: list[float], b: list[float]) -> float:
@@ -36,39 +31,48 @@ def find_duplicates(
     threshold: float = THRESHOLD,
     max_results: int = MAX_RESULTS,
 ) -> list[dict]:
-    # Embeddings are normalized, so dot product equals cosine similarity.
+    by_number = {issue["number"]: issue for issue in others}
+    # A match on an issue closed as a duplicate counts for the issue it duplicates,
+    # so authors are pointed at the discussion that was kept.
+    scores: dict[int, float] = {}
+    reported_as: dict[int, list[int]] = {}
+    for issue, embedding in zip(others, other_embeddings):
+        # Embeddings are normalized, so dot product equals cosine similarity.
+        score = dot_product(current_embedding, embedding) * 100
+        if score < threshold * 100:
+            continue
+        target = resolve_canonical(issue["number"], by_number)
+        if target != issue["number"]:
+            reported_as.setdefault(target, []).append(issue["number"])
+        scores[target] = max(score, scores.get(target, score))
+
     # Sort by the raw score, not the rounded display value, so close scores
     # that round to the same tenth (e.g. 90.04 vs 90.01) still rank correctly.
-    scored: list[tuple[float, dict]] = []
-    for issue, embedding in zip(others, other_embeddings):
-        score = dot_product(current_embedding, embedding) * 100
-        if score >= threshold * 100:
-            scored.append(
-                (
-                    score,
-                    {
-                        "number": issue["number"],
-                        "title": issue["title"],
-                        "url": issue["url"],
-                        "state": issue["state"],
-                        "score": round(score, 1),
-                    },
-                )
-            )
-    scored.sort(key=lambda item: -item[0])
-    return [match for _, match in scored[:max_results]]
+    ranked = sorted(scores, key=lambda number: -scores[number])[:max_results]
+    return [
+        {
+            "number": number,
+            "title": by_number[number]["title"],
+            "url": by_number[number]["url"],
+            "status": status(by_number[number]),
+            "score": round(scores[number], 1),
+            "also_reported_as": sorted(reported_as.get(number, [])),
+        }
+        for number in ranked
+    ]
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("issues_json", type=Path)
+    parser.add_argument("corpus_json", type=Path, help="written by issue_corpus.py")
+    parser.add_argument("event_json", type=Path, help="the issues event payload")
     parser.add_argument("matches_json", type=Path)
     parser.add_argument("--threshold", type=float, default=THRESHOLD)
     args = parser.parse_args()
 
-    data = json.loads(args.issues_json.read_text(encoding="utf-8"))
-    current = data["current"]
-    others = data["others"]
+    corpus = json.loads(args.corpus_json.read_text(encoding="utf-8"))
+    current = json.loads(args.event_json.read_text(encoding="utf-8"))["issue"]
+    others = [issue for issue in corpus if issue["number"] != current["number"]]
 
     print(f"Threshold = {args.threshold}")
     print(f"Current issue: #{current['number']}")

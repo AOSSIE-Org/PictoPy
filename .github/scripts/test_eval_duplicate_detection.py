@@ -1,8 +1,6 @@
 """Run with: python .github/scripts/test_eval_duplicate_detection.py"""
 
 from eval_duplicate_detection import (
-    clean_body,
-    clean_title,
     load_pairs,
     next_link,
     percentile,
@@ -20,26 +18,6 @@ def test_next_link_follows_cursor_and_stops_on_last_page() -> None:
     assert next_link(header) == "https://api.github.com/repositories/1/issues?after=abc"
     assert next_link('<https://x/issues?before=xyz>; rel="prev"') is None
     assert next_link("") is None
-
-
-def test_clean_title_strips_template_prefixes() -> None:
-    assert clean_title("BUG: Search is slow") == "Search is slow"
-    assert clean_title("[Bug]: Search is slow") == "Search is slow"
-    assert clean_title("Feat:Albums page") == "Albums page"
-    assert clean_title("BUG:BUG: Inefficient loop") == "Inefficient loop"
-    assert clean_title("Bugfix for albums") == "Bugfix for albums"
-    assert clean_title("Bug in search") == "Bug in search"
-
-
-def test_clean_body_strips_issue_template_scaffolding() -> None:
-    body = (
-        "### Is there an existing issue for this?\n\n"
-        "- [X] I have searched the existing issues\n\n"
-        "### What happened?\n\nThe gallery freezes.\n\n"
-        "### Record\n\n- [x] I agree to follow this project's Code of Conduct\n"
-        "_No response_ ![shot](https://example.com/a.png)"
-    )
-    assert clean_body(body) == "The gallery freezes."
 
 
 def test_percentile_interpolates_like_numpy() -> None:
@@ -89,8 +67,6 @@ def test_labelled_pairs_are_well_formed() -> None:
 
 if __name__ == "__main__":
     test_next_link_follows_cursor_and_stops_on_last_page()
-    test_clean_title_strips_template_prefixes()
-    test_clean_body_strips_issue_template_scaffolding()
     test_percentile_interpolates_like_numpy()
     test_rank_of_counts_strictly_higher_scores()
     test_top_matches_applies_every_gate_and_ranks_by_rank_scores()
