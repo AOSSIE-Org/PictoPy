@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@/test-utils';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes, useNavigate } from 'react-router';
 import { useSelector } from 'react-redux';
+import { onlineManager } from '@tanstack/react-query';
 import { RootState } from '@/app/store';
 import { GlobalLoader } from '@/components/Loader/GlobalLoader';
 import AlbumDetail from '../Album/AlbumDetail';
@@ -228,6 +229,49 @@ describe('AlbumDetail', () => {
     expect(watcher.stop()).toBe(false);
   }, 30000);
 
+  // The backend is local, but TanStack pauses queries when the machine has no
+  // internet, which left the loader up with no way out.
+  test('still checks the password when offline', async () => {
+    const album = await mockGetAlbumById.getMockImplementation()?.();
+    mockGetAlbumById.mockImplementation(async () => {
+      // Go offline once the album has loaded, before the password check runs.
+      onlineManager.setOnline(false);
+      return album;
+    });
+
+    const { store, unmount } = render(<AlbumDetailWithLoader />, {
+      initialRoutes: [{ pathname: '/albums/a1', state: { password: 'pw' } }],
+    });
+
+    try {
+      expect(await screen.findByText('Trip')).toBeInTheDocument();
+      expect(mockGetAlbumImages).toHaveBeenCalledWith('a1', { password: 'pw' });
+      expect(store.getState().loader.loading).toBe(false);
+    } finally {
+      // Unmount first, so going back online resumes no queries after the test.
+      unmount();
+      onlineManager.setOnline(true);
+    }
+  }, 30000);
+
+  // The password check never starts for a missing album, so it must not
+  // leave the loader spinning forever.
+  test('shows not found instead of a stuck loader for a missing album', async () => {
+    mockGetAlbumById.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 404 },
+    });
+    const { store } = render(<AlbumDetailWithLoader />, {
+      initialRoutes: [{ pathname: '/albums/a1', state: { password: 'pw' } }],
+    });
+
+    // usePictoQuery retries twice, 500ms apart, before the 404 settles.
+    expect(
+      await screen.findByText('Album not found', {}, { timeout: 5000 }),
+    ).toBeInTheDocument();
+    expect(store.getState().loader.loading).toBe(false);
+  }, 30000);
+
   // A cached 401 used to fail the right password straight after a wrong one.
   test('opens the album with the right password after a wrong one', async () => {
     const user = userEvent.setup();
@@ -257,6 +301,21 @@ describe('AlbumDetail', () => {
 
     await screen.findByText('Trip');
     await waitFor(() => expect(mockGetAlbumImages).toHaveBeenCalled());
+
+    unmount();
+
+    expect(store.getState().loader.loading).toBe(false);
+  }, 30000);
+
+  test('hides the password loader when leaving mid-check', async () => {
+    mockGetAlbumImages.mockImplementation(() => new Promise(() => {}));
+
+    const { store, unmount } = render(<AlbumDetailWithLoader />, {
+      initialRoutes: [{ pathname: '/albums/a1', state: { password: 'pw' } }],
+    });
+
+    await waitFor(() => expect(mockGetAlbumImages).toHaveBeenCalled());
+    expect(store.getState().loader.loading).toBe(true);
 
     unmount();
 

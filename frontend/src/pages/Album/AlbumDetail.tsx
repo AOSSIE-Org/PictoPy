@@ -70,6 +70,7 @@ export const AlbumDetail = () => {
   const {
     data: imagesData,
     isLoading: isLoadingImages,
+    isPending: isImagesPending,
     isSuccess: imagesSuccess,
     isError: imagesError,
     refetch: refetchImages,
@@ -82,6 +83,9 @@ export const AlbumDetail = () => {
     // Drop the result on leaving, so reopening after a password change checks
     // the password again instead of showing the album from cache.
     gcTime: 0,
+    // The backend is local, so the password check must not pause offline and
+    // leave the loader up with no way out.
+    networkMode: 'always',
     // A wrong password stays wrong, so retrying only delays the error.
     retry: (failureCount, error) => {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
@@ -186,10 +190,10 @@ export const AlbumDetail = () => {
 
   // Until the password is accepted, showing the album's header would suggest
   // it is already unlocked.
-  // The images query only starts once the fetched album reaches the store,
-  // so that gap counts as loading too, or the spinner would flicker off.
-  const isAlbumPending = isLoadingAlbum || (!!albumData && !album);
-  const isVerifyingPassword = !!password && (isAlbumPending || isLoadingImages);
+  // Pending, not loading: the images query has no answer yet while it waits
+  // for the album to reach the store.
+  const isVerifyingPassword =
+    !!password && isImagesPending && (isLoadingAlbum || !!albumData);
 
   useEffect(() => {
     if (!isVerifyingPassword) return;
