@@ -15,6 +15,7 @@ from collections import defaultdict, Counter
 from typing import List, Dict, Optional, Union, Tuple
 from numpy.typing import NDArray
 from app.database.connection import get_db_connection
+from app.utils.image_loader import load_image_bgr
 
 from app.database.faces import (
     db_get_all_faces_with_cluster_names,
@@ -995,7 +996,7 @@ def _generate_cluster_face_image(
         image_path, bbox = face_data
 
         # Load the image
-        img = cv2.imread(image_path)
+        img = load_image_bgr(image_path)
         if img is None:
             return None
 
