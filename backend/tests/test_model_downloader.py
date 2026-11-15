@@ -113,6 +113,7 @@ def test_successful_download_installs_and_verifies(model_env: str) -> None:
         path = asyncio.run(ensure_model(MODEL_KEY))
     finally:
         server.shutdown()
+        server.server_close()
 
     assert path == model_env
     assert os.path.exists(model_env)
@@ -130,6 +131,7 @@ def test_interrupted_download_is_not_reported_as_installed(model_env: str) -> No
             asyncio.run(ensure_model(MODEL_KEY, max_retries=1))
     finally:
         server.shutdown()
+        server.server_close()
 
     # The core regression: the final path must not exist after an interruption,
     # so os.path.exists()-based status and loaders see it as not installed.
@@ -152,12 +154,12 @@ def test_remote_protocol_error_is_retried(model_env: str) -> None:
         client: httpx.AsyncClient,
         url: str,
         part_path: str,
-        cb: ProgressCallback,
+        progress_callback: ProgressCallback,
     ) -> None:
         # Swap to the good server after the first (failing) attempt.
         url = f"http://127.0.0.1:{port_box['port']}/m"
         port_box["port"] = full.server_port
-        return await original(client, url, part_path, cb)
+        return await original(client, url, part_path, progress_callback)
 
     _set_url(f"http://127.0.0.1:{early.server_port}/m")
     try:
@@ -166,7 +168,9 @@ def test_remote_protocol_error_is_retried(model_env: str) -> None:
     finally:
         model_downloader._download_to_part = original
         early.shutdown()
+        early.server_close()
         full.shutdown()
+        full.server_close()
 
     assert os.path.exists(path)
     with open(path, "rb") as f:
@@ -187,6 +191,7 @@ def test_resume_continues_from_partial_file(model_env: str) -> None:
         path = asyncio.run(ensure_model(MODEL_KEY))
     finally:
         server.shutdown()
+        server.server_close()
 
     assert os.path.exists(path)
     with open(path, "rb") as f:
@@ -207,6 +212,7 @@ def test_stale_oversized_partial_file_is_discarded_on_416(model_env: str) -> Non
         path = asyncio.run(ensure_model(MODEL_KEY))
     finally:
         server.shutdown()
+        server.server_close()
 
     with open(path, "rb") as f:
         assert f.read() == BODY
@@ -222,6 +228,7 @@ def test_hash_mismatch_is_rejected(model_env: str) -> None:
             asyncio.run(ensure_model(MODEL_KEY, max_retries=1))
     finally:
         server.shutdown()
+        server.server_close()
 
     # A model that fails verification is never installed and its .part is cleaned up.
     assert not os.path.exists(model_env)
