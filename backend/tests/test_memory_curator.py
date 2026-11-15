@@ -231,15 +231,43 @@ class TestAnniversaryWindow:
         ]
 
     @pytest.mark.parametrize(
-        "reference, expected",
+        "reference, expected_window, credits",
         [
-            (date(2026, 1, 1), ["01-01", "01-02", "12-31"]),  # year boundary
-            (date(2026, 3, 1), ["02-28", "03-01", "03-02"]),  # non-leap February
-            (date(2024, 3, 1), ["02-29", "03-01", "03-02"]),  # leap February
+            (
+                date(2026, 1, 1),
+                ["01-01", "01-02", "12-31"],
+                [
+                    (date(2025, 12, 31), None),
+                    (date(2025, 1, 1), 2025),
+                    (date(2024, 12, 31), 2025),
+                    (date(2024, 1, 1), 2024),
+                ],
+            ),
+            (
+                date(2025, 12, 31),
+                ["01-01", "12-30", "12-31"],
+                [
+                    (date(2025, 12, 30), None),
+                    (date(2024, 12, 31), 2024),
+                    (date(2024, 1, 1), 2023),
+                ],
+            ),
+            (
+                date(2026, 3, 1),
+                ["02-28", "03-01", "03-02"],
+                [(date(2024, 2, 29), 2024)],
+            ),
+            (
+                date(2024, 3, 1),
+                ["02-29", "03-01", "03-02"],
+                [(date(2023, 2, 28), 2023)],
+            ),
         ],
     )
-    def test_handles_calendar_edges(self, reference, expected):
-        assert memory_curator._anniversary_window(reference) == expected
+    def test_handles_calendar_edges(self, reference, expected_window, credits):
+        assert memory_curator._anniversary_window(reference) == expected_window
+        for captured, expected_year in credits:
+            assert memory_curator._anniversary_year(reference, captured) == expected_year
 
 
 class TestDisplayNames:
@@ -408,6 +436,38 @@ class TestAnniversaryCuration:
 
         run_curator(anniversary=candidates, upsert_side_effect=flaky)
         assert len(seen) == 2
+
+    def test_new_year_boundary_drops_last_night_and_credits_prior_eve(self):
+        """On Jan 1, yesterday's photos belong to today, not a year ago."""
+        ref = "2026-01-01"
+        nye_last_night = [
+            {**image, "captured_at": f"2025-12-31 2{i}:00:00", "capture_year": 2025}
+            for i, image in enumerate(make_images("nye2025", 4))
+        ]
+        jan1_prior = [
+            {**image, "captured_at": f"2025-01-01 1{i}:00:00", "capture_year": 2025}
+            for i, image in enumerate(make_images("jan2025", 4))
+        ]
+        nye_prior = [
+            {**image, "captured_at": f"2024-12-31 2{i}:00:00", "capture_year": 2024}
+            for i, image in enumerate(make_images("nye2024", 4))
+        ]
+
+        # Jan 1 2025 and NYE 2024 merge into one "1 year ago" memory;
+        # NYE 2025 (last night) is dropped entirely.
+        candidates = nye_last_night + jan1_prior + nye_prior
+        upserts = of_type(
+            run_curator(anniversary=candidates, reference_date=ref),
+            "anniversary",
+        )
+
+        assert len(upserts) == 1
+        memory = upserts[0]["memory"]
+        assert memory["title"] == "1 year ago today"
+        assert memory["dedupe_key"] == "anniv:01-01:2025"
+
+        included = {image_id for image_id, _, _ in upserts[0]["images"]}
+        assert included == {img["id"] for img in jan1_prior + nye_prior}
 
 
 # ##############################
