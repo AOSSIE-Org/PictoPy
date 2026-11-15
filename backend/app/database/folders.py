@@ -326,9 +326,12 @@ def db_update_ai_tagging_batch(
         # Create placeholders for the IN clause
         placeholders = ",".join("?" * len(folder_ids))
 
+        # Type the combined list as List[object] so mypy accepts the bool
+        # AI_Tagging flag alongside the str folder ids in one params list.
+        params: List[object] = [ai_tagging_enabled, *folder_ids]
         cursor.execute(
             f"UPDATE folders SET AI_Tagging = ? WHERE folder_id IN ({placeholders})",
-            [ai_tagging_enabled] + folder_ids,
+            params,
         )
 
         updated_count = cursor.rowcount
