@@ -1,3 +1,4 @@
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Iterator
 from unittest.mock import patch
@@ -72,7 +73,9 @@ class TestDetectFaces:
     def test_unreadable_file_returns_none(self, models, tmp_path):
         assert models.detector.detect_faces(str(tmp_path / "missing.jpg")) is None
 
-    def test_non_ascii_path_is_readable(self, models, photo, tmp_path):
+    def test_non_ascii_path_is_readable(
+        self, models: SimpleNamespace, photo: str, tmp_path: Path
+    ) -> None:
         """cv2.imread returns None for these paths on Windows."""
         folder = tmp_path / "फोटो"
         folder.mkdir()

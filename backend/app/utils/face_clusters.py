@@ -12,7 +12,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 
 from collections import defaultdict, Counter
-from typing import List, Dict, Optional, Union, Tuple
+from typing import Any, List, Dict, Optional, Union, Tuple
 from numpy.typing import NDArray
 from app.database.connection import get_db_connection
 from app.utils.image_loader import load_image_bgr
@@ -140,11 +140,11 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
                 db_update_metadata(current_metadata, cursor)
             return 0, total_faces_skipped
 
-        results = [result.to_dict() for result in results]
+        result_dicts: List[Dict[str, Any]] = [result.to_dict() for result in results]
 
         # Extract unique clusters with their names (without face images yet)
         unique_clusters = {}
-        for result in results:
+        for result in result_dicts:
             cluster_id = result["cluster_id"]
             cluster_name = result["cluster_name"]
             if cluster_id not in unique_clusters:
@@ -167,7 +167,7 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
             db_insert_clusters_batch(cluster_list, cursor)
 
             # Now update face cluster assignments (foreign keys will be valid)
-            db_update_face_cluster_ids_batch(results, cursor)
+            db_update_face_cluster_ids_batch(result_dicts, cursor)
 
             # Finally, generate and update face images for each cluster
             for cluster_id in unique_clusters.keys():
@@ -261,7 +261,7 @@ def cluster_util_cluster_all_face_embeddings(
     eps: float = PICTO_CLUSTERING_EPS,
     min_samples: int = PICTO_CLUSTERING_MIN_SAMPLES,
     similarity_threshold: float = PICTO_CLUSTERING_SIMILARITY_THRESHOLD,
-    merge_threshold: float = None,
+    merge_threshold: Optional[float] = None,
 ) -> Tuple[List[ClusterResult], int]:
     """
     Cluster face embeddings using DBSCAN with similarity validation.
@@ -518,7 +518,7 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
             continue
 
         # Find the best match
-        min_distance = np.min(distances)
+        min_distance = float(np.min(distances))
         max_similarity = 1 - min_distance
 
         # Only assign if similarity is above threshold
@@ -710,7 +710,7 @@ def _merge_similar_clusters(
                 cluster_name_votes[result.cluster_uuid].append(result.cluster_name)
 
         # Determine final name for each cluster
-        final_cluster_names = {}
+        final_cluster_names: Dict[str, Optional[str]] = {}
         for cluster_uuid, names in cluster_name_votes.items():
             if names:
                 # Majority vote: most common name wins
@@ -787,7 +787,7 @@ def _update_cluster_face_image(
         True if update was successful, False otherwise
     """
     own_connection = cursor is None
-    if own_connection:
+    if cursor is None:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
 
@@ -968,7 +968,7 @@ def _encode_image_to_base64(img: np.ndarray, format: str = ".jpg") -> Optional[s
     """
     try:
         _, buffer = cv2.imencode(format, img)
-        return base64.b64encode(buffer).decode("utf-8")
+        return base64.b64encode(buffer.tobytes()).decode("utf-8")
     except Exception as e:
         logger.error(f"Error encoding image to base64: {e}")
         return None
