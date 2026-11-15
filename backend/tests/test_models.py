@@ -4,6 +4,7 @@ import sys
 import json
 import uuid
 from datetime import datetime, timedelta, timezone
+from typing import Any, Dict
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -161,7 +162,7 @@ def clear_download_tasks():
 @pytest.fixture
 def completed_task_id():
     task_id = str(uuid.uuid4())
-    queue = asyncio.Queue()
+    queue: asyncio.Queue[Dict[str, Any]] = asyncio.Queue()
     queue.put_nowait({"status": "complete", "model_key": "facenet"})
 
     mock_task = MagicMock()
@@ -177,7 +178,7 @@ def completed_task_id():
 @pytest.fixture
 def error_task_id():
     task_id = str(uuid.uuid4())
-    queue = asyncio.Queue()
+    queue: asyncio.Queue[Dict[str, Any]] = asyncio.Queue()
     queue.put_nowait({"status": "error", "message": "download failed"})
 
     mock_task = MagicMock()
@@ -193,7 +194,7 @@ def error_task_id():
 @pytest.fixture
 def active_listener_task_id():
     task_id = str(uuid.uuid4())
-    queue = asyncio.Queue()
+    queue: asyncio.Queue[Dict[str, Any]] = asyncio.Queue()
 
     mock_task = MagicMock()
     mock_task.done.return_value = False
