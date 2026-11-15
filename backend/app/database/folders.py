@@ -454,11 +454,11 @@ def db_get_all_folder_details() -> (
                 COALESCE(v.video_count, 0) as video_count
             FROM folders f
             LEFT JOIN (
-                SELECT folder_id, COUNT(*) as image_count
+                SELECT folder_id, COUNT(id) as image_count
                 FROM images GROUP BY folder_id
             ) i ON i.folder_id = f.folder_id
             LEFT JOIN (
-                SELECT folder_id, COUNT(*) as video_count
+                SELECT folder_id, COUNT(id) as video_count
                 FROM videos GROUP BY folder_id
             ) v ON v.folder_id = f.folder_id
             ORDER BY f.folder_path
