@@ -101,11 +101,11 @@ export const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({
 
     // The backend requires the current password to change a locked album.
     if (album.is_locked) {
-      requestData.current_password = formData.current_password.trim();
+      requestData.current_password = formData.current_password;
     }
 
     if (formData.password.trim()) {
-      requestData.password = formData.password.trim();
+      requestData.password = formData.password;
     }
 
     updateAlbumMutation.mutate({ albumId: album.id, data: requestData });
