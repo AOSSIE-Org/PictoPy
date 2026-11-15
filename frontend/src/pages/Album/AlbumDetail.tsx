@@ -191,9 +191,12 @@ export const AlbumDetail = () => {
   // Until the password is accepted, showing the album's header would suggest
   // it is already unlocked.
   // Pending, not loading: the images query has no answer yet while it waits
-  // for the album to reach the store.
+  // for the album to reach the store. A locked album opened without a password
+  // still waits for the backend's answer rather than showing its header.
   const isVerifyingPassword =
-    !!password && isImagesPending && (isLoadingAlbum || !!albumData);
+    (!!password || !!album?.is_locked) &&
+    isImagesPending &&
+    (isLoadingAlbum || !!albumData);
 
   useEffect(() => {
     if (!isVerifyingPassword) return;

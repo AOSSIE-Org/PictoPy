@@ -307,6 +307,26 @@ describe('AlbumDetail', () => {
     expect(store.getState().loader.loading).toBe(false);
   }, 30000);
 
+  // Reaching a locked album without a password used to show its header
+  // until the backend's 401 arrived.
+  test('never renders a locked album opened without a password', async () => {
+    const album = await mockGetAlbumById.getMockImplementation()?.();
+    mockGetAlbumById.mockResolvedValue({
+      ...album,
+      data: { album: { ...album.data.album, is_locked: true } },
+    });
+    mockGetAlbumImages.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 401 },
+    });
+    const watcher = watchForInsertedText('Trip');
+
+    renderDetail();
+
+    await screen.findByText('Albums list');
+    expect(watcher.stop()).toBe(false);
+  }, 30000);
+
   test('hides the password loader when leaving mid-check', async () => {
     mockGetAlbumImages.mockImplementation(() => new Promise(() => {}));
 
