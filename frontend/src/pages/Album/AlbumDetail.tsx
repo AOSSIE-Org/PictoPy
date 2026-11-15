@@ -79,6 +79,9 @@ export const AlbumDetail = () => {
     queryFn: () =>
       getAlbumImages(albumId!, password ? { password } : undefined),
     enabled: !!albumId && !!album,
+    // Drop the result on leaving, so reopening after a password change checks
+    // the password again instead of showing the album from cache.
+    gcTime: 0,
     // A wrong password stays wrong, so retrying only delays the error.
     retry: (failureCount, error) => {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
@@ -183,7 +186,10 @@ export const AlbumDetail = () => {
 
   // Until the password is accepted, showing the album's header would suggest
   // it is already unlocked.
-  const isVerifyingPassword = !!password && (isLoadingAlbum || isLoadingImages);
+  // The images query only starts once the fetched album reaches the store,
+  // so that gap counts as loading too, or the spinner would flicker off.
+  const isAlbumPending = isLoadingAlbum || (!!albumData && !album);
+  const isVerifyingPassword = !!password && (isAlbumPending || isLoadingImages);
 
   useEffect(() => {
     if (!isVerifyingPassword) return;

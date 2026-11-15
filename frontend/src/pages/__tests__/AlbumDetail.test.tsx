@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@/test-utils';
 import userEvent from '@testing-library/user-event';
-import { Route, Routes } from 'react-router';
+import { Route, Routes, useNavigate } from 'react-router';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/app/store';
 import { GlobalLoader } from '@/components/Loader/GlobalLoader';
@@ -30,17 +30,62 @@ const mockGetAlbumById = getAlbumById as jest.Mock;
 const mockGetAlbumImages = getAlbumImages as jest.Mock;
 const mockFetchAllImages = fetchAllImages as jest.Mock;
 
+// Stands in for the albums page, reopening the album the way its unlock
+// dialog does.
+const AlbumsListStub = () => {
+  const navigate = useNavigate();
+  return (
+    <div>
+      Albums list
+      <button
+        onClick={() =>
+          navigate('/albums/a1', { state: { password: 'old-password' } })
+        }
+      >
+        Reopen
+      </button>
+    </div>
+  );
+};
+
 const AlbumDetailWithLoader = () => {
   const { loading, message } = useSelector((state: RootState) => state.loader);
   return (
     <>
       <Routes>
         <Route path="/albums/:albumId" element={<AlbumDetail />} />
-        <Route path="/albums" element={<div>Albums list</div>} />
+        <Route path="/albums" element={<AlbumsListStub />} />
       </Routes>
       <GlobalLoader loading={loading} message={message} />
     </>
   );
+};
+
+// Records whether `text` was ever inserted into the page. Reads the mutation
+// records rather than the current DOM, since a node can be added and removed
+// before the observer callback runs.
+const watchForInsertedText = (text: string) => {
+  let seen = false;
+  const observer = new MutationObserver((records) => {
+    for (const record of records) {
+      const nodes =
+        record.type === 'characterData'
+          ? [record.target]
+          : Array.from(record.addedNodes);
+      if (nodes.some((node) => node.textContent?.includes(text))) seen = true;
+    }
+  });
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+  });
+  return {
+    stop: () => {
+      observer.disconnect();
+      return seen;
+    },
+  };
 };
 
 const renderDetail = () =>
@@ -112,7 +157,16 @@ describe('AlbumDetail', () => {
       initialRoutes: [{ pathname: '/albums/a1', state: { password: 'pw' } }],
     });
 
+    // The images request starts a render after the album loads; the loader
+    // must stay up across that gap rather than flicker off.
+    let loaderDropped = false;
+    const unsubscribe = store.subscribe(() => {
+      if (!store.getState().loader.loading) loaderDropped = true;
+    });
+
     await waitFor(() => expect(mockGetAlbumImages).toHaveBeenCalled());
+    unsubscribe();
+    expect(loaderDropped).toBe(false);
     expect(store.getState().loader.loading).toBe(true);
     expect(screen.getByText('Verifying password...')).toBeInTheDocument();
     expect(screen.queryByText('Trip')).not.toBeInTheDocument();
@@ -135,25 +189,63 @@ describe('AlbumDetail', () => {
       response: { status: 401 },
     });
 
-    let albumShown = false;
-    const observer = new MutationObserver(() => {
-      if (document.body.textContent?.includes('Trip')) albumShown = true;
-    });
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-    });
+    const watcher = watchForInsertedText('Trip');
 
     const { store } = render(<AlbumDetailWithLoader />, {
       initialRoutes: [{ pathname: '/albums/a1', state: { password: 'wrong' } }],
     });
 
     await screen.findByText('Albums list');
-    observer.disconnect();
 
-    expect(albumShown).toBe(false);
+    expect(watcher.stop()).toBe(false);
     expect(store.getState().loader.loading).toBe(false);
+  }, 30000);
+
+  // A cached result for an old password used to outlive a password change,
+  // so reopening showed the album before the backend rejected it.
+  test('rechecks the password when an album is reopened', async () => {
+    const user = userEvent.setup();
+    render(<AlbumDetailWithLoader />, {
+      initialRoutes: [
+        { pathname: '/albums/a1', state: { password: 'old-password' } },
+      ],
+    });
+    await screen.findByText('Trip');
+
+    await user.click(screen.getByRole('button', { name: /back to albums/i }));
+    await screen.findByText('Albums list');
+
+    mockGetAlbumImages.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 401 },
+    });
+    const watcher = watchForInsertedText('Trip');
+
+    await user.click(screen.getByRole('button', { name: 'Reopen' }));
+
+    await waitFor(() => expect(mockGetAlbumImages).toHaveBeenCalledTimes(2));
+    await screen.findByText('Albums list');
+    expect(watcher.stop()).toBe(false);
+  }, 30000);
+
+  // A cached 401 used to fail the right password straight after a wrong one.
+  test('opens the album with the right password after a wrong one', async () => {
+    const user = userEvent.setup();
+    mockGetAlbumImages.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: { status: 401 },
+    });
+    render(<AlbumDetailWithLoader />, {
+      initialRoutes: [{ pathname: '/albums/a1', state: { password: 'wrong' } }],
+    });
+    await screen.findByText('Albums list');
+
+    await user.click(screen.getByRole('button', { name: 'Reopen' }));
+
+    expect(await screen.findByText('Trip')).toBeInTheDocument();
+    expect(mockGetAlbumImages).toHaveBeenLastCalledWith('a1', {
+      password: 'old-password',
+    });
   }, 30000);
 
   // Leaving while a request was in flight used to leave showLoader dispatched
