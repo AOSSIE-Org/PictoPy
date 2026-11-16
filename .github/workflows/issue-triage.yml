@@ -23,12 +23,24 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            github.rest.issues.createComment({
+            const discordUrl = "https://discord.com/channels/1022871757289422898/1531495258217648268";
+
+            const body = [
+              "👋 Thanks for opening this issue! The maintainers will review it shortly. Till then, do not open any PR. This is a strict rule we like to follow around here :)",
+              "",
+              "Discussions are carried on Discord.",
+              "",
+              `Instead of commenting here, go to [the Discord channel](${discordUrl}).`,
+              "",
+              "If you find this project useful, a GitHub star would be appreciated."
+            ].join("\n");
+
+            await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: "👋 Thanks for opening this issue! The maintainers will review it shortly. Till then, do not open any PR. This is a strict rule we like to follow around here :)"
-            })
+              body
+            });
 
   detect-duplicates:
     # Label or assignee edits also fire "edited"; only title and body affect matching.
