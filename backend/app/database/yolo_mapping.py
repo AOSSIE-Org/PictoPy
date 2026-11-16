@@ -1,13 +1,12 @@
 import sqlite3
 from app.config.settings import DATABASE_PATH
+from app.logging.setup_logging import get_logger
 from app.utils.YOLO import class_names
 
+logger = get_logger(__name__)
 
-def db_create_YOLO_classes_table():
-    # print current directory:
-    import os
 
-    print(os.getcwd())
+def db_create_YOLO_classes_table() -> None:
     conn = None
     try:
         conn = sqlite3.connect(DATABASE_PATH)
@@ -36,6 +35,11 @@ def db_create_YOLO_classes_table():
             )
 
         conn.commit()
+    except sqlite3.Error as e:
+        if conn is not None:
+            conn.rollback()
+        logger.error("Error creating YOLO classes table: %s", e, exc_info=True)
+        raise
     finally:
         if conn is not None:
             conn.close()

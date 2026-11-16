@@ -666,11 +666,14 @@ def _convert_to_degrees(value):
     """Converts a GPS coordinate value from DMS to decimal degrees."""
 
     def to_float(v):
-        return (
-            float(v.numerator) / float(v.denominator)
-            if hasattr(v, "numerator")
-            else float(v)
-        )
+        # Handle rational EXIF values (IFDRational/Fraction objects having numerator & denominator)
+        if hasattr(v, "numerator") and hasattr(v, "denominator"):
+            den = float(v.denominator)
+            # Edge case: corrupted EXIF metadata can have denominator == 0, raising ZeroDivisionError
+            if den == 0.0:
+                raise ZeroDivisionError("EXIF GPS rational denominator is zero")
+            return float(v.numerator) / den
+        return float(v)
 
     d, m, s = (to_float(v) for v in value[:3])
     return d + (m / 60.0) + (s / 3600.0)
@@ -715,7 +718,10 @@ def _extract_gps_coordinates(exif_data: Any) -> Tuple[float | None, float | None
                 TypeError,
                 ValueError,
                 AttributeError,
+                ZeroDivisionError,
             ):
+                # Edge case: corrupted DMS tuples or zero denominators fall back to None
+                # so an invalid GPS tag never aborts the wider metadata extraction or folder scan.
                 latitude = None
                 longitude = None
         else:
