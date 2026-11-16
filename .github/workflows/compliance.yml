@@ -3,14 +3,13 @@ name: PR Compliance Check
 on:
   pull_request_target:
     types: [opened, edited, synchronize, reopened, ready_for_review]
-  # Recheck linked PRs when an issue's assignees or proof label change
   issues:
     types: [assigned, unassigned, labeled, unlabeled]
 
 permissions:
   contents: read
-  pull-requests: write # labels and comments on PRs
-  issues: read # linked-issue lookups
+  pull-requests: write 
+  issues: read 
 
 jobs:
   compliance:

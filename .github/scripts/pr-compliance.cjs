@@ -1,6 +1,6 @@
 const PASSED_LABEL = 'compliance:passed';
 const FAILED_LABEL = 'compliance:failed';
-// Label applied to issues that require screenshots/video in the PR (see issue #1534)
+// Label applied to issues that require screenshots/video in the PR 
 const VISUAL_PROOF_LABEL = 'requires:image-video-proof';
 const COMMENT_MARKER = '<!-- pr-compliance -->';
 
@@ -15,26 +15,18 @@ const LABEL_DEFINITIONS = {
   },
 };
 
-// A PR counts as having visual proof only if it embeds or links to actual media.
-// A bare filename such as "logo.png" in plain text does not qualify.
 const VISUAL_PROOF_PATTERNS = [
-  // Markdown image embed: ![alt](url)
   /!\[[^\]]*\]\([^)]+\)/,
-  // HTML <img> / <video> tag with a src attribute
   /<(?:img|video)\b[^>]*\bsrc\s*=/i,
-  // GitHub upload links (uploaded videos are pasted as bare URLs)
   /https?:\/\/github\.com\/user-attachments\/assets\/[\w-]+/i,
-  // Direct link (bare or markdown link) to an image/video file
   /https?:\/\/[^\s)>"']+\.(?:png|jpe?g|gif|webp|mp4|mov|webm)(?:\?[^\s)>"']*)?(?=[\s)>"']|$)/i,
 ];
 
 function hasVisualProof(body) {
-  // Ignore HTML comments so template placeholders don't count as proof
   const visibleBody = body.replace(/<!--[\s\S]*?-->/g, '');
   return VISUAL_PROOF_PATTERNS.some((pattern) => pattern.test(visibleBody));
 }
 
-// Assignees are capped at 10 per issue by GitHub, so first: 20 can never truncate.
 const LINKED_ISSUES_QUERY = `
   query ($owner: String!, $repo: String!, $number: Int!, $cursor: String) {
     repository(owner: $owner, name: $repo) {
@@ -84,8 +76,7 @@ const LINKED_PULL_REQUESTS_QUERY = `
   }
 `;
 
-// Fetches every closing issue (all pages) with its full assignee and label lists,
-// so the check never passes on a truncated result.
+// Fetches every closing issue (all pages) with its full assignee and label lists
 async function fetchLinkedIssues(github, owner, repo, prNumber) {
   const issues = [];
   let cursor = null;
@@ -185,7 +176,6 @@ async function ensureLabelExists(github, owner, repo, name) {
 }
 
 async function updateLabels({ github, core, owner, repo, pr, labelToAdd, labelToRemove }) {
-  // Label problems must never stop the report comment from being posted
   try {
     await ensureLabelExists(github, owner, repo, labelToAdd);
 
@@ -251,8 +241,6 @@ async function postReport({ github, owner, repo, prNumber, message }) {
 }
 
 async function checkPullRequest({ github, core, owner, repo, prNumber }) {
-  // Always load the PR fresh: the event payload can be stale, and issue-triggered
-  // runs have no PR payload at all.
   const { data: pr } = await github.rest.pulls.get({
     owner: owner,
     repo: repo,
@@ -333,7 +321,6 @@ module.exports = async ({ github, context, core }) => {
   if (context.payload.pull_request) {
     prNumbers = [context.payload.pull_request.number];
   } else if (context.payload.issue) {
-    // Issue assigned/unassigned/labeled: recheck every open PR that closes it
     prNumbers = await fetchLinkedPullRequestNumbers(github, owner, repo, context.payload.issue.number);
     core.info(`Issue #${context.payload.issue.number} is linked to PRs: ${prNumbers.join(', ') || 'none'}`);
   } else {
