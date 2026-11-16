@@ -1,0 +1,79 @@
+name: Redirect open issues to Discord
+
+on:
+  issues:
+    types: [opened, reopened]
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  add-discord-comment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add Discord redirect to open issues
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        with:
+          script: |
+            const discordUrl = "https://discord.com/channels/1022871757289422898/1311271974630330388";
+
+            const marker = "<!-- discord-redirect: 1022871757289422898-1311271974630330388 -->";
+            
+            const body = [
+              "Thanks for reporting this!",
+              "",
+              `For questions, troubleshooting, and discussions related to PictoPy, please join our [Discord community](${discordUrl}).`,
+              "",
+              "You can discuss the issue with the community and get help there.",
+              "",
+              marker
+            ].join("\n");
+
+            if (context.eventName === "workflow_dispatch") {
+              issues = await github.paginate(github.rest.issues.listForRepo, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: "open",
+                per_page: 100
+              });
+
+              issues = issues.filter(issue => !issue.pull_request);
+            } else {
+              const issue = context.payload.issue;
+
+              if (!issue || issue.pull_request) {
+                core.info("Not a regular issue. Skipping.");
+                return;
+              }
+
+              issues = [issue];
+            }
+
+            for (const issue of issues) {
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                per_page: 100
+              });
+
+              const alreadyHasRedirect = comments.some(comment =>
+                (comment.body || "").includes(marker) ||
+                (comment.body || "").includes(discordUrl)
+              );
+
+              if (alreadyHasRedirect) {
+                core.info(`Issue #${issue.number} already has the redirect. Skipping.`);
+                continue;
+              }
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body
+              });
+
+              core.info(`Added redirect to issue #${issue.number}.`);
+            }
