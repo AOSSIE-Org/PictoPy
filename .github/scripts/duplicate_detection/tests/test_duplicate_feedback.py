@@ -93,7 +93,7 @@ def test_summarise_feedback_counts_outcomes() -> None:
             state_reason="duplicate",
             duplicate_of=7,
         ),
-        # Disputed by the author, and the legacy label removed by hand.
+        # Disputed by the author, and the label removed by hand.
         make_issue(
             12,
             [(bot, LEGACY_COMMENT), ("alice", "This is not a duplicate of #799.")],
@@ -270,7 +270,19 @@ def test_fetch_issues_since_fetches_every_comment_and_label_removal() -> None:
     more = {
         ("comments", "k1"): page([{"author": None, "body": "second"}], "k2"),
         ("comments", "k2"): page([{"author": None, "body": "third"}]),
-        ("timelineItems", "u1"): page([{"label": {"name": "possible-duplicate"}}]),
+        ("timelineItems", "u1"): page(
+            [
+                {
+                    "actor": {"login": "maintainer"},
+                    "label": {"name": "possible-duplicate"},
+                },
+                # The workflow's own removal, when it deletes a stale comment.
+                {
+                    "actor": {"login": "github-actions"},
+                    "label": {"name": "possible-duplicate"},
+                },
+            ]
+        ),
     }
 
     def transport(query: str, variables: dict, token: str) -> dict:

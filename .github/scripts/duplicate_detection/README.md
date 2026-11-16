@@ -14,8 +14,10 @@ title or body is edited:
 3. `duplicate_comment.py` renders up to three matches, grouped by whether they are open,
    resolved, or closed as not planned, plus at most one tracking issue. The workflow
    keeps one comment per issue, updating it on edits and deleting it if nothing matches
-   any more. Issues are referenced by number only, so no text from other issues is
-   copied into the comment.
+   any more. A new comment also adds the `possible-duplicate` label, and deleting the
+   comment removes it. Edits do not add the label back, so a maintainer who removes it
+   is not overruled. Issues are referenced by number only, so no text from other issues
+   is copied into the comment.
 
 The tests live in `tests/` and run in `pr-check.yml`. To run one locally:
 

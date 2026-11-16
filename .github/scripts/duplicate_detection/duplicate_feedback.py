@@ -31,7 +31,8 @@ from issue_corpus import (
 DEFAULT_DAYS = 90
 # The header the bot used before the comment carried MARKER.
 LEGACY_HEADER = "Potential Duplicate Issue (Semantic Match)"
-LEGACY_LABEL = "possible-duplicate"
+# Must match LABEL in .github/workflows/issue-triage.yml.
+LABEL = "possible-duplicate"
 # GraphQL reports the Actions bot as "github-actions"; REST adds "[bot]".
 BOT_LOGINS = {"github-actions", "github-actions[bot]"}
 
@@ -60,6 +61,9 @@ fragment UnlabeledPage on IssueTimelineItemsConnection {
   }
   nodes {
     ... on UnlabeledEvent {
+      actor {
+        login
+      }
       label {
         name
       }
@@ -200,8 +204,12 @@ def parse_issue(node: dict, repository: str) -> FeedbackIssue:
             {"author": login(c.get("author")), "body": c["body"]}
             for c in node["comments"]["nodes"]
         ],
+        # The workflow removes the label itself when it deletes its comment; only
+        # removals by people say anything about the suggestion.
         "unlabeled": [
-            e["label"]["name"] for e in node["timelineItems"]["nodes"] if e.get("label")
+            e["label"]["name"]
+            for e in node["timelineItems"]["nodes"]
+            if e.get("label") and login(e.get("actor")) not in BOT_LOGINS
         ],
     }
 
@@ -309,7 +317,7 @@ def summarise_feedback(
             report["commented"] += 1
         if disputed:
             report["disputed"].append((issue["number"], disputed))
-        if LEGACY_LABEL in issue["unlabeled"]:
+        if LABEL in issue["unlabeled"]:
             report["label_removed"].append(issue["number"])
 
         if issue["state"] == "closed" and is_duplicate(issue):
@@ -350,7 +358,7 @@ def render_report(report: FeedbackReport, repository: str, since: str) -> str:
         f"{share(len(report['confirmed']), commented, 'comments')} |",
         f"| Suggestion disputed by the issue author | {len(report['disputed'])} | "
         f"{share(len(report['disputed']), commented, 'comments')} |",
-        f"| `{LEGACY_LABEL}` label removed by hand | {len(report['label_removed'])} | |",
+        f"| `{LABEL}` label removed by hand | {len(report['label_removed'])} | |",
         f"| Closed as duplicate | {closures} | |",
         f"| Closed as duplicate, but the bot missed the original | "
         f"{len(report['missed'])} | "

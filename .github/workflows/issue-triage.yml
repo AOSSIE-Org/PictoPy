@@ -108,6 +108,8 @@ jobs:
           script: |
             // Must match MARKER in .github/scripts/duplicate_detection/duplicate_comment.py.
             const marker = "<!-- pictopy-duplicate-detection -->";
+            // Must match LABEL in .github/scripts/duplicate_detection/duplicate_feedback.py.
+            const label = "possible-duplicate";
             const body = process.env.COMMENT.trim();
             const issue = {
               owner: context.repo.owner,
@@ -140,11 +142,17 @@ jobs:
               }));
             } else if (body) {
               await safe(() => github.rest.issues.createComment({ ...issue, body }));
+              // Labelled only with a new comment, so a maintainer who removes the
+              // label is not overruled by the author's next edit.
+              await safe(() => github.rest.issues.addLabels({ ...issue, labels: [label] }));
             } else if (existing) {
               // An edited issue no longer matches, so the old suggestion is stale.
               await safe(() => github.rest.issues.deleteComment({
                 owner: issue.owner, repo: issue.repo, comment_id: existing.id
               }));
+              if (current.labels.some(l => (l.name || l) === label)) {
+                await safe(() => github.rest.issues.removeLabel({ ...issue, name: label }));
+              }
             } else {
               core.notice("No similar issues found.");
             }
