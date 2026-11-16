@@ -155,6 +155,19 @@ def test_disputes_accumulate_and_ignore_unrelated_issues() -> None:
     )
     assert summarise_feedback([unclear])["disputed"] == []
 
+    for body in (
+        "Not a duplicate of #3, but #4 describes this bug.",
+        "#4 describes this bug but this is not a duplicate of #3.",
+        "Not a duplicate of #3; #4 is the same thing.",
+    ):
+        same_sentence = make_issue(27, [(bot, new_comment(3, 4)), ("alice", body)])
+        assert summarise_feedback([same_sentence])["disputed"] == [(27, [3])], body
+
+    both = make_issue(
+        28, [(bot, new_comment(3, 4)), ("alice", "Not a duplicate of #3 or #4.")]
+    )
+    assert summarise_feedback([both])["disputed"] == [(28, [3, 4])]
+
 
 def test_only_the_bot_comment_counts_as_a_suggestion() -> None:
     quoted = make_issue(23, [("bob", new_comment(3))])

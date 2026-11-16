@@ -1,11 +1,13 @@
 """Run from .github/scripts/duplicate_detection with: python -m tests.test_eval_duplicate_detection"""
 
+import detect_duplicate_issue as detector
 from tests.test_issue_corpus import make_issue
 
 from eval_duplicate_detection import (
     Pair,
     load_pairs,
     next_link,
+    older_counts,
     percentile,
     prefix_resolver,
     rank_of,
@@ -76,17 +78,38 @@ def test_summarise_resolves_labelled_candidates_like_the_detector() -> None:
 
 
 def test_prefix_resolver_only_follows_links_to_older_issues() -> None:
+    def at(second: int) -> str:
+        return f"2026-01-01T00:00:{second:02d}Z"
+
     corpus = [
-        make_issue(1, duplicate_of=30),
-        make_issue(5, duplicate_of=2),
-        make_issue(2),
-        make_issue(20),
-        make_issue(30),
+        make_issue(1, duplicate_of=30, created_at=at(1)),
+        make_issue(5, duplicate_of=2, created_at=at(2)),
+        make_issue(2, created_at=at(3)),
+        make_issue(20, created_at=at(4)),
+        make_issue(30, created_at=at(5)),
+        # Transferred in: a higher number, but created before #20.
+        make_issue(40, created_at=at(3)),
+        make_issue(6, duplicate_of=40, created_at=at(2)),
     ]
     canonical = prefix_resolver(corpus)
     # Query #20 cannot see #30, so the detector shows #1 itself.
     assert canonical(20, 1) == 1
     assert canonical(20, 5) == 2
+    assert canonical(20, 6) == 40
+    # #2 and #40 were opened in the same second, so neither sees the other.
+    assert canonical(2, 6) == 6
+
+
+def test_older_counts_match_the_detector_candidates() -> None:
+    created = ["01", "02", "02", "03"]
+    corpus = [
+        make_issue(n, created_at=f"2026-01-01T00:00:{c}Z")
+        for n, c in zip([1, 7, 3, 4], created)
+    ]
+    older = older_counts(corpus)
+    for issue in corpus:
+        expected = detector.candidates(corpus, issue)
+        assert corpus[: older[issue["number"]]] == expected, issue["number"]
 
 
 def test_labelled_pairs_are_well_formed() -> None:
@@ -106,5 +129,6 @@ if __name__ == "__main__":
     test_summarise_counts_flags_and_shown_pairs()
     test_summarise_resolves_labelled_candidates_like_the_detector()
     test_prefix_resolver_only_follows_links_to_older_issues()
+    test_older_counts_match_the_detector_candidates()
     test_labelled_pairs_are_well_formed()
     print("All tests passed.")

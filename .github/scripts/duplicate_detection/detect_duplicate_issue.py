@@ -118,7 +118,7 @@ def find_duplicates(
     ]
 
 
-def candidates(corpus: list[Issue], current: dict) -> list[Issue]:
+def candidates(corpus: list[Issue], current: Mapping[str, Any]) -> list[Issue]:
     # Issues opened after this one cannot be what it duplicates.
     return [issue for issue in corpus if issue["created_at"] < current["created_at"]]
 

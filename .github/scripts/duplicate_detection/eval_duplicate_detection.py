@@ -18,6 +18,7 @@ import os
 import re
 import sys
 import urllib.request
+from bisect import bisect_left
 from functools import lru_cache
 from pathlib import Path
 from typing import Callable, Iterable, Sequence, TypedDict
@@ -214,13 +215,20 @@ def summarise(
     }
 
 
+def older_counts(corpus: list[Issue]) -> dict[int, int]:
+    """For a corpus in creation order, how many issues each one's detector run sees."""
+    created = [issue["created_at"] for issue in corpus]
+    # bisect_left drops issues opened in the same second, as candidates() does.
+    return {i["number"]: bisect_left(created, i["created_at"]) for i in corpus}
+
+
 def prefix_resolver(corpus: list[Issue]) -> Callable[[int, int], int]:
     """Resolve a candidate as the detector does for a query: through older issues."""
-    position = {issue["number"]: k for k, issue in enumerate(corpus)}
+    by_number = {issue["number"]: issue for issue in corpus}
 
     @lru_cache(maxsize=None)
     def older(query: int) -> dict[int, Issue]:
-        return {i["number"]: i for i in corpus[: position[query]]}
+        return {i["number"]: i for i in detector.candidates(corpus, by_number[query])}
 
     def canonical(query: int, number: int) -> int:
         return resolve_canonical(number, older(query))
@@ -229,15 +237,15 @@ def prefix_resolver(corpus: list[Issue]) -> Callable[[int, int], int]:
 
 
 def usable_pairs(
-    pairs: Sequence[Pair], position: dict[int, int], label: str
+    pairs: Sequence[Pair], position: dict[int, int], older: dict[int, int], label: str
 ) -> list[Pair]:
     usable = []
     for pair in pairs:
         issue, candidate = pair["issue"], pair["candidate"]
         if issue not in position or candidate not in position:
             print(f"skipping {label} #{issue} -> #{candidate}: not an issue in corpus")
-        elif candidate > issue:
-            print(f"skipping {label} #{issue} -> #{candidate}: candidate is newer")
+        elif position[candidate] >= older[issue]:
+            print(f"skipping {label} #{issue} -> #{candidate}: candidate is not older")
         else:
             usable.append(pair)
     return usable
@@ -250,14 +258,16 @@ def evaluate(
     since: str,
     linked: bool = False,
 ) -> dict:
+    # The detector sees only issues created strictly before the new one, so each
+    # query's candidates are a prefix of the corpus in creation order.
+    corpus = sorted(corpus, key=lambda i: (i["created_at"], i["number"]))
     numbers = [i["number"] for i in corpus]
     position = {n: k for k, n in enumerate(numbers)}
-    positives = usable_pairs(positives, position, "positive")
-    negatives = usable_pairs(negatives, position, "negative")
+    older = older_counts(corpus)
+    positives = usable_pairs(positives, position, older, "positive")
+    negatives = usable_pairs(negatives, position, older, "negative")
     eval_queries = [
-        i["number"]
-        for i in corpus
-        if i["created_at"] >= since and position[i["number"]]
+        i["number"] for i in corpus if i["created_at"] >= since and older[i["number"]]
     ]
     if not eval_queries:
         raise SystemExit(f"No issues created since {since}; pick an earlier --since.")
@@ -268,7 +278,7 @@ def evaluate(
     for name, to_text in VARIANTS.items():
         print(f"Embedding corpus for variant '{name}'...", file=sys.stderr)
         sim = similarity_rows([to_text(i) for i in corpus])
-        rows[name] = {q: sim[position[q]][: position[q]] for q in queries}
+        rows[name] = {q: sim[position[q]][: older[q]] for q in queries}
 
     def run(variant: str, threshold: float) -> Outcome:
         shown = {
@@ -282,7 +292,7 @@ def evaluate(
         q: [
             m["number"]
             for m in detector.find_duplicates(
-                rows["title"][q], rows["body"][q], list(corpus[: position[q]])
+                rows["title"][q], rows["body"][q], list(corpus[: older[q]])
             )
         ]
         for q in queries

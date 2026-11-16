@@ -263,17 +263,25 @@ def suggested_numbers(body: str) -> list[int] | None:
     return None
 
 
+# Splitting lists like "#3, #4 or #5" too undercounts disputes, which is the
+# safe direction: a wrong negative is worse than a missing one.
+CLAUSE_BREAK = re.compile(
+    r"(?<=[.!?])\s+|\n+|[,;:]|\s(?=(?:but|while|whereas|however|though|although)\b)",
+    re.IGNORECASE,
+)
+
+
 def disputed_suggestions(body: str, suggested: list[int]) -> list[int]:
     """The suggestions an author's comment disputes, or none when it is unclear."""
-    # "Not a duplicate of #3. #4 looks right." disputes #3 only, so numbers count
-    # only when they share a sentence with the dispute.
-    sentences = re.split(r"(?<=[.!?])\s+|\n+", body)
-    disputing = " ".join(s for s in sentences if DISPUTE.search(s))
+    # "Not a duplicate of #3, but #4 describes this bug." disputes #3 only, so
+    # numbers count only when they share a clause with the dispute.
+    clauses = CLAUSE_BREAK.split(body)
+    disputing = " ".join(c for c in clauses if DISPUTE.search(c))
     named_in_dispute = {int(n) for n in re.findall(r"#(\d+)", disputing)}
     if named_in_dispute:
         return [n for n in suggested if n in named_in_dispute]
     # A bare "not a duplicate" disputes them all; one that names issues only in
-    # other sentences is ambiguous, and an ambiguous negative is worse than none.
+    # other clauses is ambiguous, and an ambiguous negative is worse than none.
     return [] if re.search(r"#\d+", body) else list(suggested)
 
 
