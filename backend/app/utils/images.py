@@ -243,6 +243,11 @@ def image_util_classify_and_face_detect_images(
             # Step 1: Get classes
             classes = object_classifier.get_classes(image_path)
 
+            # Skip images that could not be loaded
+            if classes is None:
+                logger.warning(f"Skipping unreadable image: {image_path}")
+                continue
+
             # Step 2: Insert class-image pairs if classes were detected
             if len(classes) > 0:
                 # Create image-class pairs
