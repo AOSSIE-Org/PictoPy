@@ -640,7 +640,11 @@ def image_util_find_folder_id_for_image(
     while current_path:
         if current_path in folder_path_to_id:
             return folder_path_to_id[current_path]
-        current_path = os.path.dirname(current_path)
+        next_path = os.path.dirname(current_path)
+        # dirname of a filesystem root ("/", "C:\\") is itself, so stop there.
+        if next_path == current_path:
+            break
+        current_path = next_path
 
     return None
 
