@@ -272,7 +272,9 @@ class TestAnniversaryWindow:
     ) -> None:
         assert memory_curator._anniversary_window(reference) == expected_window
         for captured, expected_year in credits:
-            assert memory_curator._anniversary_year(reference, captured) == expected_year
+            assert (
+                memory_curator._anniversary_year(reference, captured) == expected_year
+            )
 
 
 class TestDisplayNames:
@@ -474,7 +476,9 @@ class TestAnniversaryCuration:
         included = {image_id for image_id, _, _ in upserts[0]["images"]}
         assert included == {img["id"] for img in jan1_prior + nye_prior}
 
-    def test_new_year_eve_boundary_drops_recent_and_credits_prior_jan_first(self) -> None:
+    def test_new_year_eve_boundary_drops_recent_and_credits_prior_jan_first(
+        self,
+    ) -> None:
         """On Dec 31, photos from Jan 1 of the same year belong to 1 year ago (the prior Dec 31)."""
         ref = "2025-12-31"
         today_photos = [
@@ -497,9 +501,13 @@ class TestAnniversaryCuration:
         # Jan 1 2025 and Dec 31 2024 merge into one "1 year ago" memory (2024 anniversary);
         # Dec 31 2025 and Dec 30 2025 (today/yesterday) are dropped entirely.
         candidates = today_photos + yesterday_photos + jan1_same_year + dec31_prior
+        mocks: Dict[str, Any] = {}
         upserts = of_type(
-            run_curator(anniversary=candidates, reference_date=ref),
+            run_curator(anniversary=candidates, reference_date=ref, mocks=mocks),
             "anniversary",
+        )
+        mocks["db_get_anniversary_candidates"].assert_called_once_with(
+            ["01-01", "12-30", "12-31"], 2025
         )
 
         assert len(upserts) == 1
