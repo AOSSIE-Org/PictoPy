@@ -517,7 +517,7 @@ def _curate_anniversaries(context: _CurationContext) -> int:
     """Build memories from photos taken on this date in previous years."""
     reference = context.reference
     candidates = db_get_anniversary_candidates(
-        _anniversary_window(reference), reference.year - 1
+        _anniversary_window(reference), reference.year
     )
     if not candidates:
         return 0
