@@ -12,7 +12,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 
 from collections import defaultdict, Counter
-from typing import Any, List, Dict, Optional, Union, Tuple
+from typing import List, Dict, Optional, Tuple, TypedDict
 from numpy.typing import NDArray
 from app.database.connection import get_db_connection
 from app.utils.image_loader import load_image_bgr
@@ -46,6 +46,15 @@ from app.logging.setup_logging import get_logger
 logger = get_logger(__name__)
 
 
+class ClusterRow(TypedDict):
+    """Clustering result as the database layer consumes it."""
+
+    face_id: int
+    embedding: NDArray
+    cluster_id: str
+    cluster_name: Optional[str]
+
+
 class ClusterResult:
     """Result class for clustering operation"""
 
@@ -61,7 +70,7 @@ class ClusterResult:
         self.cluster_uuid = cluster_uuid
         self.cluster_name = cluster_name
 
-    def to_dict(self) -> Dict[str, Union[int, NDArray, str, None]]:
+    def to_dict(self) -> ClusterRow:
         """Convert to dictionary format"""
         return {
             "face_id": self.face_id,
@@ -140,7 +149,7 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
                 db_update_metadata(current_metadata, cursor)
             return 0, total_faces_skipped
 
-        result_dicts: List[Dict[str, Any]] = [result.to_dict() for result in results]
+        result_dicts: List[ClusterRow] = [result.to_dict() for result in results]
 
         # Extract unique clusters with their names (without face images yet)
         unique_clusters = {}

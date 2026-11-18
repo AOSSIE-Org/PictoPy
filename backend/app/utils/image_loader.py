@@ -36,6 +36,7 @@ def load_image_bgr(image_path: str) -> NDArray[np.uint8] | None:
         OSError,
         UnidentifiedImageError,
         ValueError,
+        SyntaxError,  # Pillow's PNG decoder raises this for broken chunks
         Image.DecompressionBombError,
     ) as e:
         logger.error("Failed to decode image %s: %s", image_path, e)

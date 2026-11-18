@@ -94,6 +94,23 @@ def test_returns_none_for_decompression_bomb(
         assert load_image_bgr(str(path)) is None
 
 
+def test_returns_none_when_pillow_raises_syntax_error(
+    tmp_path: Path, pixels: np.ndarray
+) -> None:
+    """Pillow's PNG plugin raises SyntaxError, not OSError, on broken chunks."""
+    path = tmp_path / "broken.png"
+    cv2.imwrite(str(path), pixels)
+
+    with (
+        patch("app.utils.image_loader.cv2.imdecode", return_value=None),
+        patch(
+            "app.utils.image_loader.Image.open",
+            side_effect=SyntaxError("broken PNG file (bad header checksum)"),
+        ),
+    ):
+        assert load_image_bgr(str(path)) is None
+
+
 def test_returns_none_for_missing_file(tmp_path: Path) -> None:
     assert load_image_bgr(str(tmp_path / "missing.png")) is None
 
