@@ -80,16 +80,31 @@ class TestClassifyAndFaceDetectImages:
         pipeline.insert_faces.assert_not_called()
         pipeline.mark_tagged.assert_called_once_with("img-1", True)
 
-    def test_unreadable_image_is_still_marked_tagged(self, pipeline):
-        """Otherwise every pass would retry it forever."""
+    def test_unreadable_image_is_not_marked_tagged(self, pipeline):
         pipeline.classifier.get_classes.return_value = [0]
         pipeline.detector.detect_faces.return_value = None
 
         skipped = image_util_classify_and_face_detect_images([_image("img-1")])
 
         pipeline.insert_faces.assert_not_called()
-        pipeline.mark_tagged.assert_called_once_with("img-1", True)
+        pipeline.mark_tagged.assert_not_called()
         assert skipped == 0
+
+    def test_unreadable_image_is_skipped_and_next_image_is_processed(
+        self, pipeline
+    ):
+        pipeline.classifier.get_classes.side_effect = [
+            None,
+            [],
+        ]
+
+        image_util_classify_and_face_detect_images(
+            [_image("img-1"), _image("img-2")]
+        )
+
+        assert pipeline.classifier.get_classes.call_count == 2
+        pipeline.mark_tagged.assert_called_once_with("img-2", True)
+        pipeline.detector.detect_faces.assert_not_called()
 
     def test_image_deleted_mid_pass_does_not_abort_the_rest(self, pipeline):
         """Inference is slow, so a folder can be removed while its images are being
