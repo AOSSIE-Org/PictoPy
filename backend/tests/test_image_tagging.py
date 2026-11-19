@@ -90,17 +90,13 @@ class TestClassifyAndFaceDetectImages:
         pipeline.mark_tagged.assert_not_called()
         assert skipped == 0
 
-    def test_unreadable_image_is_skipped_and_next_image_is_processed(
-        self, pipeline
-    ):
+    def test_unreadable_image_is_skipped_and_next_image_is_processed(self, pipeline):
         pipeline.classifier.get_classes.side_effect = [
             None,
             [],
         ]
 
-        image_util_classify_and_face_detect_images(
-            [_image("img-1"), _image("img-2")]
-        )
+        image_util_classify_and_face_detect_images([_image("img-1"), _image("img-2")])
 
         assert pipeline.classifier.get_classes.call_count == 2
         pipeline.mark_tagged.assert_called_once_with("img-2", True)
