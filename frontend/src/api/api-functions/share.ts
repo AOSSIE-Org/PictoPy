@@ -35,3 +35,16 @@ export const revokeShare = async (token: string): Promise<BackendRes<null>> => {
   const response = await apiClient.delete(shareEndpoints.revokeShare(token));
   return response.data;
 };
+
+/**
+ * Stop serving all shares for an album.
+ * @param albumId - The album UUID
+ */
+export const revokeAlbumShares = async (
+  albumId: string,
+): Promise<BackendRes<null>> => {
+  const response = await apiClient.delete(
+    shareEndpoints.revokeAlbumShares(albumId),
+  );
+  return response.data;
+};

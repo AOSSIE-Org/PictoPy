@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import {
   Plus,
@@ -74,6 +75,7 @@ const AlbumCardSkeleton: React.FC = () => (
 function Albums() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const albums = useSelector(selectAlbums);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -129,6 +131,9 @@ function Albums() {
   const deleteAlbumMutation = usePictoMutation({
     mutationFn: deleteAlbum,
     autoInvalidateTags: ['albums'],
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['shares'] });
+    },
   });
 
   useMutationFeedback(deleteAlbumMutation, {

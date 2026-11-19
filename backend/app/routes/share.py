@@ -18,7 +18,12 @@ from app.schemas.share import (
 from app.share.registry import share_registry_list
 from app.share.server import share_server_port
 from app.utils.network import network_util_list_candidates
-from app.utils.share import share_util_create, share_util_describe, share_util_revoke
+from app.utils.share import (
+    share_util_create,
+    share_util_describe,
+    share_util_revoke,
+    share_util_revoke_album,
+)
 
 logger = get_logger(__name__)
 
@@ -130,3 +135,21 @@ async def revoke_share(token: str = Path(...)) -> RevokeShareResponse:
             "Share Not Found", "No active share exists with the provided token."
         )
     return RevokeShareResponse(success=True, message="Share revoked")
+
+
+# DELETE /share/albums/{album_id} - Stop sharing an album
+@router.delete(
+    "/albums/{album_id}",
+    response_model=RevokeShareResponse,
+    responses={**_NOT_FOUND, **_SERVER_ERROR},
+)
+async def revoke_album_shares(album_id: str = Path(...)) -> RevokeShareResponse:
+    revoked_count = await share_util_revoke_album(album_id)
+    if revoked_count == 0:
+        raise _not_found(
+            "Share Not Found", "No active shares exist for the provided album ID."
+        )
+    return RevokeShareResponse(
+        success=True,
+        message=f"Revoked {revoked_count} active share(s) for album",
+    )
