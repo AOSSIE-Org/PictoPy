@@ -26,6 +26,12 @@ ClassId = int
 SQLITE_ID_CHUNK = 500
 
 
+# Separator for GROUP_CONCAT-ing tag names into one row per image. ASCII Unit
+# Separator (0x1f) is a control character that cannot appear in a tag name, so
+# splitting the aggregated string back into a list is always unambiguous.
+_TAG_SEPARATOR = "\x1f"
+
+
 class ImageRecord(TypedDict, total=False):
     """Represents the full images table structure"""
 
@@ -229,6 +235,113 @@ def db_bulk_insert_images(image_records: List[ImageRecord]) -> bool:
 
 
 def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
+    """
+    Get all images from the database with their tags.
+
+    Args:
+        tagged: Optional filter for tagged status. If None, returns all images.
+                If True, returns only tagged images. If False, returns only untagged images.
+
+    Returns:
+        List of dictionaries containing all image data including tags
+    """
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        # Aggregate each image's tags into a single row in SQLite with
+        # GROUP_CONCAT instead of returning one (image, tag) row per tag and
+        # grouping them in Python. An image with N tags used to produce N rows
+        # that Python looped over; GROUP BY collapses them to one row per image,
+        # so SQLite's C engine does the grouping over a library of 100k+ images.
+        #
+        # _TAG_SEPARATOR (ASCII Unit Separator, \x1f) cannot occur in a tag
+        # name, so splitting the concatenated string back into a list is
+        # unambiguous even if a label ever contains a comma.
+        query = """
+            SELECT
+                i.id,
+                i.path,
+                i.folder_id,
+                i.thumbnailPath,
+                i.metadata,
+                i.isTagged,
+                i.isFavourite,
+                i.latitude,
+                i.longitude,
+                i.captured_at,
+                i.favouritedAt,
+                GROUP_CONCAT(m.name, ?) AS tag_names
+            FROM images i
+            LEFT JOIN image_classes_display ic ON i.id = ic.image_id
+            LEFT JOIN mappings m ON ic.class_id = m.class_id
+        """
+
+        params: List[Any] = [_TAG_SEPARATOR]
+        if tagged is not None:
+            query += " WHERE i.isTagged = ?"
+            params.append(tagged)
+
+        query += " GROUP BY i.id ORDER BY i.path"
+
+        cursor.execute(query, params)
+
+        results = cursor.fetchall()
+
+        from app.utils.images import image_util_parse_metadata
+
+        images: List[dict] = []
+        for (
+            image_id,
+            path,
+            folder_id,
+            thumbnail_path,
+            metadata,
+            is_tagged,
+            is_favourite,
+            latitude,
+            longitude,
+            captured_at,
+            favourited_at,
+            tag_names,
+        ) in results:
+            # GROUP_CONCAT returns NULL when an image has no tags (all LEFT JOIN
+            # rows were NULL). Split on the separator, drop duplicates, then sort
+            # by name to match the old "ORDER BY m.name" tag ordering. Empty ->
+            # None, as callers expect.
+            tags: Optional[List[str]] = None
+            if tag_names:
+                names = sorted(
+                    {name for name in tag_names.split(_TAG_SEPARATOR) if name}
+                )
+                tags = names or None
+
+            images.append(
+                {
+                    "id": image_id,
+                    "path": path,
+                    "folder_id": str(folder_id),
+                    "thumbnailPath": thumbnail_path,
+                    "metadata": image_util_parse_metadata(metadata),
+                    "isTagged": bool(is_tagged),
+                    "isFavourite": bool(is_favourite),
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "captured_at": (
+                        captured_at if captured_at else None
+                    ),  # SQLite returns string
+                    "favouritedAt": favourited_at if favourited_at else None,
+                    "tags": tags,
+                }
+            )
+
+        return images
+
+    except sqlite3.Error as e:
+        logger.error(f"Error getting all images: {e}")
+        return []
+    finally:
+        conn.close()
     """
     Get all images from the database with their tags.
 
