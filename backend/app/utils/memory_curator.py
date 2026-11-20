@@ -231,6 +231,26 @@ def _anniversary_window(reference: date) -> List[str]:
     return sorted({(reference + timedelta(days=o)).strftime("%m-%d") for o in offsets})
 
 
+def _anniversary_year(reference: date, captured: date) -> Optional[int]:
+    """Credit a photo to the anniversary year nearest it, or drop it."""
+    # Last night is not an anniversary: yesterday's photos belong to today.
+    if abs((captured - reference).days) <= ANNIVERSARY_DAY_WINDOW:
+        return None
+
+    diff = reference.year - captured.year
+    for years_ago in (diff - 1, diff, diff + 1):
+        if years_ago < 1:
+            continue
+        target_year = reference.year - years_ago
+        try:
+            anniversary = reference.replace(year=target_year)
+        except ValueError:
+            anniversary = date(target_year, 2, 28)
+        if abs((captured - anniversary).days) <= ANNIVERSARY_DAY_WINDOW:
+            return target_year
+    return None
+
+
 def _display_event_name(label: str) -> str:
     return EVENT_DISPLAY_NAMES.get(label, label.title())
 
@@ -497,16 +517,19 @@ def _curate_anniversaries(context: _CurationContext) -> int:
     """Build memories from photos taken on this date in previous years."""
     reference = context.reference
     candidates = db_get_anniversary_candidates(
-        _anniversary_window(reference), reference.year - 1
+        _anniversary_window(reference), reference.year
     )
     if not candidates:
         return 0
 
     by_year: Dict[int, List[Dict[str, Any]]] = defaultdict(list)
     for image in candidates:
-        capture_year = image.get("capture_year")
-        if capture_year is not None:
-            by_year[capture_year].append(image)
+        captured_dt = parse_captured_at(image.get("captured_at"))
+        if captured_dt is None:
+            continue
+        anniv_year = _anniversary_year(reference, captured_dt.date())
+        if anniv_year is not None:
+            by_year[anniv_year].append(image)
 
     qualifying = [
         (year, images)
