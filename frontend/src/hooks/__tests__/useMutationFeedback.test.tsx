@@ -41,4 +41,45 @@ describe('useMutationFeedback', () => {
     const store = renderWithTwoFeedbackCalls(false);
     expect(store.getState().loader.loading).toBe(false);
   });
+
+  test('calls onSuccess even when showSuccess is false', () => {
+    const store = configureStore({ reducer: rootReducer });
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <Provider store={store}>{children}</Provider>
+    );
+    const onSuccess = jest.fn();
+
+    renderHook(
+      () =>
+        useMutationFeedback(
+          { isSuccess: true },
+          { showSuccess: false, onSuccess },
+        ),
+      { wrapper },
+    );
+
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    expect(store.getState().infoDialog.isOpen).toBe(false);
+  });
+
+  test('calls onError even when showError is false', () => {
+    const store = configureStore({ reducer: rootReducer });
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <Provider store={store}>{children}</Provider>
+    );
+    const onError = jest.fn();
+    const testError = new Error('Test error');
+
+    renderHook(
+      () =>
+        useMutationFeedback(
+          { isError: true, error: testError },
+          { showError: false, onError },
+        ),
+      { wrapper },
+    );
+
+    expect(onError).toHaveBeenCalledWith(testError);
+    expect(store.getState().infoDialog.isOpen).toBe(false);
+  });
 });
