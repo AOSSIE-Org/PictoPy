@@ -2,6 +2,7 @@ import { useLayoutEffect } from 'react';
 import { fireEvent, render, screen, waitFor } from '@/test-utils';
 import { Routes, Route, useNavigate } from 'react-router';
 import { PersonImages } from '@/pages/PersonImages/PersonImages';
+import { setClusters } from '@/features/faceClustersSlice';
 import type { Image, Video } from '@/types/Media';
 import * as apiFunctions from '@/api/api-functions';
 
@@ -16,6 +17,7 @@ jest.mock('@/api/api-functions', () => ({
 }));
 
 const fetchClusterImages = apiFunctions.fetchClusterImages as jest.Mock;
+const renameCluster = apiFunctions.renameCluster as jest.Mock;
 
 const makeImage = (id: string, path: string): Image => ({
   id,
@@ -106,6 +108,7 @@ const hasPersonB = (container: HTMLElement) =>
 
 beforeEach(() => {
   fetchClusterImages.mockReset();
+  renameCluster.mockReset();
   fetchClusterImages.mockImplementation(async ({ clusterId }) => ({
     success: true,
     data: {
@@ -218,5 +221,137 @@ describe('PersonImages videos', () => {
     expect(
       screen.queryByRole('heading', { name: 'Videos' }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe('PersonImages cluster rename', () => {
+  test('renames cluster, updates caches and store, and shows success feedback', async () => {
+    let persistedName = 'Alice';
+    fetchClusterImages.mockImplementation(async () => ({
+      success: true,
+      data: {
+        images: personAImages,
+        cluster_name: persistedName,
+      },
+    }));
+    renameCluster.mockImplementation(async ({ newName }) => {
+      persistedName = newName;
+      return { success: true, message: 'Cluster renamed' };
+    });
+
+    const { store, queryClient } = renderPerson('A');
+    store.dispatch(
+      setClusters([
+        {
+          cluster_id: 'A',
+          face_count: 2,
+          video_count: 0,
+          cluster_name: 'Alice',
+        },
+      ]),
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: 'Alice' }),
+    ).toBeInTheDocument();
+
+    const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Name' }));
+    const input = screen.getByLabelText('Person name');
+    fireEvent.change(input, { target: { value: '  Alicia  ' } });
+
+    expect(screen.getByRole('heading', { name: 'Alice' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save person name' }));
+
+    await waitFor(() => {
+      expect(renameCluster).toHaveBeenCalledWith({
+        clusterId: 'A',
+        newName: 'Alicia',
+      });
+      expect(
+        screen.getByRole('heading', { name: 'Alicia' }),
+      ).toBeInTheDocument();
+    });
+
+    expect(screen.queryByLabelText('Person name')).not.toBeInTheDocument();
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['clusters'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['person-images', 'A'],
+    });
+    const updatedCluster = store.getState().faceClusters.clusters[0];
+    expect(updatedCluster.cluster_name).toBe('Alicia');
+    expect(store.getState().infoDialog.isOpen).toBe(true);
+    expect(store.getState().infoDialog.variant).toBe('info');
+    expect(store.getState().infoDialog.title).toBe('Success');
+  });
+
+  test('rejects blank names without calling renameCluster', async () => {
+    const { store } = renderPerson('A');
+
+    expect(
+      await screen.findByRole('heading', { name: 'Alice' }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Name' }));
+    fireEvent.change(screen.getByLabelText('Person name'), {
+      target: { value: '   ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save person name' }));
+
+    expect(renameCluster).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Person name')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Alice' })).toBeInTheDocument();
+    expect(store.getState().infoDialog).toMatchObject({
+      isOpen: true,
+      title: 'Invalid Name',
+      variant: 'error',
+    });
+  });
+
+  test('keeps displayed name and edit mode on rename failure', async () => {
+    renameCluster.mockRejectedValue(new Error('Network error'));
+
+    const { store, queryClient } = renderPerson('A');
+    const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+
+    expect(
+      await screen.findByRole('heading', { name: 'Alice' }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Name' }));
+    const input = screen.getByLabelText('Person name');
+    fireEvent.change(input, { target: { value: 'Alicia' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    await waitFor(
+      () => {
+        expect(store.getState().infoDialog.isOpen).toBe(true);
+        expect(store.getState().infoDialog.variant).toBe('error');
+      },
+      { timeout: 3000 },
+    );
+
+    expect(screen.getByRole('heading', { name: 'Alice' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Person name')).toHaveValue('Alicia');
+    expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: ['clusters'] });
+  });
+
+  test('cancels editing on Escape without calling renameCluster', async () => {
+    renderPerson('A');
+
+    expect(
+      await screen.findByRole('heading', { name: 'Alice' }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Name' }));
+    const input = screen.getByLabelText('Person name');
+    fireEvent.change(input, { target: { value: 'Alicia' } });
+    fireEvent.keyDown(input, { key: 'Escape' });
+
+    expect(screen.queryByLabelText('Person name')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Alice' })).toBeInTheDocument();
+    expect(renameCluster).not.toHaveBeenCalled();
   });
 });
