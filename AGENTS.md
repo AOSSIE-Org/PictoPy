@@ -34,7 +34,8 @@ a subshell so it does not leak into the next command.
 | Frontend lint | `(cd frontend && npm run lint:check)` | `npm run lint:fix` |
 | Frontend format | `(cd frontend && npm run format:check)` | `npm run format:fix` |
 | Frontend tests | `(cd frontend && npm test)` | — |
-| Python lint + format | `pre-commit run --config .pre-commit-config.yaml --all-files` | rewrites in place |
+| Python lint + format | `SKIP=mypy-backend,mypy-sync-microservice pre-commit run --config .pre-commit-config.yaml --all-files` | rewrites in place |
+| Python type check (changed files) | see `agent-kit/references/ci-gates.md` | — |
 | Backend tests | `(cd backend && pytest)` | — |
 | Rust format | `(cd frontend/src-tauri && cargo fmt -- --check)` | `cargo fmt` |
 | Version bump | `npm run version:bump -- X.Y.Z` | — |
@@ -85,8 +86,11 @@ more than one job.
   and `npm run build` runs `tsc`. Type every export and every API boundary. The codebase
   still has some `any` — do not add more, and do not use `as` to silence a real type error.
 - **Python**: annotate function signatures and return types, as the existing modules do.
-  Table rows are `TypedDict` classes, not bare dicts. There is no mypy gate in CI, so
-  annotations are for the reader and for the next agent — write them accordingly.
+  Table rows are `TypedDict` classes, not bare dicts. MyPy is enforced in CI for changed
+  Python files, checking each touched file in full rather than only modified lines.
+  Pre-existing type errors in a touched file may cause the check to fail; contributors
+  should resolve relevant errors in touched files rather than assume existing errors will
+  be ignored.
 - Frontend types must match the backend's Pydantic response model. The backend is the
   source of truth; check `backend/app/routes/` rather than guessing the shape.
 
