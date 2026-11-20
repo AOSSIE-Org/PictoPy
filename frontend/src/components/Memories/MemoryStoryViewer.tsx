@@ -61,10 +61,7 @@ interface MemoryStoryViewerProps {
   musicEnabled: boolean;
 }
 
-/**
- * Full-screen, Instagram-style viewer: segmented progress bars, autoplay,
- * keyboard and swipe navigation, and a filmstrip of other memories.
- */
+/** Full-screen story viewer: progress bars, autoplay, keyboard and swipe nav. */
 export const MemoryStoryViewer: React.FC<MemoryStoryViewerProps> = ({
   memoryId,
   memories,

@@ -15,11 +15,10 @@ else:
         os.path.join(os.path.dirname(__file__), "..", "models", "ONNX_Exports")
     )
 
-# Microservice URLs
 SYNC_MICROSERVICE_URL = "http://localhost:52124"
 
-# The album share listener. Unlike the two services above this one binds
-# 0.0.0.0, so it is reachable by anything that can route to this machine.
+# The album share listener. Unlike the backend and sync service it binds 0.0.0.0,
+# so anything that can route to this machine can reach it.
 SHARE_SERVER_PORT = 52125
 
 CONFIDENCE_PERCENT = 0.6
@@ -180,13 +179,12 @@ SIGLIP2_EMBED_BATCH_SIZE = _get_env_int("SIGLIP2_EMBED_BATCH_SIZE", 8, min_value
 SIGLIP2_TEXT_MAX_LENGTH = 64
 SIGLIP2_TOKENIZER_PAD_ID = 0
 SIGLIP2_TOKENIZER_PAD_TOKEN = "<pad>"
-# bare-noun queries score low in absolute terms; 0.02 measured to cut true positives.
+# Bare-noun queries score low in absolute terms; 0.02 measurably cut true positives.
 SIGLIP2_MATCH_THRESHOLD = _get_env_float("SIGLIP2_MATCH_THRESHOLD", 0.01, min_value=0.0)
 
-# Curated-vocabulary pre-scoring. Ensembled label vectors score ~2 orders of
-# magnitude below live queries, so these floors are NOT comparable to
-# SIGLIP2_MATCH_THRESHOLD. Calibrated against a 151-image stratified eval set;
-# see backend/scripts/vocabulary/calibration_report.json.
+# Ensembled label vectors score ~2 orders of magnitude below live queries, so
+# these floors are NOT comparable to SIGLIP2_MATCH_THRESHOLD. Calibrated against
+# a 151-image eval set; see backend/scripts/vocabulary/calibration_report.json.
 SEMANTIC_SCORE_TOP_K = _get_env_int("SEMANTIC_SCORE_TOP_K", 15, min_value=1)
 # stricter cut for tag chips / tag lists; stored rows keep the full top-K
 SEMANTIC_DISPLAY_TOP_K = _get_env_int("SEMANTIC_DISPLAY_TOP_K", 5, min_value=1)
@@ -198,12 +196,9 @@ SEMANTIC_BUCKET_THRESHOLDS = {
 }
 SEMANTIC_DEFAULT_THRESHOLD = 5e-05
 
-# Video keyframe sampling. One frame every N seconds instead of per-frame
-# inference (30fps = 1800 forward passes per minute of video). The interval is
-# stretched when a video would exceed the cap, so cost per video is bounded.
-# The bounds are the single source of truth for both the sampler default here
-# and the user-preferences API schema, so the API can never accept an interval
-# the sampler would reject.
+# One frame every N seconds instead of per-frame inference (30fps = 1800 passes
+# per video-minute), stretched to keep cost per video bounded. These bounds also
+# back the user-preferences schema, so the API cannot accept what the sampler rejects.
 VIDEO_FRAME_INTERVAL_MIN = 0.5
 VIDEO_FRAME_INTERVAL_MAX = 300.0
 VIDEO_FRAME_INTERVAL_SECONDS = _get_env_float(

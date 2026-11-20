@@ -1,6 +1,5 @@
 import { RootState } from '@/app/store';
 
-// Basic selectors
 export const selectCurrentStepIndex = (state: RootState) =>
   state.onboarding.currentStepIndex;
 

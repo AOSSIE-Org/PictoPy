@@ -53,12 +53,10 @@ async def shutdown():
     logger.info("Shutdown request received for sync microservice")
 
     try:
-        # Stop the folder watcher first
         watcher_util_stop_folder_watcher()
     except Exception as e:
         logger.error(f"Error stopping folder watcher: {e}")
 
-    # Define callback to handle potential exceptions in the background task
     def _handle_shutdown_exception(task: asyncio.Task):
         try:
             task.result()

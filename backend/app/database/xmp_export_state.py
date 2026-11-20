@@ -36,10 +36,9 @@ def _width_or_height_changed() -> str:
     )
 
 
-# Every write that can change what export would put in an image. Triggers only
-# ever UPDATE existing state rows: inserting one while an image is being
-# cascade-deleted would violate its foreign key. "UPDATE OF" fires even when
-# the value is unchanged, so each column trigger also checks for a real change.
+# Every write that can change an image's exported data. Triggers only UPDATE state
+# rows, since an INSERT mid cascade-delete would break the foreign key. "UPDATE OF"
+# fires even on unchanged values, so each column trigger checks for a real change.
 _TRIGGERS: List[Tuple[str, str]] = [
     (
         "xmp_images_insert",

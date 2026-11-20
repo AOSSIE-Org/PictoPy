@@ -3,7 +3,6 @@ import { apiClient, syncApiClient } from '../axiosConfig';
 import { APIResponse } from '@/types/API';
 import { FolderTaggingStatusResponse } from '@/types/FolderStatus';
 
-// Request Types
 export interface AddFolderRequest {
   folder_path: string;
   parent_folder_id?: string;
@@ -23,7 +22,6 @@ export interface SyncFolderRequest {
   folder_id: string;
 }
 
-// API Functions
 export const getAllFolders = async (): Promise<APIResponse> => {
   const response = await apiClient.get<APIResponse>(
     foldersEndpoints.getAllFolders,

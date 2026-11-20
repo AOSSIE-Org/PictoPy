@@ -59,12 +59,7 @@ export default function NetflixStylePlayer({
   const containerRef = useRef<HTMLDivElement>(null);
   const hideControlsTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
-  // const resolvedSrc = useMemo(() => convertFileSrc(videoSrc), [videoSrc]);
-  const resolvedSrc = useMemo(() => {
-    const src = convertFileSrc(videoSrc);
-    console.log('Resolved video src:', src);
-    return src;
-  }, [videoSrc]);
+  const resolvedSrc = useMemo(() => convertFileSrc(videoSrc), [videoSrc]);
 
   // Reset per-source state. The overlay remounts the player per video, but this
   // keeps the component correct if a caller swaps videoSrc without remounting.
@@ -406,7 +401,6 @@ export default function NetflixStylePlayer({
         </div>
       )}
 
-      {/* Progress Bar */}
       <div
         className={`absolute right-0 bottom-16 left-0 px-4 transition-opacity ${
           controlsVisible
@@ -469,7 +463,6 @@ export default function NetflixStylePlayer({
         </div>
       </div>
 
-      {/* Controls */}
       <div
         className={`absolute right-0 bottom-4 left-0 flex items-center justify-between px-4 transition-opacity ${
           controlsVisible
@@ -522,7 +515,6 @@ export default function NetflixStylePlayer({
           </div>
         </div>
 
-        {/* Timestamp and Fullscreen */}
         <div className="flex items-center space-x-4">
           <div className="rounded-full bg-black/50 p-2 text-white">
             {formatDuration(currentTime) + ' / ' + formatDuration(duration)}

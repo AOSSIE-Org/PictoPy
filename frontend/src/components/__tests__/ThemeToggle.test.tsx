@@ -7,7 +7,6 @@ describe('ThemeSelector', () => {
     test('renders theme toggle button', () => {
       render(<ThemeSelector />);
 
-      // button should be accessible
       const button = screen.getByRole('button', { name: /themes/i });
       expect(button).toBeInTheDocument();
     });
@@ -21,7 +20,6 @@ describe('ThemeSelector', () => {
       const button = screen.getByRole('button', { name: /themes/i });
       await user.click(button); // open dropdown
 
-      // verify dropdown options are visible
       await screen.findByText('Light');
       expect(screen.getByText('Dark')).toBeInTheDocument();
       expect(screen.getByText('System')).toBeInTheDocument();
@@ -43,14 +41,12 @@ describe('ThemeSelector', () => {
         await user.click(button); // open dropdown
 
         const themeOption = screen.getByText(theme);
-        await user.click(themeOption); // select theme
+        await user.click(themeOption);
 
-        // verify theme class is applied to document
         await waitFor(() =>
           expect(document.documentElement).toHaveClass(expectedClass),
         );
 
-        // verify dropdown closed
         await waitFor(() =>
           expect(screen.queryByText(hiddenOption)).not.toBeInTheDocument(),
         );

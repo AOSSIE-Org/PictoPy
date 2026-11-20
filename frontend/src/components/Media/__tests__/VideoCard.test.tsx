@@ -2,7 +2,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { VideoCard } from '../VideoCard';
 import { Video } from '@/types/Media';
 
-// Mock Tauri convertFileSrc API
 jest.mock('@tauri-apps/api/core', () => ({
   convertFileSrc: (path: string) => `tauri-converted://${path}`,
 }));
