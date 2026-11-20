@@ -41,9 +41,18 @@ people apart, and unrelated faces start to look like the same person.
 
 Now, here's where it gets interesting:
 
-We use something called DBSCAN to group similar faces together. A full recluster runs when the last one is more than
-24 hours old, or when more than 100 faces are waiting for a cluster. In between, each new face is assigned to the
-cluster whose mean embedding it is most similar to, provided the similarity is at least 0.8.
+We use something called DBSCAN to group similar faces together. A full recluster rebuilds every cluster, so it only
+runs once, to build the first ones. After that each new face is assigned to the cluster whose mean embedding it is most
+similar to, provided the similarity is at least 0.8, and the faces that match nobody are clustered among themselves
+into new people. A full rebuild on a schedule is what used to exhaust memory on large libraries, so it no longer runs
+automatically.
+
+DBSCAN compares faces by distance, and that used to mean a distance for every pair: the matrix alone ran to hundreds
+of megabytes at 10,000 faces and would exhaust a typical machine well before 50,000. PictoPy now builds a sparse
+neighbour graph instead. Only pairs closer than the similarity threshold become edges, and a pair further apart than
+that could never be the same person anyway. The `eps` radius is estimated from the k-distances of a random sample of
+at most `PICTO_CLUSTERING_EPS_SAMPLE_SIZE` faces (2,000 by default) measured against every face, which tracks the
+full-set estimate closely while staying far cheaper than a kNN pass over every face.
 
 ## Finding People in Videos
 
@@ -172,9 +181,10 @@ Here are some key parameters for the main models used in PictoPy's image process
 
 | Parameter | Value | Description |
 | --------- | ----- | ----------- |
-| `eps` | Adaptive | Estimated from the data, capped at 0.35 (1 − the 0.65 similarity threshold). 0.75 (`PICTO_CLUSTERING_EPS`) is used only when there are too few faces to estimate it |
+| `eps` | Adaptive | Estimated from a sample of the data, capped at 0.35 (1 − the 0.65 similarity threshold). 0.75 (`PICTO_CLUSTERING_EPS`) is used only when there are too few faces to estimate it |
+| `PICTO_CLUSTERING_EPS_SAMPLE_SIZE` | 2000 | Faces sampled as kNN queries against every embedding to estimate `eps` |
 | `min_samples` | 2 | Number of samples in a neighborhood for a point to be considered as a core point. Values below 2 are reset to 2 to prevent chaining |
-| `metric` | "cosine" | Distance metric used for clustering |
+| `metric` | "precomputed" | DBSCAN runs on a sparse cosine-distance neighbour graph rather than the full N × N matrix |
 
 ### Faces in Videos
 

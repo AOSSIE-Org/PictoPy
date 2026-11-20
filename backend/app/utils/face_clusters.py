@@ -4,10 +4,12 @@ import json
 import base64
 import cv2
 import sqlite3
+import sys
+import time
 from datetime import datetime
 from sklearn.cluster import DBSCAN
 from sklearn.neighbors import NearestNeighbors
-from sklearn.metrics.pairwise import cosine_distances
+from sklearn import config_context
 from sklearn.metrics.pairwise import cosine_similarity
 
 
@@ -35,14 +37,24 @@ from app.database.metadata import (
 from app.config.settings import (
     DATABASE_PATH,
     PICTO_CLUSTERING_EPS,
+    PICTO_CLUSTERING_EPS_SAMPLE_SIZE,
     PICTO_CLUSTERING_MIN_SAMPLES,
     PICTO_CLUSTERING_SIMILARITY_THRESHOLD,
     PICTO_CLUSTERING_MERGE_THRESHOLD,
 )
 from app.logging.setup_logging import get_logger
 
+try:
+    import resource
+except ImportError:  # Windows has no resource module
+    resource = None
+
 # Initialize logger
 logger = get_logger(__name__)
+
+# Neighbour search working-set cap, in MiB. sklearn defaults to 1 GiB, which
+# dominates peak RSS on large libraries; 64 MiB costs ~0.3 s per 10k faces.
+_KNN_WORKING_MEMORY_MB = 64
 
 
 class ClusterResult:
@@ -72,55 +84,116 @@ class ClusterResult:
 
 def cluster_util_is_reclustering_needed(metadata) -> bool:
     """
-    Check if reclustering is needed based on:
-    1. Time since last clustering (24 hours)
-    2. Number of faces without cluster ID (> 100)
-    3. No clusters existing yet while faces are waiting to be assigned
+    A full pass rebuilds every cluster, so it is only worth it as a bootstrap:
+    with no clusters yet the incremental path has no means to match against and
+    no way to create the first one. Every later face is assigned -- and new
+    people formed -- incrementally, so a growing library never forces the
+    rebuild that used to OOM.
 
     Returns:
-        bool: True if reclustering is needed, False otherwise
+        bool: True if a full pass is needed, False otherwise
     """
     if not metadata:
-        return True  # No metadata means we need to recluster
+        return True  # Never clustered: rebuild from scratch
 
-    last_reclustering_time = metadata.get("reclustering_time")
-
-    # Check if more than 24 hours have passed since last reclustering
-    if last_reclustering_time:
-        try:
-            last_time = datetime.fromtimestamp(float(last_reclustering_time))
-            time_since_last_reclustering = (datetime.now() - last_time).total_seconds()
-            if time_since_last_reclustering > 86400:  # 24 hours in seconds
-                return True
-        except (ValueError, TypeError):
-            # If we can't parse the time, assume we need to recluster
-            return True
-
-    # Check if number of faces without cluster ID is greater than 100. Keyframe
-    # faces are left out: many never match a photo cluster, and they can't form
-    # one, so counting them would force a full recluster on every sync.
+    # Keyframe faces are left out: many never match a photo cluster, and they
+    # can't form one, so counting them would bootstrap on keyframes alone.
     unassigned_faces = [
         face for face in db_get_faces_unassigned_clusters() if not face.get("frame_id")
     ]
-    if len(unassigned_faces) > 100:
-        return True
 
-    # Incremental assignment matches faces against the means of existing clusters, so
-    # it can never create the first one. Bootstrap that case with a full pass.
-    if unassigned_faces and db_get_clusters_count() == 0:
-        return True
+    # Incremental assignment matches faces against the means of existing
+    # clusters, so it can never create the first one. Bootstrap that case.
+    return bool(unassigned_faces) and db_get_clusters_count() == 0
 
-    return False
+
+def _peak_rss_mb() -> str:
+    """Peak resident memory for this process, in MiB, as a string.
+
+    The OOM reports on large libraries quote this number, so every pass logs
+    it and the peaks show up in the user's logs.
+    """
+    if resource is None:
+        return "n/a"
+    rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    # Linux reports KiB, macOS bytes.
+    mib = rss / 1024 if sys.platform != "darwin" else rss / (1024 * 1024)
+    return f"{mib:.0f}"
+
+
+def _insert_clusters_and_update_faces(
+    results: List[Dict], cursor: sqlite3.Cursor
+) -> List[Dict]:
+    """Insert one row per new cluster, then point the faces at them.
+
+    Batched inserts first, then the foreign-key updates, inside the caller's
+    transaction: a face must never reference a cluster row that isn't there
+    yet. Returns the cluster rows in insert order.
+    """
+    unique_clusters = {}
+    for result in results:
+        cluster_id = result["cluster_id"]
+        if cluster_id not in unique_clusters:
+            unique_clusters[cluster_id] = {
+                "cluster_id": cluster_id,
+                "cluster_name": result["cluster_name"],
+                "face_image_base64": None,  # Filled in after the pass
+            }
+
+    cluster_list = list(unique_clusters.values())
+    db_insert_clusters_batch(cluster_list, cursor)
+    db_update_face_cluster_ids_batch(results, cursor)
+    return cluster_list
+
+
+def _generate_cluster_face_images(cluster_list: List[Dict]) -> None:
+    """Generate and store a thumbnail for each cluster in the list.
+
+    Thumbnails read the face image off disk, so this runs after the cluster rows
+    are committed and in its own connections: a failure here is cosmetic and
+    must not roll the clustering back.
+    """
+    face_images = {}
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        for cluster in cluster_list:
+            cluster_id = cluster["cluster_id"]
+            face_image_base64 = _generate_cluster_face_image(cluster_id, cursor)
+            if face_image_base64:
+                face_images[cluster_id] = face_image_base64
+
+    if not face_images:
+        return
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        for cluster_id, face_image_base64 in face_images.items():
+            try:
+                updated = _update_cluster_face_image(
+                    cluster_id, face_image_base64, cursor
+                )
+            except sqlite3.Error as e:
+                # Thumbnails are cosmetic: keep updating the remaining clusters.
+                logger.warning(
+                    f"Failed to update face image for cluster {cluster_id}: {e}"
+                )
+                continue
+            if not updated:
+                logger.warning(f"Failed to update face image for cluster {cluster_id}")
 
 
 def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
     """
     Smart face clustering with transaction safety.
-    Decides between full reclustering or incremental assignment based on 24-hour rule and face count.
+
+    A full recluster rebuilds every cluster from scratch, so it only runs to
+    bootstrap (or when forced). Otherwise the incremental pass assigns new faces
+    and forms new people. Rebuilding on a schedule is what used to OOM.
 
     Args:
-        force_full_reclustering: If True, forces full reclustering regardless of 24-hour rule
+        force_full_reclustering: If True, always do the full rebuild
     """
+    started = time.perf_counter()
     metadata = db_get_metadata()
     if force_full_reclustering or cluster_util_is_reclustering_needed(metadata):
         # Perform clustering operation
@@ -141,53 +214,32 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
 
         results = [result.to_dict() for result in results]
 
-        # Extract unique clusters with their names (without face images yet)
-        unique_clusters = {}
-        for result in results:
-            cluster_id = result["cluster_id"]
-            cluster_name = result["cluster_name"]
-            if cluster_id not in unique_clusters:
-                unique_clusters[cluster_id] = {
-                    "cluster_id": cluster_id,
-                    "cluster_name": cluster_name,
-                    "face_image_base64": None,  # Will be updated later
-                }
-
-        # Convert to list for batch insert
-        cluster_list = list(unique_clusters.values())
-
-        # Perform all database operations within a single transaction
+        # Rebuild in one transaction: batched inserts, then the foreign-key
+        # updates. Nothing slow runs while the write lock is held.
         with get_db_connection() as conn:
             cursor = conn.cursor()
             # Clear old clusters first
             db_delete_all_clusters(cursor)
 
-            # Insert the new clusters into database first
-            db_insert_clusters_batch(cluster_list, cursor)
-
-            # Now update face cluster assignments (foreign keys will be valid)
-            db_update_face_cluster_ids_batch(results, cursor)
-
-            # Finally, generate and update face images for each cluster
-            for cluster_id in unique_clusters.keys():
-                face_image_base64 = _generate_cluster_face_image(cluster_id, cursor)
-                if face_image_base64:
-                    # Update the cluster with the generated face image
-                    success = _update_cluster_face_image(
-                        cluster_id, face_image_base64, cursor
-                    )
-                    if not success:
-                        raise RuntimeError(
-                            f"Failed to update face image for cluster {cluster_id}"
-                        )
+            cluster_list = _insert_clusters_and_update_faces(results, cursor)
 
             # Update metadata with new reclustering time, preserving other values
             current_metadata = metadata or {}
             current_metadata["reclustering_time"] = datetime.now().timestamp()
             db_update_metadata(current_metadata, cursor)
+
+        # Thumbnails read image files off disk, so they used to hold SQLite's
+        # write lock for the whole rebuild. Generate after the commit; a failure
+        # is cosmetic, so warn instead of rolling the rebuild back.
+        _generate_cluster_face_images(cluster_list)
+
         # Deleting the old clusters above unassigned every keyframe face too
         # (ON DELETE SET NULL); re-attach them to the rebuilt clusters.
         cluster_util_attach_keyframe_faces()
+        logger.info(
+            f"Full face clustering pass: {len(cluster_list)} cluster(s) in "
+            f"{time.perf_counter() - started:.1f}s (peak RSS {_peak_rss_mb()} MiB)"
+        )
         return len(cluster_list), total_faces_skipped
     else:
         face_cluster_mappings, total_faces_skipped = (
@@ -196,8 +248,28 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
         with get_db_connection() as conn:
             cursor = conn.cursor()
             db_update_face_cluster_ids_batch(face_cluster_mappings, cursor)
+
+        # Faces no existing person matched used to sit unassigned until the next
+        # full pass. Cluster just those into new people instead, so a new person
+        # no longer needs the expensive pass to appear.
+        new_results, delta_skipped = cluster_util_cluster_unassigned_face_embeddings()
+        total_faces_skipped += delta_skipped
+        if new_results:
+            with get_db_connection() as conn:
+                new_clusters = _insert_clusters_and_update_faces(
+                    [result.to_dict() for result in new_results], conn.cursor()
+                )
+            # A new person needs its thumbnail now: nothing else fills it in
+            # until the next full pass.
+            _generate_cluster_face_images(new_clusters)
+
         cluster_util_attach_keyframe_faces()
-        return len(face_cluster_mappings), total_faces_skipped
+        logger.info(
+            f"Incremental face clustering pass: {len(face_cluster_mappings)} face(s) "
+            f"assigned, {len(new_results)} face(s) in new clusters in "
+            f"{time.perf_counter() - started:.1f}s (peak RSS {_peak_rss_mb()} MiB)"
+        )
+        return len(face_cluster_mappings) + len(new_results), total_faces_skipped
 
 
 def cluster_util_attach_keyframe_faces() -> int:
@@ -242,13 +314,29 @@ def _validate_embedding(embedding: NDArray, min_norm: float = 1e-6) -> bool:
     return True
 
 
-def estimate_eps(embeddings: np.ndarray, k: int) -> Optional[float]:
+def estimate_eps(
+    embeddings: np.ndarray,
+    k: int,
+    sample_size: int = PICTO_CLUSTERING_EPS_SAMPLE_SIZE,
+) -> Optional[float]:
     if len(embeddings) <= k:
         return None
 
+    # Sample the query rows, never the population: fitting the sample would measure
+    # k-distances inside the subsample, where a k-th neighbour is usually a
+    # different person once the library holds more people than the sample holds
+    # rows. Seeded for repeatability.
+    if len(embeddings) > sample_size:
+        rng = np.random.default_rng(0)
+        queries = embeddings[
+            rng.choice(len(embeddings), size=sample_size, replace=False)
+        ]
+    else:
+        queries = embeddings
+
     nn = NearestNeighbors(n_neighbors=k + 1, metric="cosine")
     nn.fit(embeddings)
-    distances, _ = nn.kneighbors(embeddings)
+    distances, _ = nn.kneighbors(queries)
 
     kth_distances = distances[:, -1]
     kth_distances.sort()
@@ -256,16 +344,21 @@ def estimate_eps(embeddings: np.ndarray, k: int) -> Optional[float]:
     return float(estimated_eps)
 
 
-def cluster_util_cluster_all_face_embeddings(
+def _cluster_face_rows(
+    face_rows: List[Dict],
     eps: float = PICTO_CLUSTERING_EPS,
     min_samples: int = PICTO_CLUSTERING_MIN_SAMPLES,
     similarity_threshold: float = PICTO_CLUSTERING_SIMILARITY_THRESHOLD,
     merge_threshold: float = None,
 ) -> Tuple[List[ClusterResult], int]:
     """
-    Cluster face embeddings using DBSCAN with similarity validation.
+    Cluster face rows with DBSCAN over a sparse cosine-distance graph.
+
+    DB-free, so the caller picks the rows: every photo face for a full pass, or
+    just the leftovers for a delta pass.
 
     Args:
+        face_rows: rows with "face_id", "embeddings", "image_id" and "cluster_name"
         eps: DBSCAN epsilon parameter for maximum distance between samples (default: 0.75)
         min_samples: DBSCAN minimum samples parameter for core points (default: 2)
         similarity_threshold: Minimum similarity to consider same person (default: 0.65, range: 0.65-0.90)
@@ -274,15 +367,7 @@ def cluster_util_cluster_all_face_embeddings(
     Returns:
         List of ClusterResult objects containing face_id, embedding, cluster_uuid, and cluster_name
     """
-    # Photo faces only: DBSCAN chains through keyframe faces and fuses different
-    # people, so those are attached afterwards by cluster_util_attach_keyframe_faces.
-    faces_data = [
-        face
-        for face in db_get_all_faces_with_cluster_names()
-        if not face.get("frame_id")
-    ]
-
-    if not faces_data:
+    if not face_rows:
         return [], 0
 
     # Extract embeddings and face IDs with validation
@@ -292,7 +377,7 @@ def cluster_util_cluster_all_face_embeddings(
     existing_cluster_names = []
     invalid_count = 0
 
-    for face in faces_data:
+    for face in face_rows:
         embedding = face["embeddings"]
 
         # Validate embedding before adding
@@ -318,26 +403,35 @@ def cluster_util_cluster_all_face_embeddings(
 
     logger.info(f"Total valid faces to cluster: {len(face_ids)}")
 
-    # Convert to numpy array for DBSCAN
-    embeddings_array = np.array(embeddings)
+    # float32 halves every buffer; embeddings only need enough precision to
+    # rank nearby faces apart.
+    embeddings_array = np.asarray(embeddings, dtype=np.float32)
 
-    # Calculate pairwise distances with similarity threshold
-    distances = cosine_distances(embeddings_array)
-
-    # Guard against NaN distances (shouldn't happen after validation, but double-check)
-    if not np.isfinite(distances).all():
-        logger.error(
-            "NaN or infinite values detected in distance matrix after validation"
-        )
-        # Replace NaN/inf with max distance (1.0)
-        distances = np.nan_to_num(distances, nan=1.0, posinf=1.0, neginf=1.0)
-
-    # Apply similarity threshold - mark dissimilar faces as completely different
+    # Only pairs within max_distance can ever be DBSCAN neighbours (the old
+    # dense path marked everything further out as distance 1.0), so a sparse
+    # radius graph is equivalent. It avoids the N x N float64 matrix: 800 MB
+    # at 10k faces, 20 GB at 50k. DBSCAN accepts the CSR directly.
+    # shortcut: a gallery where most faces sit within max_distance of each
+    # other still grows toward N x N edges; switch to a fixed-k graph if that
+    # shows up.
     max_distance = 1 - similarity_threshold  # Convert similarity to distance
-    distances[distances > max_distance] = 1.0  # Mark as completely different
     logger.info(
         f"Applied similarity threshold: {similarity_threshold} (max_distance: {max_distance:.3f})"
     )
+    neighbours = NearestNeighbors(metric="cosine", n_jobs=-1)
+    neighbours.fit(embeddings_array)
+    with config_context(working_memory=_KNN_WORKING_MEMORY_MB):
+        distances = neighbours.radius_neighbors_graph(
+            embeddings_array, radius=max_distance, mode="distance"
+        )
+
+    # Guard against NaN distances (shouldn't happen after validation, but double-check)
+    if not np.isfinite(distances.data).all():
+        logger.error(
+            "NaN or infinite values detected in distance graph after validation"
+        )
+        # Replace NaN/inf with max distance (1.0)
+        distances.data = np.nan_to_num(distances.data, nan=1.0, posinf=1.0, neginf=1.0)
 
     estimated_eps = estimate_eps(embeddings_array, k=min_samples)
     if estimated_eps is not None:
@@ -420,6 +514,74 @@ def cluster_util_cluster_all_face_embeddings(
     results = _enforce_one_face_per_image(results, face_to_image)
 
     return results, total_faces_skipped
+
+
+def cluster_util_cluster_all_face_embeddings(
+    eps: float = PICTO_CLUSTERING_EPS,
+    min_samples: int = PICTO_CLUSTERING_MIN_SAMPLES,
+    similarity_threshold: float = PICTO_CLUSTERING_SIMILARITY_THRESHOLD,
+    merge_threshold: float = None,
+) -> Tuple[List[ClusterResult], int]:
+    """
+    Cluster every photo face embedding in the database using DBSCAN.
+
+    Args:
+        eps: DBSCAN epsilon parameter for maximum distance between samples (default: 0.75)
+        min_samples: DBSCAN minimum samples parameter for core points (default: 2)
+        similarity_threshold: Minimum similarity to consider same person (default: 0.65, range: 0.65-0.90)
+        merge_threshold: Similarity threshold for post-clustering merge (default: None, uses similarity_threshold)
+
+    Returns:
+        List of ClusterResult objects containing face_id, embedding, cluster_uuid, and cluster_name
+    """
+    # Photo faces only: DBSCAN chains through keyframe faces and fuses different
+    # people, so those are attached afterwards by cluster_util_attach_keyframe_faces.
+    faces_data = [
+        face
+        for face in db_get_all_faces_with_cluster_names()
+        if not face.get("frame_id")
+    ]
+
+    return _cluster_face_rows(
+        faces_data, eps, min_samples, similarity_threshold, merge_threshold
+    )
+
+
+def cluster_util_cluster_unassigned_face_embeddings(
+    eps: float = PICTO_CLUSTERING_EPS,
+    min_samples: int = PICTO_CLUSTERING_MIN_SAMPLES,
+    similarity_threshold: float = PICTO_CLUSTERING_SIMILARITY_THRESHOLD,
+    merge_threshold: float = None,
+) -> Tuple[List[ClusterResult], int]:
+    """
+    Cluster the unassigned faces into new clusters, leaving existing ones alone.
+
+    The incremental path matches leftovers against existing cluster means and
+    hands whatever is still unassigned here; without this a new person could
+    only ever appear through a full pass.
+
+    Args:
+        eps: DBSCAN epsilon parameter for maximum distance between samples (default: 0.75)
+        min_samples: DBSCAN minimum samples parameter for core points (default: 2)
+        similarity_threshold: Minimum similarity to consider same person (default: 0.65, range: 0.65-0.90)
+        merge_threshold: Similarity threshold for post-clustering merge (default: None, uses similarity_threshold)
+
+    Returns:
+        List of ClusterResult objects for the new clusters, and the count of skipped faces
+    """
+    # Keyframe faces never seed clusters (see cluster_util_cluster_all_face_embeddings),
+    # and a leftover has no existing name to vote for, so it votes for None.
+    faces_data = [
+        {**face, "cluster_name": None}
+        for face in db_get_faces_unassigned_clusters()
+        if not face.get("frame_id")
+    ]
+
+    # shortcut: new clusters are only merged against existing ones at the next
+    # full pass, so one person split across both can stay split until then.
+    return _cluster_face_rows(
+        faces_data, eps, min_samples, similarity_threshold, merge_threshold
+    )
 
 
 def cluster_util_assign_cluster_to_faces_without_clusterId(
