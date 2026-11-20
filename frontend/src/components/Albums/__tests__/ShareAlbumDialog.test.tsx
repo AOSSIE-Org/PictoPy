@@ -177,6 +177,112 @@ describe('ShareAlbumDialog', () => {
       );
     });
 
+    describe('existing tunnel restoration', () => {
+      it('automatically selects internet mode when an existing tunnel is detected', async () => {
+        mockTunnelStatus.mockResolvedValue('https://abc123.lhr.life');
+        renderDialog([]);
+
+        await waitFor(() =>
+          expect(internetToggle()).toHaveAttribute('aria-checked', 'true'),
+        );
+        expect(
+          screen.getByText(/the link leaves your network/i),
+        ).toBeInTheDocument();
+      });
+
+      it('automatically enables password protection and displays the password input', async () => {
+        mockTunnelStatus.mockResolvedValue('https://abc123.lhr.life');
+        renderDialog([]);
+
+        await waitFor(() =>
+          expect(
+            screen.getByRole('switch', { name: /require a password/i }),
+          ).toBeChecked(),
+        );
+        expect(screen.getByLabelText('Password')).toBeInTheDocument();
+      });
+
+      it('submits the entered password to the sharing API', async () => {
+        const user = userEvent.setup();
+        mockTunnelStatus.mockResolvedValue('https://abc123.lhr.life');
+        renderDialog([]);
+
+        await waitFor(() =>
+          expect(screen.getByLabelText('Password')).toBeInTheDocument(),
+        );
+
+        await user.type(screen.getByLabelText('Password'), 'tunnel-secret-123');
+        await user.click(
+          screen.getByRole('button', { name: /start sharing/i }),
+        );
+
+        await waitFor(() => expect(mockCreateShare).toHaveBeenCalled());
+        expect(mockCreateShare).toHaveBeenCalledWith('a1', {
+          expires_in_minutes: 1440,
+          password: 'tunnel-secret-123',
+        });
+      });
+
+      it('prevents submission when password protection is active and no password was provided', async () => {
+        const user = userEvent.setup();
+        mockTunnelStatus.mockResolvedValue('https://abc123.lhr.life');
+        renderDialog([]);
+
+        await waitFor(() =>
+          expect(screen.getByLabelText('Password')).toBeInTheDocument(),
+        );
+
+        await user.click(
+          screen.getByRole('button', { name: /start sharing/i }),
+        );
+
+        expect(
+          await screen.findByText(/at least 4 characters/i),
+        ).toBeInTheDocument();
+        expect(mockCreateShare).not.toHaveBeenCalled();
+      });
+
+      it('preserves local sharing compatibility when switching back to local mode', async () => {
+        const user = userEvent.setup();
+        mockTunnelStatus.mockResolvedValue('https://abc123.lhr.life');
+        renderDialog([]);
+
+        await waitFor(() =>
+          expect(internetToggle()).toHaveAttribute('aria-checked', 'true'),
+        );
+
+        await user.click(screen.getByRole('radio', { name: /this network/i }));
+        expect(
+          screen.getByRole('switch', { name: /require a password/i }),
+        ).not.toBeChecked();
+        expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
+
+        await user.click(
+          screen.getByRole('button', { name: /start sharing/i }),
+        );
+
+        await waitFor(() => expect(mockCreateShare).toHaveBeenCalled());
+        expect(mockCreateShare).toHaveBeenCalledWith('a1', {
+          expires_in_minutes: 1440,
+        });
+        expect(mockStartTunnel).not.toHaveBeenCalled();
+      });
+
+      it('maintains normal sharing behaviour when no existing tunnel is found', async () => {
+        mockTunnelStatus.mockResolvedValue(null);
+        renderDialog([]);
+
+        expect(
+          screen.getByRole('radio', { name: /this network/i }),
+        ).toHaveAttribute('aria-checked', 'true');
+        expect(internetToggle()).toHaveAttribute('aria-checked', 'false');
+        expect(
+          screen.getByRole('switch', { name: /require a password/i }),
+        ).not.toBeChecked();
+        expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
+      });
+    });
+
     // Failing quietly would leave nothing on screen and no way to reach the
     // page, which is how a missing capability presented in the running app.
     it('hands over the address when the browser cannot be opened', async () => {

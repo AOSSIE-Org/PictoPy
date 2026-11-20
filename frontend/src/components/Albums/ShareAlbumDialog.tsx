@@ -218,6 +218,7 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
     tunnel.refresh().then((current) => {
       if (current) {
         setMode('internet');
+        setWithPassword(true);
       }
     });
   }, [isOpen, album?.id, tunnel.refresh]);
