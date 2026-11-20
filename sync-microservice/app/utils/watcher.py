@@ -38,12 +38,15 @@ def watcher_util_get_folder_id_if_watched(file_path: str) -> Optional[str]:
     Returns:
         Folder ID if the path is a watched folder, None otherwise
     """
-    # Normalize the file path
-    normalized_path = os.path.abspath(file_path)
+    # Normalize the file path. normcase folds drive-letter and path-component
+    # case on Windows, where the filesystem is case-insensitive but watchfiles
+    # and the stored folder path can each report/hold different casing for the
+    # same real path.
+    normalized_path = os.path.normcase(os.path.abspath(file_path))
 
     # Check if this path matches any of our watched folders
     for folder_id, folder_path in watched_folders:
-        if os.path.abspath(folder_path) == normalized_path:
+        if os.path.normcase(os.path.abspath(folder_path)) == normalized_path:
             return folder_id
 
     return None
@@ -101,8 +104,12 @@ def watcher_util_find_closest_parent_folder(
     Returns:
         Tuple of (folder_id, folder_path) if found, None otherwise
     """
-    # Normalize the file path
+    # Normalize the file path for both the prefix check (case-folded, so a
+    # Windows casing difference between watchfiles' report and the stored
+    # folder path doesn't hide a real parent) and the returned path (original
+    # case, since callers use it as the actual folder path).
     file_path = os.path.abspath(file_path)
+    normcase_file_path = os.path.normcase(file_path)
 
     best_match = None
     longest_match_length = 0
@@ -110,14 +117,18 @@ def watcher_util_find_closest_parent_folder(
     for folder_id, folder_path in watched_folders:
         # Normalize the folder path
         folder_path = os.path.abspath(folder_path)
+        normcase_folder_path = os.path.normcase(folder_path)
 
         # Check if this folder is a parent of the file
-        if file_path.startswith(folder_path):
+        if normcase_file_path.startswith(normcase_folder_path):
             # Ensure it's a proper parent (not just a prefix)
-            if file_path == folder_path or file_path[len(folder_path)] == os.sep:
+            if (
+                normcase_file_path == normcase_folder_path
+                or normcase_file_path[len(normcase_folder_path)] == os.sep
+            ):
                 # Choose the longest matching path (closest parent)
-                if len(folder_path) > longest_match_length:
-                    longest_match_length = len(folder_path)
+                if len(normcase_folder_path) > longest_match_length:
+                    longest_match_length = len(normcase_folder_path)
                     best_match = (folder_id, folder_path)
 
     return best_match
