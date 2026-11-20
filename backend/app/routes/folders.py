@@ -455,6 +455,8 @@ def delete_folders(
             raise ValueError("No folder IDs provided")
 
         deleted_count = db_delete_folders_batch(request.folder_ids)
+        if deleted_count > 0:
+            API_util_restart_sync_microservice_watcher()
 
         # Synchronous so the response can't race the frontend's next
         # Memories fetch; imported late, like _curate_memories below.
