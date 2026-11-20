@@ -73,6 +73,7 @@ class GetAlbumImagesRequest(BaseModel):
 
 class ImageIdsRequest(BaseModel):
     image_ids: List[str]
+    password: Optional[str] = None
 
     @field_validator("image_ids")
     def validate_image_ids(cls, value: List[str]) -> List[str]:
