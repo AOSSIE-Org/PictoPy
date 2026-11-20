@@ -861,6 +861,7 @@ def _calculate_square_crop_bounds(
 ) -> tuple:
     """
     Calculate square crop bounds centered on a face bounding box.
+    Ensures a 1:1 aspect ratio even when faces lie along image boundaries.
 
     Args:
         bbox: Dictionary with x, y, width, height keys
@@ -877,48 +878,37 @@ def _calculate_square_crop_bounds(
     width = int(bbox.get("width", 100))
     height = int(bbox.get("height", 100))
 
-    # Add padding around the face
-    x_start = max(0, x - padding)
-    y_start = max(0, y - padding)
-    x_end = min(img_width, x + width + padding)
-    y_end = min(img_height, y + height + padding)
+    # Center of the face bounding box
+    center_x = x + width // 2
+    center_y = y + height // 2
 
-    # Calculate square crop dimensions centered on the face
-    crop_width = x_end - x_start
-    crop_height = y_end - y_start
+    # Target square size with padding, bounded by image dimensions
+    raw_size = max(width, height) + 2 * padding
+    square_size = max(1, min(raw_size, img_width, img_height))
 
-    # Use the larger dimension to create a square crop
-    square_size = max(crop_width, crop_height)
+    # Initial bounds centered on face
+    half_size = square_size // 2
+    x_start = center_x - half_size
+    y_start = center_y - half_size
+    x_end = x_start + square_size
+    y_end = y_start + square_size
 
-    # Calculate center of the current crop
-    center_x = x_start + crop_width // 2
-    center_y = y_start + crop_height // 2
+    # Shift crop window if boundary is exceeded to guarantee exact 1:1 square aspect ratio
+    if x_start < 0:
+        x_end += -x_start
+        x_start = 0
+    elif x_end > img_width:
+        x_start -= (x_end - img_width)
+        x_end = img_width
 
-    # Calculate square crop bounds centered on the face
-    half_square = square_size // 2
-    square_x_start = max(0, center_x - half_square)
-    square_y_start = max(0, center_y - half_square)
-    square_x_end = min(img_width, center_x + half_square)
-    square_y_end = min(img_height, center_y + half_square)
+    if y_start < 0:
+        y_end += -y_start
+        y_start = 0
+    elif y_end > img_height:
+        y_start -= (y_end - img_height)
+        y_end = img_height
 
-    # Adjust if we hit image boundaries to maintain square shape
-    actual_width = square_x_end - square_x_start
-    actual_height = square_y_end - square_y_start
-    actual_square_size = min(actual_width, actual_height)
-
-    # Recalculate final square crop
-    square_x_start = center_x - actual_square_size // 2
-    square_y_start = center_y - actual_square_size // 2
-    square_x_end = square_x_start + actual_square_size
-    square_y_end = square_y_start + actual_square_size
-
-    # Ensure bounds are within image
-    square_x_start = max(0, square_x_start)
-    square_y_start = max(0, square_y_start)
-    square_x_end = min(img_width, square_x_end)
-    square_y_end = min(img_height, square_y_end)
-
-    return (square_x_start, square_y_start, square_x_end, square_y_end)
+    return (x_start, y_start, x_end, y_end)
 
 
 def _crop_and_resize_face(
