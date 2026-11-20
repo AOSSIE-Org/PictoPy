@@ -1,6 +1,6 @@
 # Standard library imports
 import sqlite3
-from typing import Any, List, Mapping, Optional, Tuple, TypedDict, Union
+from typing import Any, List, Mapping, Optional, Set, Tuple, TypedDict, Union
 import json
 
 from datetime import datetime
@@ -305,6 +305,79 @@ def db_get_videos_by_folder_ids(
     except sqlite3.Error as e:
         logger.error(f"Error getting videos by folder IDs: {e}")
         return []
+    finally:
+        conn.close()
+
+
+def db_get_videos_by_file_keys(
+    keys: Set[Tuple[int, str]],
+) -> List[Tuple[VideoId, VideoPath, Optional[str], Tuple[int, str]]]:
+    """
+    Get the videos whose recorded (file_size, file_modified) is one of keys.
+
+    Returns:
+        List of tuples containing (video_id, video_path, thumbnail_path, key)
+    """
+    if not keys:
+        return []
+
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            SELECT id, path, thumbnailPath,
+                   json_extract(metadata, '$.file_size'),
+                   json_extract(metadata, '$.file_modified')
+            FROM videos
+            WHERE json_valid(metadata)
+            """
+        )
+        return [
+            (video_id, path, thumbnail_path, (size, modified))
+            for video_id, path, thumbnail_path, size, modified in cursor.fetchall()
+            if (size, modified) in keys
+        ]
+    except sqlite3.Error as e:
+        logger.error(f"Error getting videos by file keys: {e}")
+        return []
+    finally:
+        conn.close()
+
+
+def db_relocate_videos(video_records: List[VideoRecord]) -> bool:
+    """
+    Update the path, folder and metadata of existing videos, matched by id.
+
+    Returns:
+        True if the update was successful, False otherwise
+    """
+    if not video_records:
+        return True
+
+    conn = _connect()
+    cursor = conn.cursor()
+
+    try:
+        cursor.executemany(
+            """
+            UPDATE videos
+            SET path = :path, folder_id = :folder_id, metadata = :metadata
+            WHERE id = :id
+            """,
+            video_records,
+        )
+        # A row deleted since it was looked up leaves the record to be inserted
+        if cursor.rowcount != len(video_records):
+            conn.rollback()
+            return False
+        conn.commit()
+        return True
+    except sqlite3.Error as e:
+        logger.error(f"Error relocating videos: {e}")
+        conn.rollback()
+        return False
     finally:
         conn.close()
 

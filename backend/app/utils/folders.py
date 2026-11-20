@@ -1,12 +1,16 @@
 import uuid
 import os
-from typing import List, Tuple
+from collections import Counter
+from typing import Dict, List, Optional, Tuple
 
 from fastapi import HTTPException, status
 from app.database.folders import (
     db_insert_folders_batch,
     db_update_parent_ids_for_subtree,
     db_delete_folders_batch,
+    db_get_all_subfolders,
+    db_get_media_sizes_under_path,
+    db_relocate_folder_tree,
 )
 from app.schemas.folders import ErrorResponse
 from app.logging.setup_logging import get_logger
@@ -176,3 +180,70 @@ def folder_util_add_multiple_folder_trees(
             logger.error(f"Error adding folder {folder_path}: {e}")
 
     return added_count, added_folders
+
+
+def _file_has_size(path: str, size: Optional[int]) -> bool:
+    if size is None:
+        return False
+    try:
+        return os.path.isfile(path) and os.path.getsize(path) == size
+    except OSError:
+        return False
+
+
+def folder_util_relocate_moved_folders(
+    folders_to_add: set, parent_folder_id: str
+) -> List[Tuple[str, str]]:
+    """
+    Point subfolders that no longer exist at the new folder they were moved to.
+
+    A missing folder matches a new one when every image and video stored under
+    it is there at the same relative path and size. Only one-to-one matches are
+    relocated; anything else is left to be deleted and added as usual.
+
+    Args:
+        folders_to_add: Set of folder paths found on disk but not in the database
+        parent_folder_id: ID of the folder they were found in
+
+    Returns:
+        List of (folder_id, folder_path) tuples for every relocated folder
+    """
+    if not folders_to_add:
+        return []
+
+    missing_folders = {
+        folder_path: folder_id
+        for folder_id, folder_path in db_get_all_subfolders()
+        if not os.path.isdir(folder_path)
+    }
+
+    matches: Dict[str, List[str]] = {}
+    for old_path in missing_folders:
+        # Subfolders of a missing folder move with it
+        if os.path.dirname(old_path) in missing_folders:
+            continue
+        media = db_get_media_sizes_under_path(old_path)
+        if not media:
+            continue
+        matches[old_path] = [
+            new_path
+            for new_path in folders_to_add
+            if all(
+                _file_has_size(
+                    os.path.join(new_path, os.path.relpath(path, old_path)), size
+                )
+                for path, size in media.items()
+            )
+        ]
+
+    match_counts = Counter(path for found in matches.values() for path in found)
+    relocated_folders: List[Tuple[str, str]] = []
+    for old_path, found in matches.items():
+        if len(found) == 1 and match_counts[found[0]] == 1:
+            relocated_folders.extend(
+                db_relocate_folder_tree(
+                    missing_folders[old_path], old_path, found[0], parent_folder_id
+                )
+            )
+
+    return relocated_folders

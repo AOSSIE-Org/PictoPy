@@ -6,6 +6,7 @@ check that keeps it from rereading and re-thumbnailing every file each time.
 
 import json
 import os
+import shutil
 import sqlite3
 import tempfile
 from typing import Any, Dict, Iterator, List
@@ -17,7 +18,10 @@ from app.database.folders import db_create_folders_table
 from app.database.images import (
     db_bulk_insert_images,
     db_create_images_table,
+    db_get_image_by_id,
     db_get_image_sync_state_by_folder_ids,
+    db_relocate_images,
+    db_toggle_image_favourite_status,
 )
 from app.database.yolo_mapping import db_create_YOLO_classes_table
 from app.utils.images import (
@@ -84,6 +88,16 @@ def _state(photo: str, thumbnail: str, **overrides: Any) -> Dict[str, Any]:
     }
     recorded.update(overrides)
     return recorded
+
+
+def _image_id(test_db: str, path) -> str:
+    conn = sqlite3.connect(test_db)
+    try:
+        return conn.execute(
+            "SELECT id FROM images WHERE path = ?", (str(path),)
+        ).fetchone()[0]
+    finally:
+        conn.close()
 
 
 class TestIsUnchanged:
@@ -392,6 +406,96 @@ class TestRescanningAFolder:
         conn.close()
 
         assert before == after
+
+    def test_a_renamed_photo_keeps_its_row(self, library, generated, test_db):
+        """Delete-and-reimport would cascade its faces, tags and album rows away."""
+        folder_data = [(str(library), "folder-1", False)]
+        image_util_process_folder_images(folder_data)
+        image_id = _image_id(test_db, library / "p1.jpg")
+        db_toggle_image_favourite_status(image_id)
+
+        renamed = library / "beach.jpg"
+        os.rename(library / "p1.jpg", renamed)
+        assert image_util_process_folder_images(folder_data) is True
+
+        image = db_get_image_by_id(image_id)
+        assert image is not None, "the renamed photo was deleted and re-imported"
+        assert image["path"] == str(renamed)
+        assert image["isFavourite"] is True
+        # The thumbnail made while reading the new path is not left behind.
+        assert len(os.listdir(library.parent / "thumbs")) == 5
+
+    def test_a_photo_moved_to_another_folder_keeps_its_row(
+        self, library, generated, test_db
+    ):
+        other = library.parent / "other"
+        other.mkdir()
+        conn = sqlite3.connect(test_db)
+        conn.execute(
+            "INSERT INTO folders (folder_id, folder_path, last_modified_time, "
+            "AI_Tagging) VALUES (?, ?, 0, 1)",
+            ("folder-2", str(other)),
+        )
+        conn.commit()
+        conn.close()
+        image_util_process_folder_images([(str(library), "folder-1", False)])
+        image_id = _image_id(test_db, library / "p2.jpg")
+
+        shutil.move(str(library / "p2.jpg"), str(other / "p2.jpg"))
+        # The watcher syncs the folder that gained the photo before the one
+        # that lost it.
+        image_util_process_folder_images([(str(other), "folder-2", False)])
+        image_util_process_folder_images([(str(library), "folder-1", False)])
+
+        image = db_get_image_by_id(image_id)
+        assert image is not None, "the moved photo was deleted and re-imported"
+        assert image["path"] == str(other / "p2.jpg")
+        assert image["folder_id"] == "folder-2"
+
+    def test_a_different_photo_does_not_take_over_a_deleted_ones_row(
+        self, library, generated, test_db
+    ):
+        folder_data = [(str(library), "folder-1", False)]
+        image_util_process_folder_images(folder_data)
+        deleted = library / "p4.jpg"
+        image_id = _image_id(test_db, deleted)
+        stats = os.stat(deleted)
+
+        os.remove(deleted)
+        # Same size and mtime, different picture: padded past the JPEG end
+        # marker, which decoders ignore.
+        replacement = library / "new.jpg"
+        for red in range(0, 256, 15):
+            _photo(replacement, (red, 255 - red, 7))
+            if os.path.getsize(replacement) <= stats.st_size:
+                break
+        padding = stats.st_size - os.path.getsize(replacement)
+        assert padding >= 0
+        with open(replacement, "ab") as f:
+            f.write(b"\0" * padding)
+        os.utime(replacement, (stats.st_atime, stats.st_mtime))
+        assert os.path.getsize(replacement) == stats.st_size
+        assert image_util_process_folder_images(folder_data) is True
+
+        assert db_get_image_by_id(image_id) is None
+        assert _image_id(test_db, replacement) != image_id
+
+
+class TestRelocateImages:
+    def test_a_row_deleted_since_the_lookup_fails_the_relocation(
+        self, folder, tmp_path
+    ):
+        moved = db_relocate_images(
+            [
+                {
+                    "id": "gone",
+                    "path": str(tmp_path / "a.jpg"),
+                    "folder_id": folder,
+                    "metadata": "{}",
+                }
+            ]
+        )
+        assert moved is False
 
 
 class TestExtractMetadataRecordsMtime:
