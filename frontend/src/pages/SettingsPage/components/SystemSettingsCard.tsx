@@ -2,15 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { Monitor } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import SettingsCard from './SettingsCard';
-import { Switch } from '@/components/ui/switch';
+import SettingSwitchRow from './SettingSwitchRow';
 
 const SystemSettingsCard: React.FC = () => {
   // null = unknown / error reading state
   const [autostart, setAutostart] = useState<boolean | null>(null);
   const [closeToTray, setCloseToTray] = useState<boolean | null>(null);
+  const [startMinimized, setStartMinimized] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
   const [pendingCloseToTray, setPendingCloseToTray] = useState(false);
+  const [pendingStartMinimized, setPendingStartMinimized] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -20,6 +22,9 @@ const SystemSettingsCard: React.FC = () => {
       invoke<boolean>('get_close_to_tray')
         .then(setCloseToTray)
         .catch(() => setCloseToTray(null)),
+      invoke<boolean>('get_start_minimized')
+        .then(setStartMinimized)
+        .catch(() => setStartMinimized(null)),
     ]).finally(() => setLoading(false));
   }, []);
 
@@ -51,6 +56,20 @@ const SystemSettingsCard: React.FC = () => {
     }
   };
 
+  const handleStartMinimizedToggle = async () => {
+    if (startMinimized === null) return;
+    const next = !startMinimized;
+    setPendingStartMinimized(true);
+    try {
+      await invoke('set_start_minimized', { enabled: next });
+      setStartMinimized(next);
+    } catch (err) {
+      console.error('Failed to toggle start minimized:', err);
+    } finally {
+      setPendingStartMinimized(false);
+    }
+  };
+
   const isDisabled = loading || pending || autostart === null;
   const isChecked = autostart === true;
 
@@ -58,54 +77,50 @@ const SystemSettingsCard: React.FC = () => {
     loading || pendingCloseToTray || closeToTray === null;
   const closeToTrayChecked = closeToTray === true;
 
+  const startMinimizedDisabled =
+    loading || pendingStartMinimized || startMinimized === null;
+  const startMinimizedChecked = startMinimized === true;
+
+  const autostartDescription = !autostart
+    ? 'Automatically start PictoPy when you log in.'
+    : startMinimized === false
+      ? 'Automatically start PictoPy when you log in. The main window opens directly on boot.'
+      : 'Automatically start PictoPy when you log in. The window starts minimized to the system tray.';
+
   return (
     <SettingsCard
       icon={Monitor}
       title="System"
       description="System integration and startup behavior"
     >
-      <div className="flex items-center justify-between py-1">
-        <div>
-          <div id="autostart-label" className="font-medium">
-            Launch at startup
-          </div>
-          <div id="autostart-desc" className="text-muted-foreground text-sm">
-            Automatically start PictoPy when you log in. The window starts
-            minimized to the system tray.
-          </div>
-        </div>
+      <SettingSwitchRow
+        id="autostart"
+        label="Launch at startup"
+        description={autostartDescription}
+        checked={isChecked}
+        disabled={isDisabled}
+        onToggle={handleToggle}
+      />
 
-        <Switch
-          checked={isChecked}
-          onCheckedChange={handleToggle}
-          disabled={isDisabled}
-          aria-labelledby="autostart-label"
-          aria-describedby="autostart-desc"
+      {isChecked && (
+        <SettingSwitchRow
+          id="start-minimized"
+          label="Start minimized"
+          description="When enabled, PictoPy starts silently in the system tray on boot. When disabled, the main window opens on boot instead."
+          checked={startMinimizedChecked}
+          disabled={startMinimizedDisabled}
+          onToggle={handleStartMinimizedToggle}
         />
-      </div>
+      )}
 
-      <div className="flex items-center justify-between py-1">
-        <div>
-          <div id="close-to-tray-label" className="font-medium">
-            Close to tray
-          </div>
-          <div
-            id="close-to-tray-desc"
-            className="text-muted-foreground text-sm"
-          >
-            When enabled, closing the window hides the app to the system tray
-            instead of exiting.
-          </div>
-        </div>
-
-        <Switch
-          checked={closeToTrayChecked}
-          onCheckedChange={handleCloseToTrayToggle}
-          disabled={closeToTrayDisabled}
-          aria-labelledby="close-to-tray-label"
-          aria-describedby="close-to-tray-desc"
-        />
-      </div>
+      <SettingSwitchRow
+        id="close-to-tray"
+        label="Close to tray"
+        description="When enabled, closing the window hides the app to the system tray instead of exiting."
+        checked={closeToTrayChecked}
+        disabled={closeToTrayDisabled}
+        onToggle={handleCloseToTrayToggle}
+      />
     </SettingsCard>
   );
 };
