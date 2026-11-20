@@ -3,7 +3,7 @@ import json
 from typing import Any, Dict, Optional
 
 import pytest
-from PIL import ExifTags, Image
+from PIL import ExifTags, Image, TiffImagePlugin
 
 from app.utils.extract_location_metadata import MetadataExtractor
 from app.utils.images import (
@@ -16,6 +16,7 @@ TAG_IDS = {name: tag_id for tag_id, name in ExifTags.TAGS.items()}
 DATE_TIME = TAG_IDS["DateTime"]
 DATE_TIME_ORIGINAL = TAG_IDS["DateTimeOriginal"]
 DATE_TIME_DIGITIZED = TAG_IDS["DateTimeDigitized"]
+GPS_INFO_TAG = 34853
 
 
 class FakeExif(dict):
@@ -168,6 +169,42 @@ class TestDateSource:
         metadata = image_util_extract_metadata(str(tmp_path / "gone.jpg"))
         assert metadata["date_source"] == "unknown"
 
+    def test_corrupted_gps_zero_denominator_survives_with_exif_date_and_dimensions(
+        self, tmp_path
+    ):
+        """
+        Corrupted EXIF GPS rational with zero denominator must not crash metadata extraction;
+        date_source must remain 'exif' and dimensions (width, height) must survive intact.
+        """
+        path = tmp_path / "corrupted_gps.jpg"
+        image = Image.new("RGB", (12, 16), "white")
+        exif = image.getexif()
+        exif[EXIF_IFD_POINTER] = {DATE_TIME_ORIGINAL: "2024:02:06 10:36:24"}
+        # GPS IFD tag 34853 with zero-denominator rational in latitude DMS
+        exif[GPS_INFO_TAG] = {
+            1: "N",
+            2: (
+                TiffImagePlugin.IFDRational(37, 1),
+                TiffImagePlugin.IFDRational(46, 1),
+                TiffImagePlugin.IFDRational(29, 0),
+            ),
+            3: "W",
+            4: (
+                TiffImagePlugin.IFDRational(122, 1),
+                TiffImagePlugin.IFDRational(28, 1),
+                TiffImagePlugin.IFDRational(56, 1),
+            ),
+        }
+        image.save(path, exif=exif)
+
+        metadata = image_util_extract_metadata(str(path))
+        assert metadata["date_source"] == "exif"
+        assert metadata["date_created"] == "2024-02-06T10:36:24"
+        assert metadata["width"] == 12
+        assert metadata["height"] == 16
+        assert "latitude" not in metadata
+        assert "longitude" not in metadata
+
 
 class TestCapturedAtRefusesGuessedDates:
     """
@@ -202,3 +239,85 @@ class TestCapturedAtRefusesGuessedDates:
         assert self._captured_at(
             {"date_created": "2024-02-06T10:36:24"}
         ) == datetime.datetime(2024, 2, 6, 10, 36, 24)
+
+
+class MockExifRatio:
+    """Simulates an EXIF rational value (e.g. IFDRational) with numerator and denominator."""
+
+    def __init__(self, numerator: int, denominator: int):
+        self.numerator = numerator
+        self.denominator = denominator
+
+
+class MockExifObject:
+    """Simulates PIL.Image.Exif object providing get_ifd."""
+
+    def __init__(self, gps_info: dict):
+        self._gps_info = gps_info
+
+    def get_ifd(self, tag: int):
+        if tag == GPS_INFO_TAG:
+            return self._gps_info
+        return {}
+
+
+class TestGpsZeroDivisionHandling:
+    """Tests that corrupted EXIF GPS values with denominator == 0 are handled gracefully."""
+
+    def test_convert_to_degrees_raises_zerodivision_on_zero_denominator(self):
+        """_convert_to_degrees must raise ZeroDivisionError when denominator is zero."""
+        from app.utils.images import _convert_to_degrees
+
+        # Corrupted DMS where the seconds rational has a denominator of zero
+        corrupt_dms = (
+            MockExifRatio(37, 1),
+            MockExifRatio(46, 1),
+            MockExifRatio(29, 0),
+        )
+        with pytest.raises(ZeroDivisionError):
+            _convert_to_degrees(corrupt_dms)
+
+    def test_convert_to_degrees_valid_rationals(self):
+        """_convert_to_degrees correctly calculates decimal degrees from valid rationals."""
+        from app.utils.images import _convert_to_degrees
+
+        # 37 deg, 30 min, 0 sec = 37.5 degrees
+        valid_dms = (
+            MockExifRatio(37, 1),
+            MockExifRatio(30, 1),
+            MockExifRatio(0, 1),
+        )
+        assert _convert_to_degrees(valid_dms) == pytest.approx(37.5)
+
+    def test_extract_gps_coordinates_handles_zero_denominator(self):
+        """_extract_gps_coordinates returns (None, None) when encountering zero denominator."""
+        from app.utils.images import _extract_gps_coordinates
+
+        # GPSInfo dict: Tag 1 = LatRef, 2 = LatDMS, 3 = LonRef, 4 = LonDMS
+        corrupt_gps_info = {
+            1: "N",
+            2: (MockExifRatio(37, 1), MockExifRatio(46, 1), MockExifRatio(29, 0)),
+            3: "W",
+            4: (MockExifRatio(122, 1), MockExifRatio(28, 1), MockExifRatio(56, 1)),
+        }
+        mock_exif = MockExifObject(corrupt_gps_info)
+
+        latitude, longitude = _extract_gps_coordinates(mock_exif)
+        assert latitude is None
+        assert longitude is None
+
+    def test_extract_gps_coordinates_handles_non_rational_numbers(self):
+        """_extract_gps_coordinates works when coordinates are plain floats/ints."""
+        from app.utils.images import _extract_gps_coordinates
+
+        plain_gps_info = {
+            1: "N",
+            2: (37.0, 30.0, 0.0),
+            3: "W",
+            4: (122.0, 30.0, 0.0),
+        }
+        mock_exif = MockExifObject(plain_gps_info)
+
+        latitude, longitude = _extract_gps_coordinates(mock_exif)
+        assert latitude == pytest.approx(37.5)
+        assert longitude == pytest.approx(-122.5)
