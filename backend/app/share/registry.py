@@ -128,6 +128,17 @@ def share_registry_revoke(token: str) -> bool:
         return _shares.pop(token, None) is not None
 
 
+def share_registry_revoke_for_album(album_id: str) -> List[str]:
+    """Revoke every active share for an album. Returns the list of revoked tokens."""
+    with _lock:
+        tokens = [
+            token for token, entry in _shares.items() if entry.album_id == album_id
+        ]
+        for token in tokens:
+            del _shares[token]
+        return tokens
+
+
 def share_registry_count() -> int:
     """Live share count; the server stops once this reaches zero."""
     with _lock:

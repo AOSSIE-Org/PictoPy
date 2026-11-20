@@ -16,6 +16,7 @@ from app.share.registry import (
     share_registry_is_unlocked,
     share_registry_list,
     share_registry_revoke,
+    share_registry_revoke_for_album,
     share_registry_unlock,
 )
 
@@ -109,6 +110,22 @@ class TestRevoke:
         drop = share_registry_create("album-2")
         share_registry_revoke(drop.token)
         assert share_registry_get(keep.token) is not None
+
+    def test_revoking_for_album_removes_all_shares_of_that_album(self) -> None:
+        first = share_registry_create("album-1")
+        second = share_registry_create("album-1")
+        other = share_registry_create("album-2")
+
+        revoked = share_registry_revoke_for_album("album-1")
+        assert set(revoked) == {first.token, second.token}
+        assert share_registry_get(first.token) is None
+        assert share_registry_get(second.token) is None
+        assert share_registry_get(other.token) is not None
+
+    def test_revoking_for_unknown_album_returns_empty_list(self) -> None:
+        entry = share_registry_create("album-1")
+        assert share_registry_revoke_for_album("unknown") == []
+        assert share_registry_get(entry.token) is not None
 
 
 class TestPassword:
