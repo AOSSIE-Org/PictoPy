@@ -1,11 +1,12 @@
 import os
 import sqlite3
 import tempfile
-from typing import Any, Dict, Iterator
+from typing import Any, Dict, Iterator, cast
 
 import pytest
 
 from app.database.images import (
+    ImageRecord,
     db_create_images_table,
     db_bulk_insert_images,
     db_get_all_images,
@@ -70,7 +71,7 @@ def folder(test_db: str) -> str:
 
 def make_image_record(
     image_id: str, path: str, folder_id: str, **overrides: Any
-) -> Dict[str, Any]:
+) -> ImageRecord:
     record: Dict[str, Any] = {
         "id": image_id,
         "path": path,
@@ -84,7 +85,8 @@ def make_image_record(
         "captured_at": None,
     }
     record.update(overrides)
-    return record
+    # Keys match ImageRecord; **overrides is dynamic so cast past the checker.
+    return cast(ImageRecord, record)
 
 
 def add_tag(db_path: str, image_id: str, class_id: int, name: str) -> None:
@@ -207,6 +209,37 @@ class TestGetAllImages:
         assert by_id["img-1"]["tags"] == ["sunset"]
         assert by_id["img-2"]["tags"] is None
 
+    def test_multiple_tags_group_into_one_record(self, folder, test_db):
+        # An image with several tags must come back as a single record whose
+        # tags hold every name, sorted. This is the GROUP_CONCAT aggregation
+        # (one row per image) replacing the old per-tag row grouping in Python.
+        db_bulk_insert_images([make_image_record("img-1", "/photos/a.jpg", folder)])
+        add_tag(test_db, "img-1", 1, "dog")
+        add_tag(test_db, "img-1", 2, "cat")
+        add_tag(test_db, "img-1", 3, "tree")
+
+        images = db_get_all_images()
+        assert len(images) == 1
+        assert images[0]["tags"] == ["cat", "dog", "tree"]
+
+    def test_empty_tag_names_are_excluded(self, folder, test_db):
+        # A mapping with an empty name must not appear in tags, matching the old
+        # per-row code which skipped falsy names. An image whose only tag is
+        # empty comes back as None, not [].
+        db_bulk_insert_images(
+            [
+                make_image_record("img-1", "/photos/a.jpg", folder),
+                make_image_record("img-2", "/photos/b.jpg", folder),
+            ]
+        )
+        add_tag(test_db, "img-1", 1, "")
+        add_tag(test_db, "img-1", 2, "cat")
+        add_tag(test_db, "img-2", 3, "")
+
+        by_id = {img["id"]: img for img in db_get_all_images()}
+        assert by_id["img-1"]["tags"] == ["cat"]
+        assert by_id["img-2"]["tags"] is None
+
     def test_tagged_filter(self, folder, test_db):
         db_bulk_insert_images(
             [
@@ -227,6 +260,7 @@ class TestGetImageById:
             [make_image_record("img-1", "/photos/a.jpg", folder, metadata='{"k": 1}')]
         )
         image = db_get_image_by_id("img-1")
+        assert image is not None
         assert image["metadata"] == {"k": 1}
         assert image["isFavourite"] is False
 
@@ -234,7 +268,9 @@ class TestGetImageById:
         db_bulk_insert_images(
             [make_image_record("img-1", "/photos/a.jpg", folder, metadata="not json")]
         )
-        assert db_get_image_by_id("img-1")["metadata"] == {}
+        image = db_get_image_by_id("img-1")
+        assert image is not None
+        assert image["metadata"] == {}
 
 
 class TestUntaggedAndUnembedded:
@@ -266,7 +302,9 @@ class TestTaggedStatusAndClasses:
     def test_update_tagged_status(self, folder, test_db):
         db_bulk_insert_images([make_image_record("img-1", "/photos/a.jpg", folder)])
         assert db_update_image_tagged_status("img-1", True) is True
-        assert db_get_image_by_id("img-1")["isTagged"] is True
+        image = db_get_image_by_id("img-1")
+        assert image is not None
+        assert image["isTagged"] is True
 
     def test_update_tagged_status_missing_image(self, test_db):
         assert db_update_image_tagged_status("nope", True) is False
@@ -290,9 +328,13 @@ class TestFavouriteStatus:
     def test_toggles_on_then_off(self, folder, test_db):
         db_bulk_insert_images([make_image_record("img-1", "/photos/a.jpg", folder)])
         assert db_toggle_image_favourite_status("img-1") is True
-        assert db_get_image_by_id("img-1")["isFavourite"] is True
+        image = db_get_image_by_id("img-1")
+        assert image is not None
+        assert image["isFavourite"] is True
         assert db_toggle_image_favourite_status("img-1") is True
-        assert db_get_image_by_id("img-1")["isFavourite"] is False
+        image = db_get_image_by_id("img-1")
+        assert image is not None
+        assert image["isFavourite"] is False
 
     def test_missing_image_returns_false(self, test_db):
         assert db_toggle_image_favourite_status("nope") is False
@@ -461,7 +503,7 @@ class TestErrorHandling:
 
     def test_get_by_folder_ids_returns_empty_on_db_error(self, test_db):
         drop_object(test_db, "TABLE", "images")
-        assert db_get_images_by_folder_ids([1]) == []
+        assert db_get_images_by_folder_ids(["1"]) == []
 
     def test_update_tagged_status_returns_false_on_db_error(self, test_db):
         drop_object(test_db, "TABLE", "images")
