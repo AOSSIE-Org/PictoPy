@@ -80,6 +80,14 @@ export const useMutationFeedback = (
   const { isPending, isSuccess, isError, error, errorMessage: stateErrorMessage } = mutationState;
 
   const isShowingLoaderRef = useRef(false);
+  const hasHandledSuccessRef = useRef(false);
+  const lastShownErrorMsg = useRef<string | null>(null);
+
+  const onSuccessRef = useRef(onSuccess);
+  onSuccessRef.current = onSuccess;
+
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
 
   // Handle loading state
   useEffect(() => {
@@ -101,19 +109,30 @@ export const useMutationFeedback = (
     };
   }, [dispatch]);
 
+  // Clear handled success flag when mutation is no longer in success state
+  useEffect(() => {
+    if (!isSuccess) {
+      hasHandledSuccessRef.current = false;
+    }
+  }, [isSuccess]);
+
   // Handle success state
   useEffect(() => {
-    if (isSuccess && showSuccess) {
-      dispatch(
-        showInfoDialog({
-          title: successTitle,
-          message: successMessage,
-          variant: 'info',
-        }),
-      );
+    if (isSuccess && !hasHandledSuccessRef.current) {
+      hasHandledSuccessRef.current = true;
 
-      if (onSuccess) {
-        onSuccess();
+      if (showSuccess) {
+        dispatch(
+          showInfoDialog({
+            title: successTitle,
+            message: successMessage,
+            variant: 'info',
+          }),
+        );
+      }
+
+      if (onSuccessRef.current) {
+        onSuccessRef.current();
       }
     }
   }, [
@@ -122,10 +141,7 @@ export const useMutationFeedback = (
     successTitle,
     successMessage,
     dispatch,
-    onSuccess,
   ]);
-
-  const lastShownErrorMsg = useRef<string | null>(null);
 
   // Clear last shown error when error is resolved
   useEffect(() => {
@@ -136,25 +152,28 @@ export const useMutationFeedback = (
 
   // Handle error state
   useEffect(() => {
-    if (isError && showError) {
+    if (isError) {
       const errorMsg = stateErrorMessage || (error instanceof Error ? error.message : errorMessage);
 
       if (lastShownErrorMsg.current !== errorMsg) {
         lastShownErrorMsg.current = errorMsg;
-        dispatch(
-          showInfoDialog({
-            title: errorTitle,
-            message: errorMsg,
-            variant: 'error',
-          }),
-        );
 
-        if (onError) {
-          onError(error);
+        if (showError) {
+          dispatch(
+            showInfoDialog({
+              title: errorTitle,
+              message: errorMsg,
+              variant: 'error',
+            }),
+          );
+        }
+
+        if (onErrorRef.current) {
+          onErrorRef.current(error);
         }
       }
     }
-  }, [isError, showError, errorTitle, errorMessage, error, dispatch, onError]);
+  }, [isError, showError, errorTitle, errorMessage, stateErrorMessage, error, dispatch]);
 
   // Return original state for convenience
   return mutationState;

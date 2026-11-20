@@ -19,7 +19,7 @@ import { getFoldersTaggingStatus } from '@/api/api-functions/folders';
  */
 export const useFolderOperations = () => {
   const dispatch = useDispatch();
-  const folders = useSelector(selectAllFolders);
+  const folders = useSelector(selectAllFolders) || [];
 
   // Query for folders
   const foldersQuery = usePictoQuery({
@@ -36,7 +36,7 @@ export const useFolderOperations = () => {
     staleTime: 1000,
     refetchInterval: (query: any) => query.state.errorUpdateCount > 0 ? false : 1000,
     refetchIntervalInBackground: true,
-    enabled: folders.some((f) => f.AI_Tagging),
+    enabled: Array.isArray(folders) && folders.some((f) => f.AI_Tagging),
     retry: 2, // Retry failed requests up to 2 times before giving up
     retryOnMount: false, // Don't retry on component mount
     refetchOnWindowFocus: false, // Don't refetch when window gains focus
@@ -55,8 +55,10 @@ export const useFolderOperations = () => {
       loadingMessage: 'Loading folders',
       showSuccess: false,
       onSuccess: () => {
-        const folders = foldersQuery.data?.data?.folders as FolderDetails[];
-        dispatch(setFolders(folders));
+        const foldersData = foldersQuery.data?.data?.folders as FolderDetails[];
+        if (foldersData) {
+          dispatch(setFolders(foldersData));
+        }
       },
     },
   );

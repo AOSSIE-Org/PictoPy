@@ -19,7 +19,7 @@ const folderSlice = createSlice({
   reducers: {
     // Set all folders
     setFolders(state, action: PayloadAction<FolderDetails[]>) {
-      state.folders = action.payload;
+      state.folders = action.payload || [];
     },
 
     // Add a single folder
