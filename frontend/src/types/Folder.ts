@@ -35,10 +35,9 @@ export const countSubfolders = (
   const children = new Map<string, string[]>();
   for (const f of folders) {
     if (!f.parent_folder_id) continue;
-    children.set(f.parent_folder_id, [
-      ...(children.get(f.parent_folder_id) ?? []),
-      f.folder_id,
-    ]);
+    const siblings = children.get(f.parent_folder_id);
+    if (siblings) siblings.push(f.folder_id);
+    else children.set(f.parent_folder_id, [f.folder_id]);
   }
   let count = 0;
   const stack = [...(children.get(folderId) ?? [])];

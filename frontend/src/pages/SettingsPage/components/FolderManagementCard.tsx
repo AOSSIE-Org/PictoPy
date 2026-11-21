@@ -208,8 +208,17 @@ const FolderManagementCard: React.FC = () => {
     dontShowAgain: boolean,
   ) => {
     // What was chosen in the dialog becomes the default for next time.
-    setDeleteSubfoldersPreference(deleteSubfolders);
-    if (dontShowAgain) setSkipFolderDeleteConfirmationPreference(true);
+    const defaultSaved = setDeleteSubfoldersPreference(deleteSubfolders);
+    // "Don't show again" lets later deletions run under the saved default, so
+    // grant it only if that default is the one chosen here. If the write failed
+    // the old default would silently apply to folders with subfolders.
+    if (dontShowAgain && defaultSaved) {
+      setSkipFolderDeleteConfirmationPreference(true);
+    }
+    // Fire-and-forget on purpose, like the photo-delete dialog: the hook owns
+    // the loading and error UI (useMutationFeedback), so the dialog doesn't
+    // need the promise and closes right away. This deletion uses the choice
+    // made in the dialog, whether or not it could be saved as the default.
     deleteFolder(folder.folder_id, !deleteSubfolders);
   };
 

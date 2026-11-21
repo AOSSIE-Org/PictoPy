@@ -1090,9 +1090,7 @@ class TestFoldersUnit:
         assert self._parent_of(test_db, "leaf") == "root"
         assert self._parent_of(test_db, "side") == "root"
 
-    def test_db_delete_folders_batch_keep_subfolders_skips_deleted_chain(
-        self, test_db
-    ):
+    def test_db_delete_folders_batch_keep_subfolders_skips_deleted_chain(self, test_db):
         self._insert_tree(test_db)
 
         # deleting root and mid together must not take leaf down with them
@@ -1125,6 +1123,64 @@ class TestFoldersUnit:
         conn.close()
         # the deleted folder's own image goes, the kept subfolder's image stays
         assert remaining == {"img-mid"}
+
+    def test_db_delete_folders_batch_keep_subfolders_rolls_back_on_delete_failure(
+        self, test_db
+    ):
+        """If the DELETE fails after children were re-parented, nothing sticks."""
+        self._insert_tree(test_db)
+        conn = sqlite3.connect(test_db)
+        conn.executemany(
+            "INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged)"
+            " VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                ("img-root", "/tmp/root/a.jpg", "root", "/t/a.jpg", "{}", 0),
+                ("img-mid", "/tmp/root/mid/b.jpg", "mid", "/t/b.jpg", "{}", 0),
+            ],
+        )
+        # A real failure, raised by SQLite itself on the DELETE only, so the
+        # re-parenting UPDATE before it succeeds first.
+        conn.execute(
+            "CREATE TRIGGER block_folder_delete BEFORE DELETE ON folders "
+            "BEGIN SELECT RAISE(ABORT, 'delete blocked'); END;"
+        )
+        conn.commit()
+        conn.close()
+
+        statements = []
+        real_connect = sqlite3.connect
+
+        def tracing_connect(*args, **kwargs):
+            traced = real_connect(*args, **kwargs)
+            traced.set_trace_callback(statements.append)
+            return traced
+
+        with patch("app.database.folders.sqlite3.connect", side_effect=tracing_connect):
+            with pytest.raises(sqlite3.Error, match="delete blocked"):
+                db_delete_folders_batch(["root"], keep_subfolders=True)
+
+        # the test only means something if the move really ran before the failure
+        assert any(
+            st.lstrip().startswith("UPDATE folders") for st in statements
+        ), "re-parenting never ran"
+        assert any(st.startswith("DELETE FROM folders") for st in statements)
+
+        # ...and it was undone: same folders, same parent links, same images
+        check = sqlite3.connect(test_db)
+        try:
+            folders = dict(
+                check.execute("SELECT folder_id, parent_folder_id FROM folders")
+            )
+            images = {r[0] for r in check.execute("SELECT id FROM images")}
+        finally:
+            check.close()
+        assert folders == {
+            "root": None,
+            "mid": "root",
+            "leaf": "mid",
+            "side": "root",
+        }
+        assert images == {"img-root", "img-mid"}
 
     def test_db_delete_folder_success(self, test_db, tmp_path):
 
