@@ -27,6 +27,28 @@ export type IndexingStatus =
 export const isIndexingPending = (status?: IndexingStatus): boolean =>
   status !== 'completed' && status !== 'interrupted';
 
+/** Number of folders nested anywhere below `folderId`. */
+export const countSubfolders = (
+  folders: FolderDetails[],
+  folderId: string,
+): number => {
+  const children = new Map<string, string[]>();
+  for (const f of folders) {
+    if (!f.parent_folder_id) continue;
+    children.set(f.parent_folder_id, [
+      ...(children.get(f.parent_folder_id) ?? []),
+      f.folder_id,
+    ]);
+  }
+  let count = 0;
+  const stack = [...(children.get(folderId) ?? [])];
+  while (stack.length) {
+    count++;
+    stack.push(...(children.get(stack.pop() as string) ?? []));
+  }
+  return count;
+};
+
 export interface GetAllFoldersData {
   folders: FolderDetails[];
   total_count: number;

@@ -134,8 +134,17 @@ export const useFolderOperations = () => {
 
   // Delete folder mutation
   const deleteFolderMutation = usePictoMutation({
-    mutationFn: async (folder_id: string) =>
-      deleteFolders({ folder_ids: [folder_id] }),
+    mutationFn: async ({
+      folderId,
+      keepSubfolders,
+    }: {
+      folderId: string;
+      keepSubfolders: boolean;
+    }) =>
+      deleteFolders({
+        folder_ids: [folderId],
+        keep_subfolders: keepSubfolders,
+      }),
     autoInvalidateTags: ['folders'],
     // Clusters and memories become stale on folder deletion. They require separate invalidation calls
     // because autoInvalidateTags uses prefix matching, meaning a combined queryKey wouldn't match either.
@@ -168,10 +177,10 @@ export const useFolderOperations = () => {
   };
 
   /**
-   * Delete a folder
+   * Delete a folder. With keepSubfolders, its subfolders stay in the library.
    */
-  const deleteFolder = (folderId: string) => {
-    deleteFolderMutation.mutate(folderId);
+  const deleteFolder = (folderId: string, keepSubfolders = false) => {
+    deleteFolderMutation.mutate({ folderId, keepSubfolders });
   };
 
   return {
