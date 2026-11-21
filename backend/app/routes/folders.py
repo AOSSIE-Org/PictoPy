@@ -454,7 +454,9 @@ def delete_folders(
         if not request.folder_ids:
             raise ValueError("No folder IDs provided")
 
-        deleted_count = db_delete_folders_batch(request.folder_ids)
+        deleted_count = db_delete_folders_batch(
+            request.folder_ids, keep_subfolders=request.keep_subfolders
+        )
 
         # Synchronous so the response can't race the frontend's next
         # Memories fetch; imported late, like _curate_memories below.
