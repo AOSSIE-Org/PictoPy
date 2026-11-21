@@ -153,7 +153,12 @@ jobs:
           pip install -r requirements.txt
           pyinstaller main.py --name PictoPy_Sync_Microservice --onedir --distpath dist
 
-      - name: Run Tests
+      - name: Run Tests (Backend)
         run: |
           cd backend
+          pytest
+
+      - name: Run Tests (Sync Microservice)
+        run: |
+          cd sync-microservice
           pytest
