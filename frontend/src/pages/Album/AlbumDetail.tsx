@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate, useLocation } from 'react-router';
+import axios from 'axios';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { ImageCard } from '@/components/Media/ImageCard';
@@ -30,6 +31,7 @@ import {
 } from '@/features/albumSelectors';
 import { selectIsImageViewOpen } from '@/features/imageSelectors';
 import { showInfoDialog } from '@/features/infoDialogSlice';
+import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { Album } from '@/types/Album';
 import { Image } from '@/types/Media';
@@ -63,19 +65,35 @@ export const AlbumDetail = () => {
     queryKey: ['album', albumId],
     queryFn: () => getAlbumById(albumId!),
     enabled: !!albumId,
+    // This page's own requests go to the local backend, so none of them should
+    // wait for an internet connection.
+    networkMode: 'always',
   });
 
   const {
     data: imagesData,
     isLoading: isLoadingImages,
+    isPending: isImagesPending,
     isSuccess: imagesSuccess,
     isError: imagesError,
     refetch: refetchImages,
   } = usePictoQuery({
-    queryKey: ['album-images', albumId],
+    // Keyed on the password so each attempt is checked, not served from cache.
+    queryKey: ['album-images', albumId, password],
     queryFn: () =>
       getAlbumImages(albumId!, password ? { password } : undefined),
     enabled: !!albumId && !!album,
+    // Drop the result on leaving, so reopening after a password change checks
+    // the password again instead of showing the album from cache.
+    gcTime: 0,
+    networkMode: 'always',
+    // A wrong password stays wrong, so retrying only delays the error.
+    retry: (failureCount, error) => {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
 
   // Fetch all images to get full details
@@ -83,6 +101,7 @@ export const AlbumDetail = () => {
     queryKey: ['images'],
     queryFn: () => fetchAllImages(),
     enabled: !!albumId && !!album,
+    networkMode: 'always',
   });
 
   // The grid needs both responses: one names the album's images, the other
@@ -99,6 +118,7 @@ export const AlbumDetail = () => {
     }) => removeMultipleImagesFromAlbum(albumId, { image_ids: imageIds }),
     // The list page shows a photo count per album, so it is stale now too.
     autoInvalidateTags: ['albums'],
+    networkMode: 'always',
   });
 
   useMutationFeedback(removeImagesMutation, {
@@ -171,6 +191,21 @@ export const AlbumDetail = () => {
     navigate,
   ]);
 
+  // Showing a locked album's header before the backend accepts the password
+  // would suggest it is unlocked. Pending, since the check waits on the store.
+  const isVerifyingPassword =
+    (!!password || !!album?.is_locked) &&
+    isImagesPending &&
+    (isLoadingAlbum || !!albumData);
+
+  useEffect(() => {
+    if (!isVerifyingPassword) return;
+    dispatch(showLoader('Verifying password...'));
+    return () => {
+      dispatch(hideLoader());
+    };
+  }, [isVerifyingPassword, dispatch]);
+
   useEffect(() => {
     return () => {
       dispatch(clearAlbumImages());
@@ -206,6 +241,12 @@ export const AlbumDetail = () => {
   const handleBack = () => {
     navigate('/albums');
   };
+
+  // A failed load redirects to /albums from an effect, which runs after this
+  // render, so the album must not flash in between.
+  if (isVerifyingPassword || imagesError) {
+    return null;
+  }
 
   if (isLoadingAlbum) {
     return (
