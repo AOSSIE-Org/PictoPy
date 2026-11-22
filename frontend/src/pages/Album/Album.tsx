@@ -28,6 +28,7 @@ import { selectAlbums } from '@/features/albumSelectors';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { usePersistedSort } from '@/hooks/usePersistedSort';
+import { stopTunnel } from '@/utils/tunnel';
 import { MEDIA_GRID_CLASS } from '@/constants/layout';
 import { cn } from '@/lib/utils';
 import { Album } from '@/types/Album';
@@ -36,6 +37,8 @@ import {
   GallerySortDropdown,
   type SortOption,
 } from '@/components/GallerySortDropdown';
+
+const SHARES_POLL_MS = 30_000;
 
 type AlbumSortValue = 'name' | 'photoCount' | 'dateCreated' | 'recentlyUpdated';
 
@@ -112,7 +115,30 @@ function Albums() {
   >({
     queryKey: ['shares'],
     queryFn: () => getShares(),
+    // Expiry happens in the backend with no event, so poll while something is
+    // shared to notice the last one lapsing. Idle once nothing is.
+    refetchInterval: (query) =>
+      (query.state.data?.data?.length ?? 0) > 0 ? SHARES_POLL_MS : false,
   });
+
+  // One tunnel serves every share, and the dialog only closes it on "Stop
+  // sharing". When the last share lapses on its own nothing else would, so
+  // the album would stay reachable from the internet.
+  useEffect(() => {
+    if (shares && shares.length === 0) {
+      // Nothing running resolves quietly; a rejection means the ssh process
+      // may still be up, and its message carries the PID to kill by hand.
+      stopTunnel().catch((cause) =>
+        dispatch(
+          showInfoDialog({
+            title: 'Could not close the internet connection',
+            message: String(cause),
+            variant: 'error',
+          }),
+        ),
+      );
+    }
+  }, [shares, dispatch]);
 
   // Every share an album has, not just its newest: an album can be shared more
   // than once, and each token serves it until it is revoked.

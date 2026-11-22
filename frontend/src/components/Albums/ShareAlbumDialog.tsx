@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { useDispatch } from 'react-redux';
 import { QRCodeSVG } from 'qrcode.react';
 import { openUrl } from '@tauri-apps/plugin-opener';
@@ -27,7 +28,7 @@ import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { usePictoMutation, type BackendRes } from '@/hooks/useQueryExtension';
-import { createShare, revokeShare } from '@/api/api-functions';
+import { createShare, getShares, revokeShare } from '@/api/api-functions';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { cn } from '@/lib/utils';
@@ -62,6 +63,9 @@ const hasNonAscii = (value: string): boolean =>
 const DOCS_URL =
   'https://aossie-org.github.io/PictoPy/overview/sharing-albums/';
 const DOCS_INTERNET_URL = `${DOCS_URL}#internet-mode`;
+
+const isAlreadyGone = (error: unknown): boolean =>
+  axios.isAxiosError(error) && error.response?.status === 404;
 
 const formatExpiry = (expiresAt: string | null): string =>
   expiresAt ? new Date(expiresAt).toLocaleString() : 'Until you stop it';
@@ -165,7 +169,25 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
     // serving the album. Wrapped rather than passed straight through because
     // react-query hands the mutation function a context as a second argument.
     mutationFn: async (tokens: string[]): Promise<BackendRes<null>> => {
-      await Promise.all(tokens.map((token) => revokeShare(token)));
+      // A share that expired meanwhile is already gone, which is the outcome
+      // wanted, so a 404 is not a failure. Letting it reject would skip the
+      // tunnel close below and leave the album reachable.
+      const results = await Promise.allSettled(
+        tokens.map((token) => revokeShare(token)),
+      );
+      const failure = results.find(
+        (result): result is PromiseRejectedResult =>
+          result.status === 'rejected' && !isAlreadyGone(result.reason),
+      );
+      if (failure) {
+        throw failure.reason;
+      }
+      // The tunnel serves every album, and this dialog only knows about one.
+      // Ask the backend what is still live before taking it down.
+      const remaining = await getShares();
+      if ((remaining.data?.length ?? 0) > 0) {
+        return { success: true };
+      }
       // Closed through the hook, which asks whether one is running rather than
       // reading state this dialog may not have received yet. A failure here
       // rejects the mutation, so nothing claims the cleanup finished.
@@ -211,6 +233,9 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
     setCreatedShare(null);
     setSelectedUrl('');
     setCopied(false);
+    // Shares can expire while nothing is looking, so the list handed in may
+    // still hold one that is gone.
+    onChanged();
     // A share made earlier is still served by whatever tunnel is up, so ask
     // rather than assume it was a local one. The mode follows the answer:
     // showing an internet link while the help button explains local sharing
