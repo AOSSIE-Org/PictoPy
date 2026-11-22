@@ -26,6 +26,12 @@ ClassId = int
 SQLITE_ID_CHUNK = 500
 
 
+# Separator for GROUP_CONCAT-ing tag names into one row per image. ASCII Unit
+# Separator (0x1f) is a control character that cannot appear in a tag name, so
+# splitting the aggregated string back into a list is always unambiguous.
+_TAG_SEPARATOR = "\x1f"
+
+
 class ImageRecord(TypedDict, total=False):
     """Represents the full images table structure"""
 
@@ -244,7 +250,10 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
     cursor = conn.cursor()
 
     try:
-        # Build the query with optional WHERE clause
+        # Aggregate tags per image in SQLite with GROUP_CONCAT + GROUP BY so the
+        # query returns one row per image instead of one row per (image, tag),
+        # moving the grouping off Python. Tags are joined with _TAG_SEPARATOR
+        # (ASCII Unit Separator \x1f), which can't appear in a tag name.
         query = """
             SELECT
                 i.id,
@@ -258,25 +267,26 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
                 i.longitude,
                 i.captured_at,
                 i.favouritedAt,
-                m.name as tag_name
+                GROUP_CONCAT(m.name, ?) AS tag_names
             FROM images i
             LEFT JOIN image_classes_display ic ON i.id = ic.image_id
             LEFT JOIN mappings m ON ic.class_id = m.class_id
         """
 
-        params = []
+        params: List[Any] = [_TAG_SEPARATOR]
         if tagged is not None:
             query += " WHERE i.isTagged = ?"
             params.append(tagged)
 
-        query += " ORDER BY i.path, m.name"
+        query += " GROUP BY i.id ORDER BY i.path"
 
         cursor.execute(query, params)
 
         results = cursor.fetchall()
 
-        # Group results by image ID
-        images_dict = {}
+        from app.utils.images import image_util_parse_metadata
+
+        images: List[dict] = []
         for (
             image_id,
             path,
@@ -289,20 +299,26 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
             longitude,
             captured_at,
             favourited_at,
-            tag_name,
+            tag_names,
         ) in results:
-            if image_id not in images_dict:
-                # Safely parse metadata JSON -> dict
-                from app.utils.images import image_util_parse_metadata
+            # GROUP_CONCAT returns NULL when an image has no tags (all LEFT JOIN
+            # rows were NULL). Split on the separator, drop duplicates, then sort
+            # by name to match the old "ORDER BY m.name" tag ordering. Empty ->
+            # None, as callers expect.
+            tags: Optional[List[str]] = None
+            if tag_names:
+                names = sorted(
+                    {name for name in tag_names.split(_TAG_SEPARATOR) if name}
+                )
+                tags = names or None
 
-                metadata_dict = image_util_parse_metadata(metadata)
-
-                images_dict[image_id] = {
+            images.append(
+                {
                     "id": image_id,
                     "path": path,
                     "folder_id": str(folder_id),
                     "thumbnailPath": thumbnail_path,
-                    "metadata": metadata_dict,
+                    "metadata": image_util_parse_metadata(metadata),
                     "isTagged": bool(is_tagged),
                     "isFavourite": bool(is_favourite),
                     "latitude": latitude,
@@ -311,22 +327,9 @@ def db_get_all_images(tagged: Union[bool, None] = None) -> List[dict]:
                         captured_at if captured_at else None
                     ),  # SQLite returns string
                     "favouritedAt": favourited_at if favourited_at else None,
-                    "tags": [],
+                    "tags": tags,
                 }
-
-            # Add tag if it exists (avoid duplicates)
-            if tag_name and tag_name not in images_dict[image_id]["tags"]:
-                images_dict[image_id]["tags"].append(tag_name)
-
-        # Convert to list and set tags to None if empty
-        images = []
-        for image_data in images_dict.values():
-            if not image_data["tags"]:
-                image_data["tags"] = None
-            images.append(image_data)
-
-        # Sort by path
-        images.sort(key=lambda x: x["path"])
+            )
 
         return images
 
