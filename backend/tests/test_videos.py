@@ -20,6 +20,7 @@ from app.database.videos import (
     db_get_video_by_id,
 )
 from app.utils.videos import (
+    IndexedVideos,
     video_util_is_valid_video,
     video_util_get_videos_from_folder,
     video_util_generate_thumbnail,
@@ -224,7 +225,7 @@ class TestVideoThumbnailAndMetadata:
             f.write("not a video")
 
         records = video_util_prepare_video_records(
-            [fake], {os.path.abspath(temp_media_dir): 1}
+            [fake], {os.path.abspath(temp_media_dir): "folder-1"}
         )
         assert len(records) == 1
         assert records[0]["thumbnailPath"] is None
@@ -689,7 +690,7 @@ class TestVideosAPI:
 class TestVideoUtilEdgeCases:
     def test_collect_superseded_skips_records_without_thumbnail(self):
         records = [{"path": "/v/a.mp4", "thumbnailPath": None}]
-        already = {"/v/a.mp4": ("/thumbs/old.jpg", {})}
+        already: IndexedVideos = {"/v/a.mp4": ("/thumbs/old.jpg", {})}
         assert video_util_collect_superseded_thumbnails(records, already) == []
 
     def test_source_is_unchanged_missing_file(self):
@@ -741,7 +742,7 @@ class TestVideoUtilEdgeCases:
             f.write(b"data")
         # Folder resolves to id 0, which the guard treats as "no folder"
         records = video_util_prepare_video_records(
-            [video_path], {os.path.abspath(temp_media_dir): 0}
+            [video_path], {os.path.abspath(temp_media_dir): 0}  # type: ignore[dict-item]
         )
         assert records == []
 

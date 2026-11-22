@@ -8,13 +8,14 @@ import json
 import os
 import sqlite3
 import tempfile
-from typing import Any, Dict, Iterator, List
+from typing import Any, Iterator, List
 
 import pytest
 from PIL import Image
 
 from app.database.folders import db_create_folders_table
 from app.database.images import (
+    ImageSyncState,
     db_bulk_insert_images,
     db_create_images_table,
     db_get_image_sync_state_by_folder_ids,
@@ -74,15 +75,16 @@ def _thumbnail(path) -> str:
     return str(path)
 
 
-def _state(photo: str, thumbnail: str, **overrides: Any) -> Dict[str, Any]:
+def _state(photo: str, thumbnail: str, **overrides: Any) -> ImageSyncState:
     """The sync state a previous scan would have recorded for an untouched file."""
     stats = os.stat(photo)
-    recorded: Dict[str, Any] = {
-        "thumbnailPath": thumbnail,
-        "file_size": stats.st_size,
-        "file_mtime": int(stats.st_mtime),
-    }
-    recorded.update(overrides)
+    recorded = ImageSyncState(
+        thumbnailPath=thumbnail,
+        file_size=stats.st_size,
+        file_mtime=int(stats.st_mtime),
+        date_source=None,
+    )
+    recorded.update(overrides)  # type: ignore[typeddict-item]
     return recorded
 
 
@@ -146,7 +148,7 @@ class TestIsUnchanged:
                 '{"photoTakenTime": {"timestamp": "1600000000"}}'
             )
         recorded = _state(photo, thumb, date_source=date_source)
-        assert image_util_is_unchanged(photo, recorded) is expected  # type: ignore[arg-type]
+        assert image_util_is_unchanged(photo, recorded) is expected
 
     def test_an_unknown_path_is_changed(self, tmp_path):
         assert image_util_is_unchanged(str(tmp_path / "a.jpg"), None) is False
