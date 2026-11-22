@@ -128,6 +128,15 @@ def share_registry_revoke(token: str) -> bool:
         return _shares.pop(token, None) is not None
 
 
+def share_registry_purge_expired() -> int:
+    """Drop every expired share and return how many went."""
+    with _lock:
+        expired = [token for token, entry in _shares.items() if entry.is_expired]
+        for token in expired:
+            del _shares[token]
+        return len(expired)
+
+
 def share_registry_count() -> int:
     """Live share count; the server stops once this reaches zero."""
     with _lock:

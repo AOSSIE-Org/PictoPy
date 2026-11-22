@@ -399,6 +399,50 @@ describe('ShareAlbumDialog', () => {
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
   });
 
+  it('refreshes the share list when opened, in case one expired meanwhile', () => {
+    const onChanged = jest.fn();
+    renderDialog([share], onChanged);
+
+    expect(onChanged).toHaveBeenCalled();
+  });
+
+  // An expired share is already gone from the backend, so revoking it 404s.
+  // That must not stop the tunnel from closing or the dialog from reporting
+  // failure.
+  it('treats a share that already expired as stopped and still closes the tunnel', async () => {
+    const user = userEvent.setup();
+    mockTunnelStatus.mockResolvedValue('https://abc123.lhr.life');
+    mockRevokeShare.mockRejectedValue(
+      Object.assign(new Error('Not Found'), {
+        isAxiosError: true,
+        response: { status: 404 },
+      }),
+    );
+    renderDialog([share]);
+
+    await user.click(screen.getByRole('button', { name: /stop sharing/i }));
+
+    await waitFor(() => expect(mockStopTunnel).toHaveBeenCalled());
+  });
+
+  it('still reports a revoke that failed for another reason', async () => {
+    const user = userEvent.setup();
+    // 409 because the mutation retries any other failure, and those retries
+    // would leak into the next test's call counts.
+    mockRevokeShare.mockRejectedValue(
+      Object.assign(new Error('boom'), {
+        isAxiosError: true,
+        response: { status: 409 },
+      }),
+    );
+    renderDialog([share]);
+
+    await user.click(screen.getByRole('button', { name: /stop sharing/i }));
+
+    await waitFor(() => expect(mockRevokeShare).toHaveBeenCalled());
+    expect(mockStopTunnel).not.toHaveBeenCalled();
+  });
+
   // Creating a share leaves earlier ones valid, so stopping has to take down
   // every token or the album stays reachable after the UI says it stopped.
   it('stops every share the album has, not just the newest', async () => {

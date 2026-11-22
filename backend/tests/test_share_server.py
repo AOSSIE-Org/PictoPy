@@ -1,18 +1,24 @@
 import asyncio
 import socket
+from datetime import datetime, timedelta, timezone
 from typing import Iterator, List, Optional, Tuple
 
 import pytest
 
 from app.share import server as share_server
-from app.share.registry import share_registry_clear, share_registry_create
+import app.utils.share as share_utils
+from app.share.registry import (
+    share_registry_clear,
+    share_registry_count,
+    share_registry_create,
+)
 from app.share.server import (
     share_server_is_running,
     share_server_port,
     share_server_start,
     share_server_stop,
 )
-from app.utils.share import share_util_revoke
+from app.utils.share import share_util_create, share_util_revoke, share_util_sweep
 
 # Every assertion about listener state is made inside the coroutine, because
 # asyncio.run cancels the serve task and clears the state on its way out.
@@ -137,3 +143,40 @@ class TestRevokeOrchestration:
 
     def test_revoking_an_unknown_token_reports_false(self) -> None:
         assert asyncio.run(share_util_revoke("nope")) is False
+
+
+class TestExpiryOrchestration:
+    def test_sweeping_after_the_last_share_expires_stops_the_listener(self) -> None:
+        async def scenario() -> Tuple[bool, int]:
+            await share_server_start()
+            entry = share_registry_create("album-1", expires_in_minutes=1)
+            entry.expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+            await share_util_sweep()
+            return share_server_is_running(), share_registry_count()
+
+        running, remaining = asyncio.run(scenario())
+        assert running is False
+        assert remaining == 0
+
+    def test_sweeping_keeps_the_listener_while_a_share_is_live(self) -> None:
+        async def scenario() -> bool:
+            await share_server_start()
+            expired = share_registry_create("album-1", expires_in_minutes=1)
+            expired.expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+            share_registry_create("album-2")
+            await share_util_sweep()
+            return share_server_is_running()
+
+        assert asyncio.run(scenario()) is True
+
+    def test_an_expiring_share_stops_the_listener_without_any_request(self) -> None:
+        async def scenario() -> bool:
+            entry = await share_util_create("album-1", expires_in_minutes=1)
+            entry.expires_at = datetime.now(timezone.utc) + timedelta(seconds=0.1)
+            # The timer was armed for the original minute; arm one for the new
+            # deadline the way create does for a real short expiry.
+            share_utils._schedule_sweep(entry.expires_at)
+            await asyncio.sleep(0.4)
+            return share_server_is_running()
+
+        assert asyncio.run(scenario()) is False
