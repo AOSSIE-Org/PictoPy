@@ -649,7 +649,10 @@ class TestAlbumImageManagement:
             json_response = response.json()
             assert json_response["detail"]["success"] is False
             assert json_response["detail"]["error"] == "Failed to Add Images"
-            assert "Database connection failed" in json_response["detail"]["message"]
+            assert (
+                json_response["detail"]["message"]
+                == "An unexpected error occurred while adding images."
+            )
 
             mock_get_album.assert_called_once_with(album_id)
             mock_add_images.assert_called_once_with(album_id, request_body["image_ids"])
@@ -897,3 +900,99 @@ class TestCreateAlbumFromMemory:
             assert response.status_code == 409
             assert response.json()["detail"]["error"] == "Album Already Exists"
             mock_create.assert_not_called()
+
+
+class TestAlbumRouteErrors:
+    """Test suite for verifying that album routes correctly handle exceptions."""
+
+    def test_unexpected_exceptions_mapped_to_500(self):
+        """Verify that an unexpected exception returns a 500 error."""
+        from unittest.mock import patch
+
+        with patch("app.routes.albums.db_get_all_albums") as mock_get_all:
+            mock_get_all.side_effect = Exception("Database explosion")
+            response = client.get("/albums/")
+            assert response.status_code == 500
+            json_resp = response.json()
+            assert json_resp["detail"]["success"] is False
+            assert "unexpected error" in json_resp["detail"]["message"].lower()
+
+    def test_duplicate_album_integrity_error(self):
+        """Verify that a database IntegrityError returns a 409 conflict."""
+        import sqlite3
+        from unittest.mock import patch
+
+        with patch("app.routes.albums.db_get_album_by_name", return_value=None):
+            with patch(
+                "app.routes.albums.db_insert_album",
+                side_effect=sqlite3.IntegrityError("Unique constraint failed"),
+            ):
+                response = client.post(
+                    "/albums/",
+                    json={"name": "Duplicate", "description": "This should fail"},
+                )
+                assert response.status_code == 409
+                json_resp = response.json()
+                assert json_resp["detail"]["success"] is False
+                assert "album already exists" in json_resp["detail"]["error"].lower()
+
+    def test_database_locked_operational_error(self):
+        """Verify that a database locked OperationalError provides an informative error message."""
+        import sqlite3
+        from unittest.mock import patch
+
+        with patch("app.routes.albums.db_get_all_albums") as mock_get_all:
+            err = sqlite3.OperationalError("database is locked")
+            err.sqlite_errorcode = sqlite3.SQLITE_LOCKED
+            mock_get_all.side_effect = err
+            response = client.get("/albums/")
+            assert response.status_code == 500
+            json_resp = response.json()
+            assert json_resp["detail"]["success"] is False
+            assert (
+                "database is currently busy or locked"
+                in json_resp["detail"]["message"].lower()
+            )
+
+    def test_update_album_unexpected_error_returns_500(self, mock_db_album):
+        """Verify that an unexpected exception during album update returns 500."""
+        from unittest.mock import patch
+
+        current_album = album_row(mock_db_album)
+        with patch("app.routes.albums.db_get_album") as mock_get_album, patch(
+            "app.routes.albums.db_get_album_by_name", return_value=None
+        ), patch(
+            "app.routes.albums.db_update_album",
+            side_effect=Exception("Disk failure"),
+        ):
+            mock_get_album.return_value = current_album
+            response = client.put(
+                f"/albums/{current_album['album_id']}",
+                json={"name": "NewName", "description": "", "is_locked": False},
+            )
+            assert response.status_code == 500
+            json_resp = response.json()
+            assert json_resp["detail"]["success"] is False
+            assert json_resp["detail"]["error"] == "Failed to Update Album"
+            assert (
+                json_resp["detail"]["message"]
+                == "An unexpected error occurred while updating the album."
+            )
+
+    def test_decorator_unexpected_errors_return_generic_500(self):
+        """Verify unexpected ValueError or TypeError in decorated route uses default message."""
+        from unittest.mock import patch
+
+        with patch("app.routes.albums.db_get_all_albums") as mock_get_all:
+            mock_get_all.side_effect = TypeError(
+                "'NoneType' object is not subscriptable"
+            )
+            response = client.get("/albums/")
+            assert response.status_code == 500
+            json_resp = response.json()
+            assert json_resp["detail"]["success"] is False
+            assert (
+                json_resp["detail"]["message"]
+                == "An unexpected error occurred while fetching albums."
+            )
+            assert "NoneType" not in json_resp["detail"]["message"]
