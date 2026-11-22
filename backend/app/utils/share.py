@@ -9,13 +9,15 @@ those together, which is why they are here rather than in the route module.
 from __future__ import annotations
 
 import asyncio
-from typing import List, Optional, TypedDict
+from datetime import datetime, timezone
+from typing import List, Optional, Set, TypedDict
 
 from app.database.albums import db_count_album_images, db_get_album
 from app.share.registry import (
     ShareEntry,
     share_registry_count,
     share_registry_create,
+    share_registry_purge_expired,
     share_registry_revoke,
     share_registry_revoke_for_album,
 )
@@ -51,6 +53,36 @@ class ShareDescription(TypedDict):
 _orchestration_lock = asyncio.Lock()
 
 
+# Strong references: the loop only keeps weak ones, so an unreferenced timer
+# could be collected before it fires.
+_expiry_timers: Set["asyncio.Task[None]"] = set()
+
+
+async def share_util_sweep() -> None:
+    """Drop expired shares and stop the listener if none are left."""
+    async with _orchestration_lock:
+        share_registry_purge_expired()
+        if share_registry_count() == 0:
+            await share_server_stop()
+
+
+async def _sweep_at(expires_at: datetime) -> None:
+    # Expiry is otherwise noticed only when someone requests the token, so
+    # without this the listener outlives its last share.
+    # Looped because the sleep clock and the wall clock can disagree by a hair,
+    # and waking just early would leave the share unexpired and never revisited.
+    while (expires_at - datetime.now(timezone.utc)).total_seconds() > 0:
+        delay = (expires_at - datetime.now(timezone.utc)).total_seconds()
+        await asyncio.sleep(max(delay, 0.01))
+    await share_util_sweep()
+
+
+def _schedule_sweep(expires_at: datetime) -> None:
+    timer = asyncio.create_task(_sweep_at(expires_at))
+    _expiry_timers.add(timer)
+    timer.add_done_callback(_expiry_timers.discard)
+
+
 async def share_util_create(
     album_id: str,
     expires_in_minutes: Optional[int] = None,
@@ -59,9 +91,12 @@ async def share_util_create(
     """Issue a token for an album and make sure the listener is up."""
     async with _orchestration_lock:
         await share_server_start()
-        return share_registry_create(
+        entry = share_registry_create(
             album_id, expires_in_minutes=expires_in_minutes, password=password
         )
+        if entry.expires_at is not None:
+            _schedule_sweep(entry.expires_at)
+        return entry
 
 
 async def share_util_revoke(token: str) -> bool:

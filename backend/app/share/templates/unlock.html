@@ -172,13 +172,31 @@
   {% if error %}
   <p class="error" role="alert">{{ error }}</p>
   {% endif %}
-
+  <p id="non-ascii-error" class="error" role="alert" hidden>
+    Password contains unsupported non-ASCII characters.
+  </p>
   <form method="post" action="/s/{{ token }}/unlock">
     <input type="password" name="password" required autofocus
            autocomplete="current-password" aria-label="Password">
     <button type="submit">View album</button>
   </form>
 </main>
+<script>
+  const input = document.querySelector('input[name="password"]');
+  const err = document.getElementById('non-ascii-error');
+
+  input.addEventListener('input', () => {
+    const hasNonAscii = /[^\x00-\x7F]/.test(input.value);
+    err.hidden = !hasNonAscii;
+    if (hasNonAscii) {
+      input.setAttribute('aria-invalid', 'true');
+      input.setAttribute('aria-describedby', 'non-ascii-error');
+    } else {
+      input.removeAttribute('aria-invalid');
+      input.removeAttribute('aria-describedby');
+    }
+  });
+</script>
 
 </body>
 </html>

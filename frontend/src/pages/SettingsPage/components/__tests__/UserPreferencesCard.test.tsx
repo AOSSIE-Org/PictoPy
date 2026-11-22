@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@/test-utils';
 import userEvent from '@testing-library/user-event';
+import { act } from '@testing-library/react';
 
 import UserPreferencesCard from '../UserPreferencesCard';
 import type { MemoriesPreferences } from '@/api/api-functions/user_preferences';
@@ -424,5 +425,54 @@ describe('UserPreferencesCard video face detection', () => {
     expect(
       await screen.findByRole('button', { name: /All scanned/i }),
     ).toBeDisabled();
+  });
+});
+
+describe('UserPreferencesCard delete subfolders', () => {
+  beforeEach(() => localStorage.clear());
+
+  // The card fetches model status on mount; settle it inside act.
+  const renderCard = () =>
+    act(async () => {
+      render(<UserPreferencesCard />);
+    });
+
+  it('is off by default and sits below Delete From Computer', async () => {
+    await renderCard();
+
+    const toggle = screen.getByRole('switch', { name: 'Delete Subfolders' });
+    expect(toggle).not.toBeChecked();
+
+    const labels = screen.getAllByText(
+      /^(Delete From Computer|Delete Subfolders)$/,
+    );
+    expect(labels.map((l) => l.textContent)).toEqual([
+      'Delete From Computer',
+      'Delete Subfolders',
+    ]);
+  });
+
+  it('reflects and saves the setting', async () => {
+    const user = userEvent.setup();
+    await renderCard();
+
+    await user.click(screen.getByRole('switch', { name: 'Delete Subfolders' }));
+
+    expect(
+      screen.getByRole('switch', { name: 'Delete Subfolders' }),
+    ).toBeChecked();
+    expect(localStorage.getItem('pictopy:deleteSubfolders')).toBe('true');
+  });
+
+  it('restores the folder-delete dialog after "Don\'t show again"', async () => {
+    localStorage.setItem('pictopy:skipFolderDeleteConfirmation', 'false');
+    const user = userEvent.setup();
+    await renderCard();
+
+    await user.click(screen.getByRole('switch', { name: 'Delete Subfolders' }));
+
+    expect(
+      localStorage.getItem('pictopy:skipFolderDeleteConfirmation'),
+    ).toBeNull();
   });
 });

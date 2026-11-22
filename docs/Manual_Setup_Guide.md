@@ -103,7 +103,7 @@ Before setting up the Python backend and sync-microservice, you need to have **M
 
    The server will start on `http://localhost:52123` by default. In test mode, the server will automatically restart if any errors are detected or if source files are modified.
 
-   ![Server running screenshot](/docs/assets/screenshots/serverRunning.png)
+   ![Server running screenshot](assets/screenshots/serverRunning.png)
 
 ## Sync-Microservice Setup Steps
 

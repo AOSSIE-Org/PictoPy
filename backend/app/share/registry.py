@@ -102,8 +102,8 @@ def share_registry_get(token: str) -> Optional[ShareEntry]:
     """
     The live share for a token, or None.
 
-    An expired entry is dropped here rather than swept on a timer, so expiry
-    needs no background task.
+    An expired entry is dropped here, and also by the sweep that
+    share_util_create schedules.
     """
     with _lock:
         entry = _shares.get(token)
@@ -137,6 +137,15 @@ def share_registry_revoke_for_album(album_id: str) -> List[str]:
         for token in tokens:
             del _shares[token]
         return tokens
+
+
+def share_registry_purge_expired() -> int:
+    """Drop every expired share and return how many went."""
+    with _lock:
+        expired = [token for token, entry in _shares.items() if entry.is_expired]
+        for token in expired:
+            del _shares[token]
+        return len(expired)
 
 
 def share_registry_count() -> int:
