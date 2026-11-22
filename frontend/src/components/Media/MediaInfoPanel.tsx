@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { open } from '@tauri-apps/plugin-shell';
-import { invoke } from '@tauri-apps/api/core';
 import {
   X,
   ImageIcon as ImageLucide,
@@ -218,11 +217,25 @@ export const MediaInfoPanel: React.FC<MediaInfoPanelProps> = ({
                   e.preventDefault();
                   if (currentImage?.path) {
                     try {
-                      await invoke<void>('open_image_file', {
-                        path: currentImage.path,
-                      });
+                      const lastSeparator = Math.max(
+                        currentImage.path.lastIndexOf('/'),
+                        currentImage.path.lastIndexOf('\\')
+                      );
+                      
+                      if (lastSeparator !== -1) {
+                        let folderPath = currentImage.path.substring(0, lastSeparator);
+                        
+                        // Handle root-level paths to preserve the root separator
+                        if (/^[A-Za-z]:$/.test(folderPath)) {
+                          folderPath += '\\'; // e.g., "C:" becomes "C:\"
+                        } else if (folderPath === '') {
+                          folderPath = '/'; // e.g., "/image.jpg" becomes "/"
+                        }
+                        
+                        await open(folderPath);
+                      }
                     } catch (err) {
-                      console.error('Failed to open file:', err);
+                      console.error('Failed to open folder:', err);
                     }
                   }
                 }}
