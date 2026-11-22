@@ -12,6 +12,7 @@ from app.share.registry import (
     share_registry_count,
     share_registry_create,
 )
+from app.share.registry import ShareEntry
 from app.share.server import (
     share_server_is_running,
     share_server_port,
@@ -175,8 +176,14 @@ class TestExpiryOrchestration:
         real_create = share_utils.share_registry_create
 
         # Only the deadline is shortened; scheduling is left to share_util_create.
-        def short_lived(*args: object, **kwargs: object) -> object:
-            entry = real_create(*args, **kwargs)
+        def short_lived(
+            album_id: str,
+            expires_in_minutes: Optional[int] = None,
+            password: Optional[str] = None,
+        ) -> ShareEntry:
+            entry = real_create(
+                album_id, expires_in_minutes=expires_in_minutes, password=password
+            )
             entry.expires_at = datetime.now(timezone.utc) + timedelta(seconds=0.1)
             return entry
 
