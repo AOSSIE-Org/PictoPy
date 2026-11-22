@@ -65,6 +65,9 @@ export const AlbumDetail = () => {
     queryKey: ['album', albumId],
     queryFn: () => getAlbumById(albumId!),
     enabled: !!albumId,
+    // This page's own requests go to the local backend, so none of them should
+    // wait for an internet connection.
+    networkMode: 'always',
   });
 
   const {
@@ -83,8 +86,6 @@ export const AlbumDetail = () => {
     // Drop the result on leaving, so reopening after a password change checks
     // the password again instead of showing the album from cache.
     gcTime: 0,
-    // The backend is local, so the password check must not pause offline and
-    // leave the loader up with no way out.
     networkMode: 'always',
     // A wrong password stays wrong, so retrying only delays the error.
     retry: (failureCount, error) => {
@@ -100,6 +101,7 @@ export const AlbumDetail = () => {
     queryKey: ['images'],
     queryFn: () => fetchAllImages(),
     enabled: !!albumId && !!album,
+    networkMode: 'always',
   });
 
   // The grid needs both responses: one names the album's images, the other
@@ -116,6 +118,7 @@ export const AlbumDetail = () => {
     }) => removeMultipleImagesFromAlbum(albumId, { image_ids: imageIds }),
     // The list page shows a photo count per album, so it is stale now too.
     autoInvalidateTags: ['albums'],
+    networkMode: 'always',
   });
 
   useMutationFeedback(removeImagesMutation, {
@@ -188,11 +191,8 @@ export const AlbumDetail = () => {
     navigate,
   ]);
 
-  // Until the password is accepted, showing the album's header would suggest
-  // it is already unlocked.
-  // Pending, not loading: the images query has no answer yet while it waits
-  // for the album to reach the store. A locked album opened without a password
-  // still waits for the backend's answer rather than showing its header.
+  // Showing a locked album's header before the backend accepts the password
+  // would suggest it is unlocked. Pending, since the check waits on the store.
   const isVerifyingPassword =
     (!!password || !!album?.is_locked) &&
     isImagesPending &&

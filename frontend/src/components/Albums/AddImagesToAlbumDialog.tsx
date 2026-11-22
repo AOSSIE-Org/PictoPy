@@ -36,6 +36,8 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
     queryKey: ['images'],
     queryFn: () => fetchAllImages(),
     enabled: isOpen,
+    // The backend is local, so this must not wait for an internet connection.
+    networkMode: 'always',
   });
 
   useEffect(() => {
@@ -47,6 +49,7 @@ export const AddImagesToAlbumDialog: React.FC<AddImagesToAlbumDialogProps> = ({
   const addImagesMutation = usePictoMutation({
     mutationFn: (data: { image_ids: string[] }) =>
       addImagesToAlbum(albumId, data),
+    networkMode: 'always',
   });
 
   useMutationFeedback(addImagesMutation, {

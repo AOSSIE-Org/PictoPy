@@ -11,6 +11,7 @@ import {
   getAlbumById,
   getAlbumImages,
   fetchAllImages,
+  removeMultipleImagesFromAlbum,
 } from '@/api/api-functions';
 
 // Mock Tauri convertFileSrc API
@@ -30,6 +31,7 @@ jest.mock('@/api/api-functions', () => ({
 const mockGetAlbumById = getAlbumById as jest.Mock;
 const mockGetAlbumImages = getAlbumImages as jest.Mock;
 const mockFetchAllImages = fetchAllImages as jest.Mock;
+const mockRemoveImages = removeMultipleImagesFromAlbum as jest.Mock;
 
 // Stands in for the albums page, reopening the album the way its unlock
 // dialog does.
@@ -229,27 +231,40 @@ describe('AlbumDetail', () => {
     expect(watcher.stop()).toBe(false);
   }, 30000);
 
-  // The backend is local, but TanStack pauses queries when the machine has no
-  // internet, which left the loader up with no way out.
-  test('still checks the password when offline', async () => {
-    const album = await mockGetAlbumById.getMockImplementation()?.();
-    mockGetAlbumById.mockImplementation(async () => {
-      // Go offline once the album has loaded, before the password check runs.
-      onlineManager.setOnline(false);
-      return album;
-    });
-
-    const { store, unmount } = render(<AlbumDetailWithLoader />, {
-      initialRoutes: [{ pathname: '/albums/a1', state: { password: 'pw' } }],
-    });
+  // The backend is local, but TanStack pauses requests when the machine has no
+  // internet, which left the page empty or the loader up with no way out.
+  test('opens the album and removes photos while offline', async () => {
+    const user = userEvent.setup();
+    mockRemoveImages.mockResolvedValue({ success: true });
+    onlineManager.setOnline(false);
+    let view: ReturnType<typeof render> | undefined;
 
     try {
+      view = render(<AlbumDetailWithLoader />, {
+        initialRoutes: [{ pathname: '/albums/a1', state: { password: 'pw' } }],
+      });
+      const { store } = view;
+
       expect(await screen.findByText('Trip')).toBeInTheDocument();
-      expect(mockGetAlbumImages).toHaveBeenCalledWith('a1', { password: 'pw' });
+      // The tile needs the all-images query, not only the password check.
+      const tile = await screen.findByAltText('i1.jpg');
       expect(store.getState().loader.loading).toBe(false);
+
+      await user.click(screen.getByRole('button', { name: /select images/i }));
+      await user.click(tile);
+      await user.click(
+        screen.getByRole('button', { name: /remove selected/i }),
+      );
+
+      await waitFor(() =>
+        expect(mockRemoveImages).toHaveBeenCalledWith('a1', {
+          image_ids: ['i1'],
+        }),
+      );
+      await waitFor(() => expect(store.getState().loader.loading).toBe(false));
     } finally {
-      // Unmount first, so going back online resumes no queries after the test.
-      unmount();
+      // Unmount first, so going back online resumes nothing after the test.
+      view?.unmount();
       onlineManager.setOnline(true);
     }
   }, 30000);
