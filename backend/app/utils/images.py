@@ -243,6 +243,11 @@ def image_util_classify_and_face_detect_images(
             # Step 1: Get classes
             classes = object_classifier.get_classes(image_path)
 
+            # Skip images that could not be loaded
+            if classes is None:
+                logger.warning(f"Skipping unreadable image: {image_path}")
+                continue
+
             # Step 2: Insert class-image pairs if classes were detected
             if len(classes) > 0:
                 # Create image-class pairs
@@ -255,6 +260,13 @@ def image_util_classify_and_face_detect_images(
             # Step 3: Detect faces if "person" class is present
             if classes and 0 in classes:
                 result = face_detector.detect_faces(image_path)
+
+                if result is None:
+                    logger.warning(
+                        f"Skipping unreadable image during face detection: {image_path}"
+                    )
+                    continue
+
                 if result and result["embeddings"]:
                     try:
                         db_insert_face_embeddings_by_image_id(
