@@ -86,6 +86,16 @@ describe('ShareAlbumDialog', () => {
     mockOpenUrl.mockResolvedValue(undefined);
   });
 
+  it('groups the share-mode radios under an accessible radiogroup', () => {
+    renderDialog();
+
+    const group = screen.getByRole('radiogroup', { name: /share mode/i });
+    expect(group).toContainElement(internetToggle());
+    expect(group).toContainElement(
+      screen.getByRole('radio', { name: /this network/i }),
+    );
+  });
+
   describe('internet mode', () => {
     it('shares on the local network unless asked otherwise', async () => {
       const user = userEvent.setup();
