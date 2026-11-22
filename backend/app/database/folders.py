@@ -456,8 +456,10 @@ def db_get_all_folder_details() -> (
     cursor = conn.cursor()
 
     try:
-        # COUNT(DISTINCT ...) because joining both media tables multiplies the
-        # rows: a folder with 3 images and 4 videos yields 12 join rows.
+        # Count each media table in its own pre-aggregated subquery instead of
+        # joining both onto folders at once. Joining both multiplies the rows
+        # (a folder with 3 images and 4 videos yields 12 join rows), so the old
+        # COUNT(DISTINCT ...) query scanned images x videos rows per folder.
         cursor.execute(
             """
             SELECT
@@ -468,12 +470,17 @@ def db_get_all_folder_details() -> (
                 f.AI_Tagging,
                 f.taggingCompleted,
                 f.indexing_status,
-                COUNT(DISTINCT i.id) as image_count,
-                COUNT(DISTINCT v.id) as video_count
+                COALESCE(i.image_count, 0) as image_count,
+                COALESCE(v.video_count, 0) as video_count
             FROM folders f
-            LEFT JOIN images i ON f.folder_id = i.folder_id
-            LEFT JOIN videos v ON f.folder_id = v.folder_id
-            GROUP BY f.folder_id
+            LEFT JOIN (
+                SELECT folder_id, COUNT(id) as image_count
+                FROM images GROUP BY folder_id
+            ) i ON i.folder_id = f.folder_id
+            LEFT JOIN (
+                SELECT folder_id, COUNT(id) as video_count
+                FROM videos GROUP BY folder_id
+            ) v ON v.folder_id = f.folder_id
             ORDER BY f.folder_path
             """
         )
