@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Body, Path
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Body, Path
 from starlette.datastructures import State
 import sqlite3
 import uuid
@@ -371,6 +371,26 @@ def add_images_to_album(
             ).model_dump(),
         )
 
+    if album["is_locked"]:
+        if not body.password:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Password Required",
+                    message="Password is required to modify this locked album.",
+                ).model_dump(),
+            )
+        if not verify_album_password(album_id, body.password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Incorrect Password",
+                    message="The password provided is incorrect.",
+                ).model_dump(),
+            )
+
     try:
         db_add_images_to_album(album_id, body.image_ids)
         request_metadata_export(app_state)
@@ -399,6 +419,7 @@ def remove_image_from_album(
     album_id: str = Path(...),
     image_id: str = Path(...),
     app_state: State = Depends(get_state),
+    password: Optional[str] = Query(None, description="Required for locked albums"),
 ):
     album = db_get_album(album_id)
     if not album:
@@ -410,6 +431,26 @@ def remove_image_from_album(
                 message="No album exists with the provided ID.",
             ).model_dump(),
         )
+
+    if album["is_locked"]:
+        if not password:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Password Required",
+                    message="Password is required to modify this locked album.",
+                ).model_dump(),
+            )
+        if not verify_album_password(album_id, password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Incorrect Password",
+                    message="The password provided is incorrect.",
+                ).model_dump(),
+            )
 
     try:
         db_remove_image_from_album(album_id, image_id)
@@ -460,6 +501,26 @@ def remove_images_from_album(
                 message="You must provide at least one image ID to remove.",
             ).model_dump(),
         )
+
+    if album["is_locked"]:
+        if not body.password:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Password Required",
+                    message="Password is required to modify this locked album.",
+                ).model_dump(),
+            )
+        if not verify_album_password(album_id, body.password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Incorrect Password",
+                    message="The password provided is incorrect.",
+                ).model_dump(),
+            )
 
     try:
         db_remove_images_from_album(album_id, body.image_ids)
