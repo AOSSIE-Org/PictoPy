@@ -102,8 +102,8 @@ def share_registry_get(token: str) -> Optional[ShareEntry]:
     """
     The live share for a token, or None.
 
-    An expired entry is dropped here rather than swept on a timer, so expiry
-    needs no background task.
+    An expired entry is dropped here, and also by the sweep that
+    share_util_create schedules.
     """
     with _lock:
         entry = _shares.get(token)
