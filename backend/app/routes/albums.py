@@ -39,6 +39,7 @@ from app.utils.albums import (
     MemoryNotFoundError,
     album_util_create_from_memory,
 )
+from app.utils.share import share_util_revoke_album
 
 from app.routes.dependencies import get_state, request_metadata_export
 
@@ -267,7 +268,9 @@ def update_album(
 
 # DELETE /albums/{album_id} - Delete an album
 @router.delete("/{album_id}", response_model=SuccessResponse)
-def delete_album(album_id: str = Path(...), app_state: State = Depends(get_state)):
+async def delete_album(
+    album_id: str = Path(...), app_state: State = Depends(get_state)
+) -> SuccessResponse:
     album = db_get_album(album_id)
     if not album:
         raise HTTPException(
@@ -281,6 +284,7 @@ def delete_album(album_id: str = Path(...), app_state: State = Depends(get_state
 
     try:
         db_delete_album(album_id)
+        await share_util_revoke_album(album_id)
         request_metadata_export(app_state)
         return SuccessResponse(success=True, msg="Album deleted successfully")
     except Exception as e:

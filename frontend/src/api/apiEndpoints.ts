@@ -73,6 +73,8 @@ export const shareEndpoints = {
   createShare: (albumId: string) =>
     `/share/albums/${encodeURIComponent(albumId)}`,
   revokeShare: (token: string) => `/share/${encodeURIComponent(token)}`,
+  revokeAlbumShares: (albumId: string) =>
+    `/share/albums/${encodeURIComponent(albumId)}`,
 };
 
 export const memoriesEndpoints = {

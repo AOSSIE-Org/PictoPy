@@ -19,7 +19,12 @@ from app.share.server import (
     share_server_start,
     share_server_stop,
 )
-from app.utils.share import share_util_create, share_util_revoke, share_util_sweep
+from app.utils.share import (
+    share_util_create,
+    share_util_revoke,
+    share_util_revoke_album,
+    share_util_sweep,
+)
 
 # Every assertion about listener state is made inside the coroutine, because
 # asyncio.run cancels the serve task and clears the state on its way out.
@@ -144,6 +149,42 @@ class TestRevokeOrchestration:
 
     def test_revoking_an_unknown_token_reports_false(self) -> None:
         assert asyncio.run(share_util_revoke("nope")) is False
+
+    def test_revoking_album_stops_the_listener_when_no_other_shares(self) -> None:
+        async def scenario() -> bool:
+            await share_server_start()
+            share_registry_create("album-1")
+            share_registry_create("album-1")
+            revoked_count = await share_util_revoke_album("album-1")
+            assert revoked_count == 2
+            return share_server_is_running()
+
+        assert asyncio.run(scenario()) is False
+
+    def test_revoking_album_leaves_listener_up_when_other_album_shared(self) -> None:
+        async def scenario() -> bool:
+            await share_server_start()
+            share_registry_create("album-1")
+            share_registry_create("album-2")
+            revoked_count = await share_util_revoke_album("album-1")
+            assert revoked_count == 1
+            return share_server_is_running()
+
+        assert asyncio.run(scenario()) is True
+
+    def test_revoking_album_with_no_shares_reports_zero(self) -> None:
+        assert asyncio.run(share_util_revoke_album("unknown")) == 0
+
+    def test_revoking_album_with_only_expired_shares_stops_listener(self) -> None:
+        async def scenario() -> bool:
+            await share_server_start()
+            entry = share_registry_create("album-1", expires_in_minutes=1)
+            entry.expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+            revoked_count = await share_util_revoke_album("album-1")
+            assert revoked_count == 0
+            return share_server_is_running()
+
+        assert asyncio.run(scenario()) is False
 
 
 class TestExpiryOrchestration:

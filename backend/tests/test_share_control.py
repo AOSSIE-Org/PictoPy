@@ -10,6 +10,8 @@ from typing import Iterator
 
 import bcrypt
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from app.database.albums import (
@@ -17,15 +19,24 @@ from app.database.albums import (
     db_create_albums_table,
     db_insert_album,
 )
+from app.database.connection import get_db_connection
+from app.routes.albums import router as albums_router
+from app.routes.share import router as share_router
 from app.schemas.share import CreateShareRequest, Share
 from app.share.registry import (
     PASSWORD_MAX_BYTES,
     share_registry_clear,
     share_registry_create,
+    share_registry_get,
 )
 from app.utils.share import share_util_describe
 
 PORT = 52125
+
+app = FastAPI()
+app.include_router(share_router, prefix="/share")
+app.include_router(albums_router, prefix="/albums")
+client = TestClient(app)
 
 
 @pytest.fixture(autouse=True)
@@ -42,6 +53,9 @@ def album_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     os.close(db_fd)
     monkeypatch.setattr("app.database.albums.DATABASE_PATH", db_path)
     monkeypatch.setattr("app.database.connection.DATABASE_PATH", db_path)
+
+    with get_db_connection() as conn:
+        conn.execute("CREATE TABLE IF NOT EXISTS images (id TEXT PRIMARY KEY)")
 
     db_create_albums_table()
     db_create_album_images_table()
@@ -100,3 +114,28 @@ class TestCreateRequest:
         # Well under 72 characters, comfortably over 72 bytes.
         with pytest.raises(ValidationError):
             CreateShareRequest(password="é" * 40)
+
+
+class TestRevokeAlbumEndpoint:
+    def test_revoking_album_shares_success(self) -> None:
+        entry = share_registry_create("album-1")
+        response = client.delete("/share/albums/album-1")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert "Revoked 1 active share(s)" in data["message"]
+        assert share_registry_get(entry.token) is None
+
+    def test_revoking_album_without_shares_returns_404(self) -> None:
+        response = client.delete("/share/albums/album-1")
+        assert response.status_code == 404
+        assert response.json()["detail"]["error"] == "Share Not Found"
+
+
+class TestDeleteAlbumRevokesShares:
+    def test_deleting_album_cleans_up_active_shares(self) -> None:
+        entry = share_registry_create("album-1")
+        response = client.delete("/albums/album-1")
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+        assert share_registry_get(entry.token) is None

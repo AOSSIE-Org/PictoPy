@@ -19,6 +19,7 @@ from app.share.registry import (
     share_registry_create,
     share_registry_purge_expired,
     share_registry_revoke,
+    share_registry_revoke_for_album,
 )
 from app.share.server import share_server_start, share_server_stop
 from app.utils.network import network_util_list_candidates
@@ -110,6 +111,19 @@ async def share_util_revoke(token: str) -> bool:
         if share_registry_count() == 0:
             await share_server_stop()
         return True
+
+
+async def share_util_revoke_album(album_id: str) -> int:
+    """
+    End all shares for an album, stopping the listener once nothing is being served.
+
+    Returns the number of active shares revoked.
+    """
+    async with _orchestration_lock:
+        revoked_tokens = share_registry_revoke_for_album(album_id)
+        if share_registry_count() == 0:
+            await share_server_stop()
+        return len(revoked_tokens)
 
 
 def share_util_describe(entry: ShareEntry, port: int) -> ShareDescription:

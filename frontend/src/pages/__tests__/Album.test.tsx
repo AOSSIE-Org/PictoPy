@@ -278,9 +278,10 @@ describe('Albums page', () => {
     await openDeleteConfirmation(user);
     await dismissResultDialog(user);
 
-    // The mutation invalidates ['albums'], so the list comes back from the
-    // server rather than from a local guess about what the delete did.
+    // The mutation invalidates ['albums'] and ['shares'], so the list and
+    // active shares come back from the server rather than lingering.
     expect(mockGetAllAlbums.mock.calls.length).toBeGreaterThan(1);
+    expect(mockGetShares.mock.calls.length).toBeGreaterThan(1);
     await waitFor(() =>
       expect(screen.queryByText('Trip')).not.toBeInTheDocument(),
     );
