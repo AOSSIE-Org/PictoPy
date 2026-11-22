@@ -276,12 +276,17 @@ def db_folder_exists(folder_path: FolderPath) -> bool:
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
     try:
-        abs_path = os.path.abspath(folder_path)
-        cursor.execute(
-            "SELECT folder_id FROM folders WHERE folder_path = ?", (abs_path,)
+        # Case-insensitive match: a byte-exact '=' would miss an already-
+        # registered folder whose stored path differs only by case (a drive
+        # letter or path component the OS/file picker reported differently on
+        # Windows, which is case-insensitive) -- letting the same real folder
+        # be registered a second time under the 'folder already exists' 409
+        # check above, since the table's UNIQUE constraint is binary too.
+        normalized_path = os.path.normcase(os.path.abspath(folder_path))
+        cursor.execute("SELECT folder_path FROM folders")
+        return any(
+            os.path.normcase(row[0]) == normalized_path for row in cursor.fetchall()
         )
-        result = cursor.fetchone()
-        return bool(result)
     finally:
         conn.close()
 
