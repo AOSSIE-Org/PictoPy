@@ -216,7 +216,17 @@ def video_util_source_is_unchanged(
     if recorded_mtime is None:
         return False
 
-    return recorded_mtime == datetime.datetime.fromtimestamp(stats.st_mtime).isoformat()
+    if recorded_mtime != datetime.datetime.fromtimestamp(stats.st_mtime).isoformat():
+        return False
+
+    # A sidecar that arrives after the video leaves its size and mtime alone.
+    # Only a date still standing in as the mtime can be improved by one.
+    if stored_metadata.get("date_source") == DATE_SOURCE_FILESYSTEM:
+        sidecar_dt, _, _ = takeout_sidecar_read(video_path)
+        if sidecar_dt:
+            return False
+
+    return True
 
 
 def video_util_prepare_video_records(

@@ -1,3 +1,4 @@
+import datetime
 import os
 import sqlite3
 import tempfile
@@ -19,6 +20,7 @@ from app.database.videos import (
     db_get_video_by_id,
 )
 from app.utils.videos import (
+    IndexedVideos,
     video_util_is_valid_video,
     video_util_get_videos_from_folder,
     video_util_generate_thumbnail,
@@ -223,7 +225,7 @@ class TestVideoThumbnailAndMetadata:
             f.write("not a video")
 
         records = video_util_prepare_video_records(
-            [fake], {os.path.abspath(temp_media_dir): 1}
+            [fake], {os.path.abspath(temp_media_dir): "folder-1"}
         )
         assert len(records) == 1
         assert records[0]["thumbnailPath"] is None
@@ -688,11 +690,29 @@ class TestVideosAPI:
 class TestVideoUtilEdgeCases:
     def test_collect_superseded_skips_records_without_thumbnail(self):
         records = [{"path": "/v/a.mp4", "thumbnailPath": None}]
-        already = {"/v/a.mp4": ("/thumbs/old.jpg", {})}
+        already: IndexedVideos = {"/v/a.mp4": ("/thumbs/old.jpg", {})}
         assert video_util_collect_superseded_thumbnails(records, already) == []
 
     def test_source_is_unchanged_missing_file(self):
         assert video_util_source_is_unchanged("/nope/missing.mp4", {}) is False
+
+    def test_late_sidecar_rereads_a_filesystem_dated_video(self, tmp_path):
+        video = tmp_path / "a.mp4"
+        video.write_bytes(b"x")
+        stats = os.stat(video)
+        stored = {
+            "file_size": stats.st_size,
+            "file_modified": datetime.datetime.fromtimestamp(
+                stats.st_mtime
+            ).isoformat(),
+            "date_source": "filesystem",
+        }
+        assert video_util_source_is_unchanged(str(video), stored) is True
+
+        (tmp_path / "a.mp4.supplemental-metadata.json").write_text(
+            '{"photoTakenTime": {"timestamp": "1600000000"}}'
+        )
+        assert video_util_source_is_unchanged(str(video), stored) is False
 
     def test_remove_thumbnail_files_tolerates_os_error(
         self, temp_media_dir, monkeypatch
@@ -722,7 +742,7 @@ class TestVideoUtilEdgeCases:
             f.write(b"data")
         # Folder resolves to id 0, which the guard treats as "no folder"
         records = video_util_prepare_video_records(
-            [video_path], {os.path.abspath(temp_media_dir): 0}
+            [video_path], {os.path.abspath(temp_media_dir): 0}  # type: ignore[dict-item]
         )
         assert records == []
 
