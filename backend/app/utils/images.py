@@ -833,6 +833,12 @@ def image_util_extract_metadata(image_path: str) -> dict:
                     exif_data = None
 
                 dt_original = _extract_capture_datetime(exif_data)
+                # A placeholder like "0000:00:00 00:00:00" must not block the sidecar.
+                if dt_original:
+                    try:
+                        datetime.datetime.strptime(dt_original, "%Y:%m:%d %H:%M:%S")
+                    except ValueError:
+                        dt_original = None
                 latitude, longitude = _extract_gps_coordinates(exif_data)
 
                 # A Google Takeout export drops EXIF from part of its own

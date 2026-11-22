@@ -4,10 +4,12 @@ constantly over folders that are almost entirely unchanged. These cover the
 check that keeps it from rereading and re-thumbnailing every file each time.
 """
 
+import datetime
 import json
 import os
 import sqlite3
 import tempfile
+from pathlib import Path
 from typing import Any, Iterator, List
 
 import pytest
@@ -22,6 +24,7 @@ from app.database.images import (
 )
 from app.database.yolo_mapping import db_create_YOLO_classes_table
 from app.utils.images import (
+    EXIF_IFD_POINTER,
     image_util_extract_metadata,
     image_util_generate_thumbnail,
     image_util_is_unchanged,
@@ -139,8 +142,8 @@ class TestIsUnchanged:
         ],
     )
     def test_a_late_sidecar_rereads_only_a_filesystem_dated_photo(
-        self, tmp_path, date_source, has_sidecar, expected
-    ):
+        self, tmp_path: Path, date_source: str, has_sidecar: bool, expected: bool
+    ) -> None:
         photo = _photo(tmp_path / "a.jpg")
         thumb = _thumbnail(tmp_path / "thumb.jpg")
         if has_sidecar:
@@ -149,6 +152,27 @@ class TestIsUnchanged:
             )
         recorded = _state(photo, thumb, date_source=date_source)
         assert image_util_is_unchanged(photo, recorded) is expected
+
+    def test_an_unparseable_exif_date_falls_back_to_the_sidecar(
+        self, tmp_path: Path
+    ) -> None:
+        image = Image.new("RGB", (8, 8))
+        exif = image.getexif()
+        exif[EXIF_IFD_POINTER] = {0x9003: "0000:00:00 00:00:00"}  # DateTimeOriginal
+        image.save(tmp_path / "a.jpg", exif=exif)
+        (tmp_path / "a.jpg.supplemental-metadata.json").write_text(
+            '{"photoTakenTime": {"timestamp": "1600000000"}}'
+        )
+        photo = str(tmp_path / "a.jpg")
+
+        metadata = image_util_extract_metadata(photo)
+        assert metadata["date_source"] == "sidecar"
+        assert metadata["date_created"] == (
+            datetime.datetime.fromtimestamp(1600000000).isoformat()
+        )
+        thumb = _thumbnail(tmp_path / "thumb.jpg")
+        recorded = _state(photo, thumb, date_source=metadata["date_source"])
+        assert image_util_is_unchanged(photo, recorded) is True
 
     def test_an_unknown_path_is_changed(self, tmp_path):
         assert image_util_is_unchanged(str(tmp_path / "a.jpg"), None) is False
@@ -416,7 +440,9 @@ class TestRescanningAFolder:
 
         assert before == after
 
-    def test_a_sidecar_copied_in_after_the_photo_is_read(self, library, test_db):
+    def test_a_sidecar_copied_in_after_the_photo_is_read(
+        self, library: Path, test_db: str
+    ) -> None:
         folder_data = [(str(library), "folder-1", False)]
         image_util_process_folder_images(folder_data)
         (library / "p2.jpg.supplemental-metadata.json").write_text(
