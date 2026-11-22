@@ -100,14 +100,16 @@ export const useMutationFeedback = (
 
   // Handle success state
   useEffect(() => {
-    if (isSuccess && showSuccess) {
-      dispatch(
-        showInfoDialog({
-          title: successTitle,
-          message: successMessage,
-          variant: 'info',
-        }),
-      );
+    if (isSuccess) {
+      if (showSuccess) {
+        dispatch(
+          showInfoDialog({
+            title: successTitle,
+            message: successMessage,
+            variant: 'info',
+          }),
+        );
+      }
 
       if (onSuccessRef.current) {
         onSuccessRef.current();
@@ -117,16 +119,18 @@ export const useMutationFeedback = (
 
   // Handle error state
   useEffect(() => {
-    if (isError && showError) {
-      const errorMsg = getErrorMessage(error, errorMessage);
+    if (isError) {
+      if (showError) {
+        const errorMsg = getErrorMessage(error, errorMessage);
 
-      dispatch(
-        showInfoDialog({
-          title: errorTitle,
-          message: errorMsg,
-          variant: 'error',
-        }),
-      );
+        dispatch(
+          showInfoDialog({
+            title: errorTitle,
+            message: errorMsg,
+            variant: 'error',
+          }),
+        );
+      }
 
       if (onErrorRef.current) {
         onErrorRef.current(error);
