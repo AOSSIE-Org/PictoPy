@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
 import tempfile
 import os
+import ntpath
 import shutil
 from concurrent.futures import Future, ProcessPoolExecutor
 
@@ -39,6 +40,7 @@ from app.database.folders import (
 from app.database.images import db_create_images_table
 from app.database.videos import db_create_videos_table
 from app.database.yolo_mapping import db_create_YOLO_classes_table
+from app.utils.folders import folder_util_add_folder_tree
 
 # ##############################
 # Pytest Fixtures
@@ -897,6 +899,50 @@ class TestFoldersUnit:
 
         mock_conn.rollback.assert_called_once()
         mock_conn.close.assert_called_once()
+
+    def test_folder_util_add_folder_tree_reconciles_case_duplicate_root(
+        self, test_db, tmp_path, monkeypatch
+    ):
+        # Register the root path under a different case than the one the
+        # upcoming walk will use, as if an earlier scan had already stored
+        # it (Windows paths are case-insensitive, but os.walk/the file
+        # picker can report the same real directory with different casing
+        # between scans). Seed it through db_insert_folders_batch rather
+        # than db_insert_folder -- the latter requires the exact path it's
+        # given to exist as a directory, which this lowercase variant
+        # won't on a case-sensitive filesystem even though the two paths
+        # name the same real directory on Windows.
+        root = tmp_path / "Photos"
+        root.mkdir()
+        (root / "sub").mkdir()
+        existing_root_path = str(root).replace("Photos", "photos")
+        db_insert_folders_batch(
+            [("existing-root-id", existing_root_path, None, 1693526400, False, None)]
+        )
+
+        # os.path.normcase is a no-op on POSIX, so the case-insensitive
+        # matching this test exercises -- which is specifically Windows
+        # filesystem behavior -- only happens on a POSIX CI runner if we
+        # emulate Windows normalization explicitly.
+        monkeypatch.setattr(os.path, "normcase", ntpath.normcase)
+
+        root_folder_id, folder_map = folder_util_add_folder_tree(str(root))
+
+        # The walk generated a fresh id for root before finding out it was a
+        # duplicate; the returned id -- and the child's recorded parent_id --
+        # must be the id the row is actually stored under, not that ghost id.
+        assert root_folder_id == "existing-root-id"
+        child_path = os.path.abspath(str(root / "sub"))
+        assert folder_map[child_path][1] == "existing-root-id"
+
+        db_update_parent_ids_for_subtree(str(root), folder_map)
+        child_id = folder_map[child_path][0]
+        conn = sqlite3.connect(test_db)
+        stored_parent_id = conn.execute(
+            "SELECT parent_folder_id FROM folders WHERE folder_id = ?", (child_id,)
+        ).fetchone()[0]
+        conn.close()
+        assert stored_parent_id == "existing-root-id"
 
     def test_db_insert_folder_generates_uuid_when_folder_id_none(
         self, test_db, tmp_path
