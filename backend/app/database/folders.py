@@ -176,10 +176,14 @@ def db_get_all_folder_ids() -> List[FolderId]:
         conn.close()
 
 
-def db_delete_folders_batch(folder_ids: List[FolderId]) -> int:
+def db_delete_folders_batch(
+    folder_ids: List[FolderId], keep_subfolders: bool = False
+) -> int:
     """
     Delete multiple folders in a single database transaction.
     folder_ids: list of folder IDs to delete
+    keep_subfolders: if True, surviving subfolders are re-attached to the nearest
+        surviving ancestor (or become top-level) instead of cascading away.
     Returns the number of folders deleted
     """
     if not folder_ids:
@@ -195,6 +199,25 @@ def db_delete_folders_batch(folder_ids: List[FolderId]) -> int:
 
         # Create placeholders for the IN clause
         placeholders = ",".join("?" * len(folder_ids))
+
+        if keep_subfolders:
+            # Hop children up one level per pass so they skip every deleted
+            # ancestor; a chain can't be longer than the ids being deleted.
+            for _ in range(len(folder_ids)):
+                cursor.execute(
+                    f"""
+                    UPDATE folders
+                    SET parent_folder_id = (
+                        SELECT p.parent_folder_id FROM folders p
+                        WHERE p.folder_id = folders.parent_folder_id
+                    )
+                    WHERE parent_folder_id IN ({placeholders})
+                      AND folder_id NOT IN ({placeholders})
+                    """,
+                    folder_ids + folder_ids,
+                )
+                if cursor.rowcount == 0:
+                    break
 
         cursor.execute(
             f"DELETE FROM folders WHERE folder_id IN ({placeholders})",
@@ -326,12 +349,9 @@ def db_update_ai_tagging_batch(
         # Create placeholders for the IN clause
         placeholders = ",".join("?" * len(folder_ids))
 
-        # Type the combined list as List[object] so mypy accepts the bool
-        # AI_Tagging flag alongside the str folder ids in one params list.
-        params: List[object] = [ai_tagging_enabled, *folder_ids]
         cursor.execute(
             f"UPDATE folders SET AI_Tagging = ? WHERE folder_id IN ({placeholders})",
-            params,
+            [ai_tagging_enabled, *folder_ids],
         )
 
         updated_count = cursor.rowcount

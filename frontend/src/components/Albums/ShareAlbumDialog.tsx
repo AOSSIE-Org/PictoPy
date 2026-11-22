@@ -57,7 +57,8 @@ const EXPIRY_OPTIONS = [
 
 // The backend hashes with bcrypt and refuses anything shorter.
 const MIN_PASSWORD_LENGTH = 4;
-
+const hasNonAscii = (value: string): boolean =>
+  Array.from(value).some((char) => (char.codePointAt(0) ?? 0) > 0x7f);
 const DOCS_URL =
   'https://aossie-org.github.io/PictoPy/overview/sharing-albums/';
 const DOCS_INTERNET_URL = `${DOCS_URL}#internet-mode`;
@@ -84,6 +85,7 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
   const [createdShare, setCreatedShare] = useState<Share | null>(null);
   const [selectedUrl, setSelectedUrl] = useState('');
   const [copied, setCopied] = useState(false);
+  const hasNonAsciiPassword = withPassword && hasNonAscii(password);
   const tunnel = useShareTunnel();
   const { url: tunnelUrl, isConnecting } = tunnel;
 
@@ -232,6 +234,10 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
   const handleCreate = (event: React.FormEvent) => {
     event.preventDefault();
     if (!album) {
+      return;
+    }
+    if (hasNonAsciiPassword) {
+      setError('Password must contain only standard ASCII characters.');
       return;
     }
     if (withPassword && password.trim().length < MIN_PASSWORD_LENGTH) {
@@ -567,9 +573,18 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
                       setPassword(event.target.value);
                       setError('');
                     }}
-                    className={error ? 'border-destructive' : ''}
+                    className={
+                      error || hasNonAsciiPassword ? 'border-destructive' : ''
+                    }
                   />
-                  {error && <p className="text-destructive text-sm">{error}</p>}
+                  {hasNonAsciiPassword ? (
+                    <p className="text-destructive text-sm" role="alert">
+                      Password contains unsupported non-ASCII characters. Please
+                      use standard ASCII characters only.
+                    </p>
+                  ) : (
+                    error && <p className="text-destructive text-sm">{error}</p>
+                  )}
                 </div>
               )}
             </div>
@@ -584,7 +599,10 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={createShareMutation.isPending}>
+              <Button
+                type="submit"
+                disabled={createShareMutation.isPending || hasNonAsciiPassword}
+              >
                 <Share2 className="mr-2 h-4 w-4" />
                 Start sharing
               </Button>
