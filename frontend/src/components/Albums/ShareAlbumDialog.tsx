@@ -28,7 +28,7 @@ import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { usePictoMutation, type BackendRes } from '@/hooks/useQueryExtension';
-import { createShare, revokeShare } from '@/api/api-functions';
+import { createShare, getShares, revokeShare } from '@/api/api-functions';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { cn } from '@/lib/utils';
@@ -181,6 +181,12 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
       );
       if (failure) {
         throw failure.reason;
+      }
+      // The tunnel serves every album, and this dialog only knows about one.
+      // Ask the backend what is still live before taking it down.
+      const remaining = await getShares();
+      if ((remaining.data?.length ?? 0) > 0) {
+        return { success: true };
       }
       // Closed through the hook, which asks whether one is running rather than
       // reading state this dialog may not have received yet. A failure here

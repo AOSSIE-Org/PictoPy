@@ -1,6 +1,6 @@
 import userEvent from '@testing-library/user-event';
 import { act, render, screen, waitFor } from '@/test-utils';
-import { createShare, revokeShare } from '@/api/api-functions';
+import { createShare, getShares, revokeShare } from '@/api/api-functions';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { startTunnel, stopTunnel, tunnelStatus } from '@/utils/tunnel';
 import { Album } from '@/types/Album';
@@ -10,6 +10,7 @@ import { ShareAlbumDialog } from '../ShareAlbumDialog';
 jest.mock('@/api/api-functions', () => ({
   createShare: jest.fn(),
   revokeShare: jest.fn(),
+  getShares: jest.fn(),
 }));
 
 jest.mock('@tauri-apps/plugin-opener', () => ({
@@ -24,6 +25,7 @@ jest.mock('@/utils/tunnel', () => ({
 
 const mockCreateShare = createShare as jest.Mock;
 const mockRevokeShare = revokeShare as jest.Mock;
+const mockGetShares = getShares as jest.Mock;
 const mockStartTunnel = startTunnel as jest.Mock;
 const mockStopTunnel = stopTunnel as jest.Mock;
 const mockTunnelStatus = tunnelStatus as jest.Mock;
@@ -80,6 +82,7 @@ describe('ShareAlbumDialog', () => {
     jest.clearAllMocks();
     mockCreateShare.mockResolvedValue({ success: true, data: share });
     mockRevokeShare.mockResolvedValue({ success: true });
+    mockGetShares.mockResolvedValue({ success: true, data: [] });
     mockStartTunnel.mockResolvedValue('https://abc123.lhr.life');
     mockStopTunnel.mockResolvedValue(undefined);
     mockTunnelStatus.mockResolvedValue(null);
@@ -435,11 +438,35 @@ describe('ShareAlbumDialog', () => {
         response: { status: 409 },
       }),
     );
-    renderDialog([share]);
+    const { store } = renderDialog([share]);
 
     await user.click(screen.getByRole('button', { name: /stop sharing/i }));
 
     await waitFor(() => expect(mockRevokeShare).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(store.getState().infoDialog).toMatchObject({
+        isOpen: true,
+        title: 'Error',
+        variant: 'error',
+      }),
+    );
+    expect(mockStopTunnel).not.toHaveBeenCalled();
+  });
+
+  // One tunnel serves every album, so another album's live share keeps it up.
+  it('leaves the tunnel open while another album is still shared', async () => {
+    const user = userEvent.setup();
+    mockTunnelStatus.mockResolvedValue('https://abc123.lhr.life');
+    mockGetShares.mockResolvedValue({
+      success: true,
+      data: [{ ...share, token: 'other', album_id: 'album-2' }],
+    });
+    renderDialog([share]);
+
+    await user.click(screen.getByRole('button', { name: /stop sharing/i }));
+
+    await waitFor(() => expect(mockRevokeShare).toHaveBeenCalledWith('tok-1'));
+    await waitFor(() => expect(mockGetShares).toHaveBeenCalled());
     expect(mockStopTunnel).not.toHaveBeenCalled();
   });
 

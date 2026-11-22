@@ -126,9 +126,19 @@ function Albums() {
   // the album would stay reachable from the internet.
   useEffect(() => {
     if (shares && shares.length === 0) {
-      stopTunnel().catch(() => undefined);
+      // Nothing running resolves quietly; a rejection means the ssh process
+      // may still be up, and its message carries the PID to kill by hand.
+      stopTunnel().catch((cause) =>
+        dispatch(
+          showInfoDialog({
+            title: 'Could not close the internet connection',
+            message: String(cause),
+            variant: 'error',
+          }),
+        ),
+      );
     }
-  }, [shares]);
+  }, [shares, dispatch]);
 
   // Every share an album has, not just its newest: an album can be shared more
   // than once, and each token serves it until it is revoked.

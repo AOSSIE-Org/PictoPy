@@ -169,14 +169,26 @@ class TestExpiryOrchestration:
 
         assert asyncio.run(scenario()) is True
 
-    def test_an_expiring_share_stops_the_listener_without_any_request(self) -> None:
-        async def scenario() -> bool:
-            entry = await share_util_create("album-1", expires_in_minutes=1)
+    def test_an_expiring_share_stops_the_listener_without_any_request(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        real_create = share_utils.share_registry_create
+
+        # Only the deadline is shortened; scheduling is left to share_util_create.
+        def short_lived(*args: object, **kwargs: object) -> object:
+            entry = real_create(*args, **kwargs)
             entry.expires_at = datetime.now(timezone.utc) + timedelta(seconds=0.1)
-            # The timer was armed for the original minute; arm one for the new
-            # deadline the way create does for a real short expiry.
-            share_utils._schedule_sweep(entry.expires_at)
-            await asyncio.sleep(0.4)
-            return share_server_is_running()
+            return entry
+
+        monkeypatch.setattr(share_utils, "share_registry_create", short_lived)
+
+        async def scenario() -> bool:
+            await share_util_create("album-1", expires_in_minutes=1)
+            # Poll for the outcome rather than guessing how long shutdown takes.
+            for _ in range(100):
+                if not share_server_is_running():
+                    return False
+                await asyncio.sleep(0.05)
+            return True
 
         assert asyncio.run(scenario()) is False
