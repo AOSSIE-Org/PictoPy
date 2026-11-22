@@ -558,7 +558,7 @@ class TestAlbumImageManagement:
             "app.routes.albums.db_add_images_to_album"
         ) as mock_add_images:
             mock_get_album.return_value = album_tuple
-            mock_add_images.return_value = 2  # 2 actually inserted
+            mock_add_images.return_value = 1  # only 1 actually inserted out of 2 requested
 
             response = client.post(f"/albums/{album_id}/images", json=request_body)
             assert response.status_code == 200
@@ -566,7 +566,7 @@ class TestAlbumImageManagement:
             json_response = response.json()
             assert json_response["success"] is True
             assert "msg" in json_response
-            assert "2 images" in json_response["msg"]
+            assert "1 images" in json_response["msg"]  # must be 1, not 2 (request size)
 
             mock_get_album.assert_called_once_with(album_id)
             mock_add_images.assert_called_once_with(album_id, request_body["image_ids"])
