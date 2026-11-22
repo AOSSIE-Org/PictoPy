@@ -895,11 +895,21 @@ def _semantic_surface_date(reference: date, event_start: datetime) -> str:
     An anniversary within the next few days is worth waiting for; anything
     else is a rediscovery and should show now.
     """
+    event_date = event_start.date()
+
+    # Determine anniversary in reference year, falling back to Feb 28 for Feb 29 in non-leap years
     try:
-        anniversary = event_start.date().replace(year=reference.year)
+        anniversary = event_date.replace(year=reference.year)
     except ValueError:
-        # Feb 29 in a non-leap reference year.
-        return reference.isoformat()
+        anniversary = date(reference.year, 2, 28)
+
+    # If the anniversary in reference.year has already passed, check the upcoming
+    # anniversary in reference.year + 1 (handles December-to-January year transitions)
+    if anniversary < reference:
+        try:
+            anniversary = event_date.replace(year=reference.year + 1)
+        except ValueError:
+            anniversary = date(reference.year + 1, 2, 28)
 
     delta = (anniversary - reference).days
     if 0 <= delta <= EVENT_ANNIVERSARY_LOOKAHEAD_DAYS:
