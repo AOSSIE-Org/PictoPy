@@ -175,6 +175,17 @@ class TestRevokeOrchestration:
     def test_revoking_album_with_no_shares_reports_zero(self) -> None:
         assert asyncio.run(share_util_revoke_album("unknown")) == 0
 
+    def test_revoking_album_with_only_expired_shares_stops_listener(self) -> None:
+        async def scenario() -> bool:
+            await share_server_start()
+            entry = share_registry_create("album-1", expires_in_minutes=1)
+            entry.expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+            revoked_count = await share_util_revoke_album("album-1")
+            assert revoked_count == 0
+            return share_server_is_running()
+
+        assert asyncio.run(scenario()) is False
+
 
 class TestExpiryOrchestration:
     def test_sweeping_after_the_last_share_expires_stops_the_listener(self) -> None:

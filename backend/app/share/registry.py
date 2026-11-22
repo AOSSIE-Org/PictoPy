@@ -129,14 +129,21 @@ def share_registry_revoke(token: str) -> bool:
 
 
 def share_registry_revoke_for_album(album_id: str) -> List[str]:
-    """Revoke every active share for an album. Returns the list of revoked tokens."""
+    """
+    Revoke every share for an album, purging expired entries as well.
+
+    Returns the list of revoked active (non-expired) tokens.
+    """
     with _lock:
-        tokens = [
-            token for token, entry in _shares.items() if entry.album_id == album_id
+        entries = [
+            entry for entry in _shares.values() if entry.album_id == album_id
         ]
-        for token in tokens:
-            del _shares[token]
-        return tokens
+        active_tokens = [
+            entry.token for entry in entries if not entry.is_expired
+        ]
+        for entry in entries:
+            del _shares[entry.token]
+        return active_tokens
 
 
 def share_registry_purge_expired() -> int:

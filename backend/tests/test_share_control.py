@@ -19,6 +19,7 @@ from app.database.albums import (
     db_create_albums_table,
     db_insert_album,
 )
+from app.database.connection import get_db_connection
 from app.routes.albums import router as albums_router
 from app.routes.share import router as share_router
 from app.schemas.share import CreateShareRequest, Share
@@ -52,6 +53,9 @@ def album_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     os.close(db_fd)
     monkeypatch.setattr("app.database.albums.DATABASE_PATH", db_path)
     monkeypatch.setattr("app.database.connection.DATABASE_PATH", db_path)
+
+    with get_db_connection() as conn:
+        conn.execute("CREATE TABLE IF NOT EXISTS images (id TEXT PRIMARY KEY)")
 
     db_create_albums_table()
     db_create_album_images_table()

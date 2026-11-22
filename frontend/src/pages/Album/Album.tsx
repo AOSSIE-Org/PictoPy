@@ -157,7 +157,7 @@ function Albums() {
   const deleteAlbumMutation = usePictoMutation({
     mutationFn: deleteAlbum,
     autoInvalidateTags: ['albums'],
-    onSuccess: () => {
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['shares'] });
     },
   });

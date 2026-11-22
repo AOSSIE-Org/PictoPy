@@ -127,6 +127,18 @@ class TestRevoke:
         assert share_registry_revoke_for_album("unknown") == []
         assert share_registry_get(entry.token) is not None
 
+    def test_revoking_for_album_purges_expired_shares_and_returns_only_active(
+        self,
+    ) -> None:
+        active = share_registry_create("album-1")
+        expired = share_registry_create("album-1", expires_in_minutes=1)
+        expired.expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+
+        revoked = share_registry_revoke_for_album("album-1")
+        assert revoked == [active.token]
+        assert share_registry_get(active.token) is None
+        assert share_registry_get(expired.token) is None
+
 
 class TestPassword:
     def test_a_share_is_open_by_default(self) -> None:

@@ -117,11 +117,11 @@ async def share_util_revoke_album(album_id: str) -> int:
     """
     End all shares for an album, stopping the listener once nothing is being served.
 
-    Returns the number of shares revoked.
+    Returns the number of active shares revoked.
     """
     async with _orchestration_lock:
         revoked_tokens = share_registry_revoke_for_album(album_id)
-        if revoked_tokens and share_registry_count() == 0:
+        if share_registry_count() == 0:
             await share_server_stop()
         return len(revoked_tokens)
 

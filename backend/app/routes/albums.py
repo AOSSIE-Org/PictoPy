@@ -270,7 +270,7 @@ def update_album(
 @router.delete("/{album_id}", response_model=SuccessResponse)
 async def delete_album(
     album_id: str = Path(...), app_state: State = Depends(get_state)
-):
+) -> SuccessResponse:
     album = db_get_album(album_id)
     if not album:
         raise HTTPException(
