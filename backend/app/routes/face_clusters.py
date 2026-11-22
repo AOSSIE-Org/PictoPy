@@ -2,7 +2,8 @@ import logging
 from binascii import Error as Base64Error
 import base64
 from concurrent.futures import CancelledError, Future, ProcessPoolExecutor
-from typing import Annotated
+from contextlib import contextmanager
+from typing import Annotated, Iterator
 import uuid
 import os
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -41,7 +42,12 @@ from app.schemas.face_clusters import (
     MultiPersonSearchVideo,
 )
 from app.schemas.images import FaceSearchRequest, InputType
-from app.utils.faceSearch import perform_face_search
+from app.utils.faceSearch import (
+    DetectFacesResponse,
+    InvalidFaceSelection,
+    detect_faces_for_preview,
+    perform_face_search,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -276,18 +282,16 @@ def get_cluster_images(cluster_id: str):
         )
 
 
-@router.post(
-    "/face-search",
-    responses={code: {"model": ErrorResponse} for code in [400, 500]},
-)
-def face_tagging(
-    payload: FaceSearchRequest,
-    input_type: Annotated[
-        InputType, Query(description="Choose input type: 'path' or 'base64'")
-    ] = InputType.path,
-):
-    image_path = None
+@contextmanager
+def _query_image_path(
+    payload: FaceSearchRequest, input_type: InputType
+) -> Iterator[str]:
+    """
+    Validate the query photo and yield a local path to it.
 
+    A base64 upload is written to a temp file that is removed on exit, so the
+    face-search and detect-faces routes share one copy of this handling.
+    """
     if input_type == InputType.path:
         local_file_path = payload.path
 
@@ -309,65 +313,114 @@ def face_tagging(
                     message="The provided path is not a valid file",
                 ).model_dump(),
             )
-        image_path = payload.path
+        yield local_file_path
+        return
 
-    elif input_type == InputType.base64:
-        base64_data = payload.base64_data
-        if not base64_data:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ErrorResponse(
-                    success=False,
-                    error="No base64 data",
-                    message="Base64 image data is required.",
-                ).model_dump(),
-            )
-
-        MAX_B64_LEN = 14_000_000  # 10MB
-        if len(base64_data) > MAX_B64_LEN:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ErrorResponse(
-                    success=False,
-                    error="Payload too large",
-                    message="Base64 image exceeds maximum allowed size.",
-                ).model_dump(),
-            )
-        try:
-            image_bytes = base64.b64decode(base64_data.split(",")[-1])
-        except (Base64Error, ValueError):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ErrorResponse(
-                    success=False,
-                    error="Invalid base64 data",
-                    message="The provided base64 image data is malformed or invalid.",
-                ).model_dump(),
-            )
-
-        format_match = (
-            base64_data.split(";")[0].split("/")[-1] if ";" in base64_data else "jpeg"
+    base64_data = payload.base64_data
+    if not base64_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ErrorResponse(
+                success=False,
+                error="No base64 data",
+                message="Base64 image data is required.",
+            ).model_dump(),
         )
-        extension = (
-            format_match
-            if format_match in ["jpeg", "jpg", "png", "gif", "webp"]
-            else "jpeg"
+
+    MAX_B64_LEN = 14_000_000  # 10MB
+    if len(base64_data) > MAX_B64_LEN:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ErrorResponse(
+                success=False,
+                error="Payload too large",
+                message="Base64 image exceeds maximum allowed size.",
+            ).model_dump(),
         )
-        image_id = str(uuid.uuid4())[:8]
-        temp_dir = "temp_uploads"
-        os.makedirs(temp_dir, exist_ok=True)
-        local_image_path = os.path.join(temp_dir, f"{image_id}.{extension}")
+    try:
+        image_bytes = base64.b64decode(base64_data.split(",")[-1])
+    except (Base64Error, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ErrorResponse(
+                success=False,
+                error="Invalid base64 data",
+                message="The provided base64 image data is malformed or invalid.",
+            ).model_dump(),
+        )
 
-        with open(local_image_path, "wb") as f:
-            f.write(image_bytes)
-
-        image_path = local_image_path
+    format_match = (
+        base64_data.split(";")[0].split("/")[-1] if ";" in base64_data else "jpeg"
+    )
+    extension = (
+        format_match
+        if format_match in ["jpeg", "jpg", "png", "gif", "webp"]
+        else "jpeg"
+    )
+    image_id = str(uuid.uuid4())[:8]
+    temp_dir = "temp_uploads"
+    os.makedirs(temp_dir, exist_ok=True)
+    local_image_path = os.path.join(temp_dir, f"{image_id}.{extension}")
 
     try:
-        return perform_face_search(image_path)
+        with open(local_image_path, "wb") as f:
+            f.write(image_bytes)
+        yield local_image_path
     finally:
-        if input_type == InputType.base64 and image_path and os.path.exists(image_path):
-            os.remove(image_path)
+        if os.path.exists(local_image_path):
+            os.remove(local_image_path)
+
+
+@router.post(
+    "/detect-faces",
+    response_model=DetectFacesResponse,
+    responses={code: {"model": ErrorResponse} for code in [400, 500]},
+)
+def detect_query_faces(
+    payload: FaceSearchRequest,
+    input_type: Annotated[
+        InputType, Query(description="Choose input type: 'path' or 'base64'")
+    ] = InputType.path,
+):
+    """List the faces in a photo, so the caller can choose which to search with."""
+    with _query_image_path(payload, input_type) as image_path:
+        return detect_faces_for_preview(image_path)
+
+
+@router.post(
+    "/face-search",
+    responses={code: {"model": ErrorResponse} for code in [400, 500]},
+)
+def face_tagging(
+    payload: FaceSearchRequest,
+    input_type: Annotated[
+        InputType, Query(description="Choose input type: 'path' or 'base64'")
+    ] = InputType.path,
+):
+    if payload.face_indices is not None and not payload.face_indices:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ErrorResponse(
+                success=False,
+                error="No face selected",
+                message="Select at least one face to search with.",
+            ).model_dump(),
+        )
+
+    with _query_image_path(payload, input_type) as image_path:
+        try:
+            return perform_face_search(
+                image_path, payload.face_indices, payload.match_mode
+            )
+        except InvalidFaceSelection as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse(
+                    success=False,
+                    error="Invalid face selection",
+                    message=str(e),
+                ).model_dump(),
+            )
 
 
 @router.post(

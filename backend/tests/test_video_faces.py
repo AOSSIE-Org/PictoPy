@@ -48,6 +48,8 @@ def _result(*faces: tuple) -> FaceDetectionResult:
         ],
         confidences=[confidence for _, confidence in faces],
         faces_skipped=0,
+        image_width=640,
+        image_height=480,
     )
 
 

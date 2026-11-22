@@ -23,7 +23,14 @@ from app.utils.face_clusters import (
 )
 from app.utils.face_quality import face_passes_quality_gate
 from fastapi.testclient import TestClient
+from app.models.FaceDetector import FaceDetectionResult
 from app.routes.face_clusters import router as face_clusters_router
+from app.utils.faceSearch import (
+    DetectFacesData,
+    DetectFacesResponse,
+    GetAllImagesResponse,
+    InvalidFaceSelection,
+)
 
 app = FastAPI()
 app.include_router(face_clusters_router, prefix="/face_clusters")
@@ -1320,6 +1327,260 @@ class TestMultiPersonSearchRoute:
             ("vid-both", 2),
             ("vid-one", 1),
         ]
+
+
+def _search_response() -> GetAllImagesResponse:
+    return GetAllImagesResponse(success=True, message="ok", data=[])
+
+
+@pytest.fixture
+def query_photo(tmp_path):
+    photo = tmp_path / "group.jpg"
+    photo.write_bytes(b"not really a jpeg")
+    return str(photo)
+
+
+@pytest.fixture
+def upload_dir(tmp_path, monkeypatch):
+    """Where base64 uploads are written; the route uses a relative directory."""
+    monkeypatch.chdir(tmp_path)
+    return tmp_path / "temp_uploads"
+
+
+def _leftover_uploads(upload_dir) -> list:
+    return list(upload_dir.iterdir()) if upload_dir.exists() else []
+
+
+class TestFaceSearchRoute:
+    URL = "/face_clusters/face-search"
+
+    @patch("app.routes.face_clusters.perform_face_search")
+    def test_searches_with_the_first_face_by_default(self, mock_search, query_photo):
+        mock_search.return_value = _search_response()
+
+        response = client.post(self.URL, json={"path": query_photo})
+
+        assert response.status_code == 200
+        mock_search.assert_called_once_with(query_photo, None, "match_any")
+
+    @patch("app.routes.face_clusters.perform_face_search")
+    def test_passes_the_selected_faces_and_mode_through(self, mock_search, query_photo):
+        mock_search.return_value = _search_response()
+
+        client.post(
+            self.URL,
+            json={
+                "path": query_photo,
+                "face_indices": [0, 2],
+                "match_mode": "match_all",
+            },
+        )
+
+        mock_search.assert_called_once_with(query_photo, [0, 2], "match_all")
+
+    @patch("app.routes.face_clusters.perform_face_search")
+    def test_an_empty_selection_is_rejected(self, mock_search, query_photo):
+        response = client.post(self.URL, json={"path": query_photo, "face_indices": []})
+
+        assert response.status_code == 400
+        assert response.json()["detail"]["error"] == "No face selected"
+        mock_search.assert_not_called()
+
+    @patch("app.routes.face_clusters.perform_face_search")
+    def test_an_unknown_match_mode_is_rejected(self, mock_search, query_photo):
+        response = client.post(
+            self.URL, json={"path": query_photo, "match_mode": "match_some"}
+        )
+
+        assert response.status_code == 422
+        mock_search.assert_not_called()
+
+    @patch("app.routes.face_clusters.perform_face_search")
+    def test_a_face_that_does_not_exist_is_a_400_naming_the_range(
+        self, mock_search, query_photo
+    ):
+        mock_search.side_effect = InvalidFaceSelection(
+            "face_indices must be between 0 and 1; the photo has 2 face(s)."
+        )
+
+        response = client.post(
+            self.URL, json={"path": query_photo, "face_indices": [5]}
+        )
+
+        assert response.status_code == 400
+        detail = response.json()["detail"]
+        assert detail["error"] == "Invalid face selection"
+        assert "between 0 and 1" in detail["message"]
+
+    def test_a_missing_path_is_rejected(self):
+        response = client.post(self.URL, json={})
+
+        assert response.status_code == 400
+        assert response.json()["detail"]["message"] == "image path is required."
+
+    def test_a_path_that_is_not_a_file_is_rejected(self, tmp_path):
+        response = client.post(self.URL, json={"path": str(tmp_path / "gone.jpg")})
+
+        assert response.status_code == 400
+        assert response.json()["detail"]["error"] == "Invalid file path"
+
+    @pytest.mark.parametrize(
+        "body, error",
+        [
+            ({}, "No base64 data"),
+            ({"base64_data": "A" * 14_000_001}, "Payload too large"),
+            ({"base64_data": "abc"}, "Invalid base64 data"),
+        ],
+    )
+    def test_a_bad_base64_upload_is_rejected(self, upload_dir, body, error):
+        response = client.post(self.URL + "?input_type=base64", json=body)
+
+        assert response.status_code == 400
+        assert response.json()["detail"]["error"] == error
+        assert _leftover_uploads(upload_dir) == []
+
+    @patch("app.routes.face_clusters.perform_face_search")
+    def test_a_base64_upload_is_searched_from_a_temp_file_then_removed(
+        self, mock_search, upload_dir
+    ):
+        seen = {}
+
+        def search(image_path, face_indices, match_mode):
+            seen["bytes"] = open(image_path, "rb").read()
+            seen["suffix"] = image_path.rsplit(".", 1)[-1]
+            return _search_response()
+
+        mock_search.side_effect = search
+
+        response = client.post(
+            self.URL + "?input_type=base64",
+            json={"base64_data": "data:image/png;base64,aGVsbG8="},
+        )
+
+        assert response.status_code == 200
+        assert seen == {"bytes": b"hello", "suffix": "png"}
+        assert _leftover_uploads(upload_dir) == []
+
+    @patch("app.routes.face_clusters.perform_face_search")
+    def test_the_temp_file_is_removed_when_the_selection_is_invalid(
+        self, mock_search, upload_dir
+    ):
+        mock_search.side_effect = InvalidFaceSelection("no such face")
+
+        response = client.post(
+            self.URL + "?input_type=base64",
+            json={"base64_data": "aGVsbG8=", "face_indices": [9]},
+        )
+
+        assert response.status_code == 400
+        assert _leftover_uploads(upload_dir) == []
+
+
+class TestDetectFacesRoute:
+    URL = "/face_clusters/detect-faces"
+
+    @patch("app.routes.face_clusters.detect_faces_for_preview")
+    def test_returns_the_faces_found_in_the_photo(self, mock_detect, query_photo):
+        mock_detect.return_value = DetectFacesResponse(
+            success=True,
+            message="Detected 1 face.",
+            data=DetectFacesData(
+                image_width=640,
+                image_height=480,
+                faces=[
+                    {
+                        "index": 0,
+                        "bbox": {"x": 1, "y": 2, "width": 3, "height": 4},
+                        "confidence": 0.9,
+                    }
+                ],
+                faces_skipped=0,
+            ),
+        )
+
+        response = client.post(self.URL, json={"path": query_photo})
+
+        assert response.status_code == 200
+        mock_detect.assert_called_once_with(query_photo)
+        data = response.json()["data"]
+        assert (data["image_width"], data["image_height"]) == (640, 480)
+        assert data["faces"][0]["index"] == 0
+        assert data["faces"][0]["bbox"] == {"x": 1, "y": 2, "width": 3, "height": 4}
+
+    @patch("app.routes.face_clusters.detect_faces_for_preview")
+    def test_a_missing_path_is_rejected(self, mock_detect):
+        response = client.post(self.URL, json={})
+
+        assert response.status_code == 400
+        mock_detect.assert_not_called()
+
+    @patch("app.routes.face_clusters.detect_faces_for_preview")
+    def test_a_base64_upload_is_removed_after_detection(self, mock_detect, upload_dir):
+        mock_detect.return_value = DetectFacesResponse(
+            success=True, message="No faces detected in the image."
+        )
+
+        response = client.post(
+            self.URL + "?input_type=base64", json={"base64_data": "aGVsbG8="}
+        )
+
+        assert response.status_code == 200
+        assert _leftover_uploads(upload_dir) == []
+
+
+class TestPickingAFaceFromAGroupPhoto:
+    """The two routes end to end; only the models and the database are stubbed."""
+
+    @staticmethod
+    def _person(axis: int) -> list:
+        return np.eye(128, dtype=np.float32)[axis].tolist()
+
+    @patch("app.utils.faceSearch.db_get_images_by_ids")
+    @patch("app.utils.faceSearch.db_get_all_video_face_embeddings", return_value=[])
+    @patch("app.utils.faceSearch.db_get_all_image_face_embeddings")
+    @patch("app.utils.faceSearch.FaceDetector")
+    def test_the_index_from_detect_faces_selects_that_face_in_the_search(
+        self, detector_cls, mock_faces, _mock_videos, mock_images, query_photo
+    ):
+        detector_cls.return_value.detect_faces.return_value = FaceDetectionResult(
+            embeddings=[np.array(self._person(0)), np.array(self._person(1))],
+            bboxes=[
+                {"x": 10, "y": 10, "width": 50, "height": 50},
+                {"x": 200, "y": 10, "width": 50, "height": 50},
+            ],
+            confidences=[0.9, 0.8],
+            faces_skipped=0,
+            image_width=640,
+            image_height=480,
+        )
+        mock_faces.return_value = [
+            {"image_id": "first", "embeddings": self._person(0), "bbox": None},
+            {"image_id": "second", "embeddings": self._person(1), "bbox": None},
+        ]
+        mock_images.side_effect = lambda ids: [
+            {
+                "id": image_id,
+                "path": f"/photos/{image_id}.jpg",
+                "folder_id": "1",
+                "thumbnailPath": f"/thumbs/{image_id}.jpg",
+                "metadata": "{}",
+                "isTagged": False,
+                "tags": None,
+            }
+            for image_id in ids
+        ]
+
+        listed = client.post(
+            "/face_clusters/detect-faces", json={"path": query_photo}
+        ).json()["data"]
+        picked = listed["faces"][1]["index"]
+        search = client.post(
+            "/face_clusters/face-search",
+            json={"path": query_photo, "face_indices": [picked]},
+        )
+
+        assert [face["bbox"]["x"] for face in listed["faces"]] == [10, 200]
+        assert [image["id"] for image in search.json()["data"]] == ["second"]
 
 
 class TestMultiPersonVideoMatches:

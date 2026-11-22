@@ -27,6 +27,9 @@ class FaceDetectionResult(TypedDict):
     bboxes: List[Dict[str, int]]  # x, y, width, height in source-image pixels
     confidences: List[float]
     faces_skipped: int  # detections rejected by the quality gate
+    # Size of the decoded image the boxes are measured in.
+    image_width: int
+    image_height: int
 
 
 class FaceDetector:
@@ -90,6 +93,8 @@ class FaceDetector:
             bboxes=bboxes,
             confidences=confidences,
             faces_skipped=faces_skipped,
+            image_width=img.shape[1],
+            image_height=img.shape[0],
         )
 
     def close(self):

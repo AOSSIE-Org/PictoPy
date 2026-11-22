@@ -5,7 +5,12 @@ import numpy as np
 import pytest
 
 from app.models.FaceDetector import FaceDetectionResult
-from app.utils.faceSearch import perform_face_search
+from app.config.settings import FACE_SEARCH_MAX_SELECTED_FACES
+from app.utils.faceSearch import (
+    InvalidFaceSelection,
+    detect_faces_for_preview,
+    perform_face_search,
+)
 
 QUERY = np.eye(128, dtype=np.float32)[0]
 SAME_PERSON = QUERY.tolist()
@@ -76,6 +81,8 @@ class TestPerformFaceSearch:
             bboxes=[{"x": 0, "y": 0, "width": 50, "height": 50}],
             confidences=[0.9],
             faces_skipped=0,
+            image_width=640,
+            image_height=480,
         )
         with (
             patch(
@@ -105,6 +112,8 @@ class TestPerformFaceSearch:
             bboxes=[{"x": 0, "y": 0, "width": 50, "height": 50}],
             confidences=[0.9],
             faces_skipped=0,
+            image_width=640,
+            image_height=480,
         )
         weaker = (0.7 * QUERY + np.sqrt(1 - 0.49) * np.eye(128)[5]).tolist()
         with (
@@ -137,6 +146,8 @@ class TestPerformFaceSearch:
             bboxes=[{"x": 0, "y": 0, "width": 50, "height": 50}],
             confidences=[0.9],
             faces_skipped=0,
+            image_width=640,
+            image_height=480,
         )
         with (
             patch(
@@ -158,7 +169,12 @@ class TestPerformFaceSearch:
 
     def test_reports_when_no_face_is_found(self, detector):
         detector.detect_faces.return_value = FaceDetectionResult(
-            embeddings=[], bboxes=[], confidences=[], faces_skipped=2
+            embeddings=[],
+            bboxes=[],
+            confidences=[],
+            faces_skipped=2,
+            image_width=640,
+            image_height=480,
         )
 
         response = perform_face_search("/query.jpg")
@@ -185,6 +201,8 @@ class TestMultiFacePhotos:
             bboxes=[BOX],
             confidences=[0.9],
             faces_skipped=0,
+            image_width=640,
+            image_height=480,
         )
         with (
             patch(
@@ -256,6 +274,350 @@ class TestMultiFacePhotos:
 
         assert response.success
         assert response.data == []
+
+
+THIRD_PERSON = np.eye(128, dtype=np.float32)[2].tolist()
+
+
+def _near(axis: int, similarity: float) -> list:
+    """An embedding at the given cosine similarity to person `axis`."""
+    spill = 127
+    vector = np.zeros(128, dtype=np.float32)
+    vector[axis] = similarity
+    vector[spill] = np.sqrt(1 - similarity**2)
+    return vector.tolist()
+
+
+def _detected(*embeddings: list, skipped: int = 0) -> FaceDetectionResult:
+    """A detector result holding one face per embedding, boxed left to right."""
+    return FaceDetectionResult(
+        embeddings=[np.array(embedding, dtype=np.float32) for embedding in embeddings],
+        bboxes=[
+            {"x": i * 100, "y": 0, "width": 50, "height": 50}
+            for i in range(len(embeddings))
+        ],
+        confidences=[0.9 - i * 0.1 for i in range(len(embeddings))],
+        faces_skipped=skipped,
+        image_width=640,
+        image_height=480,
+    )
+
+
+class TestSelectedFaces:
+    @staticmethod
+    def _search(
+        detector,
+        detected,
+        image_faces=(),
+        video_faces=(),
+        face_indices=None,
+        match_mode="match_any",
+    ):
+        detector.detect_faces.return_value = detected
+        with (
+            patch(
+                "app.utils.faceSearch.db_get_all_image_face_embeddings",
+                return_value=list(image_faces),
+            ),
+            patch(
+                "app.utils.faceSearch.db_get_all_video_face_embeddings",
+                return_value=list(video_faces),
+            ),
+            patch(
+                "app.utils.faceSearch.db_get_images_by_ids",
+                side_effect=_images_by_ids,
+            ),
+            patch(
+                "app.utils.faceSearch.db_get_videos_by_ids",
+                side_effect=lambda ids: [_video_row(v) for v in ids],
+            ),
+        ):
+            return perform_face_search("/query.jpg", face_indices, match_mode)
+
+    def test_defaults_to_the_first_face(self, detector):
+        response = self._search(
+            detector,
+            _detected(SOMEONE_ELSE, SAME_PERSON),
+            [_image_face("first", SOMEONE_ELSE), _image_face("second", SAME_PERSON)],
+        )
+
+        assert [image.id for image in response.data] == ["first"]
+
+    def test_searches_with_the_selected_face(self, detector):
+        response = self._search(
+            detector,
+            _detected(SOMEONE_ELSE, SAME_PERSON),
+            [_image_face("first", SOMEONE_ELSE), _image_face("second", SAME_PERSON)],
+            face_indices=[1],
+        )
+
+        assert [image.id for image in response.data] == ["second"]
+
+    def test_match_any_returns_photos_of_either_selected_face(self, detector):
+        response = self._search(
+            detector,
+            _detected(SAME_PERSON, SOMEONE_ELSE, THIRD_PERSON),
+            [
+                _image_face("a", SAME_PERSON),
+                _image_face("b", SOMEONE_ELSE),
+                _image_face("c", THIRD_PERSON),
+            ],
+            face_indices=[0, 1],
+        )
+
+        assert sorted(image.id for image in response.data) == ["a", "b"]
+
+    def test_match_count_is_how_many_selected_faces_the_photo_holds(self, detector):
+        response = self._search(
+            detector,
+            _detected(SAME_PERSON, SOMEONE_ELSE),
+            [
+                _image_face("both", SAME_PERSON),
+                _image_face("both", SOMEONE_ELSE),
+                _image_face("one", SAME_PERSON),
+            ],
+            face_indices=[0, 1],
+        )
+
+        counts = {image.id: image.match_count for image in response.data}
+        assert counts == {"both": 2, "one": 1}
+
+    def test_match_all_needs_every_selected_face_in_the_photo(self, detector):
+        response = self._search(
+            detector,
+            _detected(SAME_PERSON, SOMEONE_ELSE),
+            [
+                _image_face("both", SAME_PERSON),
+                _image_face("both", SOMEONE_ELSE),
+                _image_face("only-first", SAME_PERSON),
+                _image_face("only-second", SOMEONE_ELSE),
+            ],
+            face_indices=[0, 1],
+            match_mode="match_all",
+        )
+
+        assert [image.id for image in response.data] == ["both"]
+        assert response.data[0].match_count == 2
+
+    def test_match_all_with_one_face_is_the_same_as_match_any(self, detector):
+        stored = [_image_face("a", SAME_PERSON), _image_face("b", SOMEONE_ELSE)]
+        detected = _detected(SAME_PERSON, SOMEONE_ELSE)
+
+        any_ids = self._search(detector, detected, stored, face_indices=[0])
+        all_ids = self._search(
+            detector, detected, stored, face_indices=[0], match_mode="match_all"
+        )
+
+        assert [i.id for i in all_ids.data] == [i.id for i in any_ids.data] == ["a"]
+
+    def test_match_all_does_not_let_one_stored_face_answer_two_selected_faces(
+        self, detector
+    ):
+        """Two lookalike selections need two stored faces, not one counted twice."""
+        detected = _detected(SAME_PERSON, _near(0, 0.9))
+        stored = [
+            _image_face("one-face", SAME_PERSON),
+            _image_face("two-faces", SAME_PERSON),
+            _image_face("two-faces", _near(0, 0.9)),
+        ]
+
+        response = self._search(
+            detector,
+            detected,
+            stored,
+            face_indices=[0, 1],
+            match_mode="match_all",
+        )
+
+        assert [image.id for image in response.data] == ["two-faces"]
+
+    def test_match_all_ranks_by_the_mean_similarity_of_the_matches(self, detector):
+        response = self._search(
+            detector,
+            _detected(SAME_PERSON, SOMEONE_ELSE),
+            [
+                _image_face("weak", SAME_PERSON),
+                _image_face("weak", _near(1, 0.7)),
+                _image_face("strong", SAME_PERSON),
+                _image_face("strong", SOMEONE_ELSE),
+            ],
+            face_indices=[0, 1],
+            match_mode="match_all",
+        )
+
+        assert [image.id for image in response.data] == ["strong", "weak"]
+
+    def test_match_all_frames_the_best_matching_face(self, detector):
+        response = self._search(
+            detector,
+            _detected(SAME_PERSON, SOMEONE_ELSE),
+            [
+                _image_face("group", _near(1, 0.8), BOX_RIGHT),
+                _image_face("group", SAME_PERSON, BOX),
+            ],
+            face_indices=[0, 1],
+            match_mode="match_all",
+        )
+
+        assert response.data[0].bboxes.x == BOX["x"]
+
+    def test_duplicate_indices_count_once(self, detector):
+        """[0, 0] under match_all must not demand two stored faces."""
+        response = self._search(
+            detector,
+            _detected(SAME_PERSON, SOMEONE_ELSE),
+            [_image_face("a", SAME_PERSON)],
+            face_indices=[0, 0],
+            match_mode="match_all",
+        )
+
+        assert [image.id for image in response.data] == ["a"]
+
+    @pytest.mark.parametrize("bad_index", [2, 99, -1])
+    def test_an_index_outside_the_detected_faces_is_rejected(self, detector, bad_index):
+        with pytest.raises(InvalidFaceSelection, match="between 0 and 1"):
+            self._search(
+                detector,
+                _detected(SAME_PERSON, SOMEONE_ELSE),
+                [_image_face("a", SAME_PERSON)],
+                face_indices=[0, bad_index],
+            )
+
+        detector.close.assert_called_once()
+
+    def test_selecting_more_faces_than_the_cap_is_rejected(self, detector):
+        crowd = _detected(*[SAME_PERSON] * (FACE_SEARCH_MAX_SELECTED_FACES + 1))
+
+        with pytest.raises(InvalidFaceSelection, match="at most"):
+            self._search(
+                detector,
+                crowd,
+                [_image_face("a", SAME_PERSON)],
+                face_indices=list(range(FACE_SEARCH_MAX_SELECTED_FACES + 1)),
+            )
+
+        detector.close.assert_called_once()
+
+    def test_the_cap_counts_distinct_faces_and_allows_exactly_the_cap(self, detector):
+        crowd = _detected(*[SAME_PERSON] * (FACE_SEARCH_MAX_SELECTED_FACES + 1))
+        stored = [_image_face("a", SAME_PERSON)]
+
+        at_the_cap = self._search(
+            detector,
+            crowd,
+            stored,
+            face_indices=list(range(FACE_SEARCH_MAX_SELECTED_FACES)),
+        )
+        repeated = self._search(
+            detector,
+            crowd,
+            stored,
+            face_indices=[0] * (FACE_SEARCH_MAX_SELECTED_FACES + 3),
+        )
+
+        assert [image.id for image in at_the_cap.data] == ["a"]
+        assert [image.id for image in repeated.data] == ["a"]
+
+    def test_a_photo_without_faces_reports_it_whatever_was_selected(self, detector):
+        response = self._search(detector, _detected(), face_indices=[3])
+
+        assert response.success
+        assert response.message == "No faces detected in the image."
+
+    def test_match_all_finds_videos_holding_every_selected_face(self, detector):
+        response = self._search(
+            detector,
+            _detected(SAME_PERSON, SOMEONE_ELSE),
+            video_faces=[
+                _video_face("vid-both", SAME_PERSON),
+                _video_face("vid-both", SOMEONE_ELSE),
+                _video_face("vid-one", SAME_PERSON),
+            ],
+            face_indices=[0, 1],
+            match_mode="match_all",
+        )
+
+        assert [video.id for video in response.videos] == ["vid-both"]
+
+
+class TestDetectFacesForPreview:
+    def test_lists_each_face_with_its_index_box_and_confidence(self, detector):
+        detector.detect_faces.return_value = _detected(
+            SAME_PERSON, SOMEONE_ELSE, skipped=1
+        )
+
+        response = detect_faces_for_preview("/query.jpg")
+
+        assert response.success
+        assert response.message == "Detected 2 faces."
+        data = response.data
+        assert data is not None
+        assert (data.image_width, data.image_height, data.faces_skipped) == (
+            640,
+            480,
+            1,
+        )
+        assert [face.index for face in data.faces] == [0, 1]
+        assert data.faces[1].bbox.x == 100
+        assert data.faces[0].confidence == pytest.approx(0.9)
+        detector.close.assert_called_once()
+
+    def test_one_face_reads_in_the_singular(self, detector):
+        detector.detect_faces.return_value = _detected(SAME_PERSON)
+
+        assert detect_faces_for_preview("/query.jpg").message == "Detected 1 face."
+
+    def test_reports_when_no_face_is_found(self, detector):
+        detector.detect_faces.return_value = _detected(skipped=2)
+
+        response = detect_faces_for_preview("/query.jpg")
+
+        assert response.success
+        assert response.message == "No faces detected in the image."
+        assert response.data is not None
+        assert response.data.faces == []
+        assert response.data.faces_skipped == 2
+
+    def test_an_unreadable_image_has_no_data(self, detector):
+        detector.detect_faces.return_value = None
+
+        response = detect_faces_for_preview("/query.jpg")
+
+        assert response.success
+        assert response.data is None
+
+    def test_detector_failure_is_reported_not_raised(self, detector):
+        detector.detect_faces.side_effect = RuntimeError("model missing")
+
+        response = detect_faces_for_preview("/query.jpg")
+
+        assert not response.success
+        assert "model missing" in response.message
+        detector.close.assert_called_once()
+
+    def test_indices_match_the_ones_the_search_accepts(self, detector):
+        """The preview's index n must be the face the search uses for index n."""
+        detected = _detected(SOMEONE_ELSE, SAME_PERSON)
+        detector.detect_faces.return_value = detected
+        with (
+            patch(
+                "app.utils.faceSearch.db_get_all_image_face_embeddings",
+                return_value=[_image_face("target", SAME_PERSON)],
+            ),
+            patch(
+                "app.utils.faceSearch.db_get_all_video_face_embeddings",
+                return_value=[],
+            ),
+            patch(
+                "app.utils.faceSearch.db_get_images_by_ids",
+                side_effect=_images_by_ids,
+            ),
+        ):
+            preview = detect_faces_for_preview("/query.jpg")
+            assert preview.data is not None
+            search = perform_face_search("/query.jpg", [preview.data.faces[1].index])
+
+        assert [image.id for image in search.data] == ["target"]
 
 
 def _looks_like(similarity: float) -> list:

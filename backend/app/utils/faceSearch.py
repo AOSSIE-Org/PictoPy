@@ -1,6 +1,6 @@
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Optional, List, Dict, Any, NamedTuple, Sequence, Set, Tuple
 from pydantic import BaseModel, ValidationError
-from app.config.settings import CONFIDENCE_PERCENT
+from app.config.settings import CONFIDENCE_PERCENT, FACE_SEARCH_MAX_SELECTED_FACES
 from app.database.faces import (
     db_get_all_image_face_embeddings,
     db_get_all_video_face_embeddings,
@@ -34,6 +34,8 @@ class ImageData(BaseModel):
     tags: Optional[List[str]] = None
     # Absent for faces stored without a box.
     bboxes: Optional[BoundingBox] = None
+    # How many of the selected faces this photo matched.
+    match_count: Optional[int] = None
 
 
 class GetAllImagesResponse(BaseModel):
@@ -44,15 +46,158 @@ class GetAllImagesResponse(BaseModel):
     videos: List[VideoData] = []
 
 
-def perform_face_search(image_path: str) -> GetAllImagesResponse:
+class DetectedFace(BaseModel):
+    index: int
+    bbox: BoundingBox
+    confidence: float
+
+
+class DetectFacesData(BaseModel):
+    image_width: int
+    image_height: int
+    faces: List[DetectedFace]
+    faces_skipped: int
+
+
+class DetectFacesResponse(BaseModel):
+    success: bool
+    message: str
+    data: Optional[DetectFacesData] = None
+
+
+class InvalidFaceSelection(ValueError):
+    """The requested face indices do not exist in the query photo."""
+
+
+class _GroupMatch(NamedTuple):
+    score: float
+    bbox: Optional[Dict[str, Any]]
+    match_count: int
+
+
+def _score_groups(
+    queries: Sequence[Any],
+    faces: List[Dict[str, Any]],
+    group_key: str,
+    match_mode: str,
+) -> Dict[str, _GroupMatch]:
+    """
+    Score every image (or video) that holds a stored face close to the queries.
+
+    match_any keeps a group when any query reaches CONFIDENCE_PERCENT and scores
+    it by its best face. match_all keeps it only when every query is matched by
+    a different stored face, assigned from the highest similarity down so one
+    face cannot answer two queries, and scores it by the mean of those matches.
+    """
+    faces_by_group: Dict[str, List[Dict[str, Any]]] = {}
+    for face in faces:
+        faces_by_group.setdefault(face[group_key], []).append(face)
+
+    scored: Dict[str, _GroupMatch] = {}
+    for group_id, group_faces in faces_by_group.items():
+        pairs: List[Tuple[float, int, int]] = []
+        for face_pos, face in enumerate(group_faces):
+            for query_pos, query in enumerate(queries):
+                similarity = FaceNet_util_cosine_similarity(query, face["embeddings"])
+                if similarity >= CONFIDENCE_PERCENT:
+                    pairs.append((similarity, query_pos, face_pos))
+        if not pairs:
+            continue
+        pairs.sort(reverse=True)
+
+        if match_mode == "match_any":
+            best_similarity, _, best_face = pairs[0]
+            scored[group_id] = _GroupMatch(
+                best_similarity,
+                group_faces[best_face].get("bbox"),
+                len({query_pos for _, query_pos, _ in pairs}),
+            )
+            continue
+
+        taken_queries: Set[int] = set()
+        taken_faces: Set[int] = set()
+        assigned: List[Tuple[float, int]] = []
+        for similarity, query_pos, face_pos in pairs:
+            if query_pos in taken_queries or face_pos in taken_faces:
+                continue
+            taken_queries.add(query_pos)
+            taken_faces.add(face_pos)
+            assigned.append((similarity, face_pos))
+        if len(assigned) == len(queries):
+            scored[group_id] = _GroupMatch(
+                sum(similarity for similarity, _ in assigned) / len(assigned),
+                group_faces[assigned[0][1]].get("bbox"),
+                len(assigned),
+            )
+    return scored
+
+
+def detect_faces_for_preview(image_path: str) -> DetectFacesResponse:
+    """
+    Lists the faces a search on this photo could use, without searching.
+
+    The indices are the ones perform_face_search accepts as face_indices.
+    """
+    fd = FaceDetector()
+
+    try:
+        try:
+            result = fd.detect_faces(image_path)
+        except Exception as e:
+            return DetectFacesResponse(
+                success=False, message=f"Failed to process image: {str(e)}"
+            )
+        if not result:
+            return DetectFacesResponse(
+                success=True, message="No faces detected in the image."
+            )
+
+        faces = [
+            DetectedFace(index=index, bbox=BoundingBox(**bbox), confidence=confidence)
+            for index, (bbox, confidence) in enumerate(
+                zip(result["bboxes"], result["confidences"])
+            )
+        ]
+        return DetectFacesResponse(
+            success=True,
+            message=(
+                f"Detected {len(faces)} face{'' if len(faces) == 1 else 's'}."
+                if faces
+                else "No faces detected in the image."
+            ),
+            data=DetectFacesData(
+                image_width=result["image_width"],
+                image_height=result["image_height"],
+                faces=faces,
+                faces_skipped=result["faces_skipped"],
+            ),
+        )
+
+    finally:
+        fd.close()
+
+
+def perform_face_search(
+    image_path: str,
+    face_indices: Optional[List[int]] = None,
+    match_mode: str = "match_any",
+) -> GetAllImagesResponse:
     """
     Performs face detection, embedding generation, and similarity search.
 
     Args:
         image_path (str): Path to the image file to process.
+        face_indices (Optional[List[int]]): Faces of the photo to search with, as
+            listed by detect_faces_for_preview. Defaults to the first face.
+        match_mode (str): With several faces, "match_any" returns photos holding
+            any of them and "match_all" only photos holding all of them.
 
     Returns:
         GetAllImagesResponse: Search result containing matched images.
+
+    Raises:
+        InvalidFaceSelection: A face index is outside the detected faces, or more
+            than FACE_SEARCH_MAX_SELECTED_FACES distinct faces were selected.
     """
     fd = FaceDetector()
 
@@ -72,8 +217,20 @@ def perform_face_search(image_path: str) -> GetAllImagesResponse:
                 data=[],
             )
 
-        # The detector already ran FaceNet on this crop; no second model needed.
-        new_embedding = result["embeddings"][0]
+        face_count = len(result["embeddings"])
+        selected = list(dict.fromkeys(face_indices)) if face_indices else [0]
+        if len(selected) > FACE_SEARCH_MAX_SELECTED_FACES:
+            raise InvalidFaceSelection(
+                f"Select at most {FACE_SEARCH_MAX_SELECTED_FACES} faces at a time; "
+                f"got {len(selected)}."
+            )
+        if any(index < 0 or index >= face_count for index in selected):
+            raise InvalidFaceSelection(
+                f"face_indices must be between 0 and {face_count - 1}; "
+                f"the photo has {face_count} face(s)."
+            )
+        # The detector already ran FaceNet on these crops; no second model needed.
+        queries = [result["embeddings"][index] for index in selected]
 
         image_faces = db_get_all_image_face_embeddings()
         video_faces = db_get_all_video_face_embeddings()
@@ -86,19 +243,8 @@ def perform_face_search(image_path: str) -> GetAllImagesResponse:
 
         # A group photo holds several faces: rank each image by its best match
         # and frame that face, as is done per video below.
-        best_by_image: Dict[str, Tuple[float, Optional[Dict[str, Any]]]] = {}
-        for face in image_faces:
-            similarity = FaceNet_util_cosine_similarity(
-                new_embedding, face["embeddings"]
-            )
-            if similarity >= CONFIDENCE_PERCENT:
-                previous = best_by_image.get(face["image_id"])
-                if previous is None or similarity > previous[0]:
-                    best_by_image[face["image_id"]] = (similarity, face["bbox"])
-
-        ranked_images = sorted(
-            best_by_image, key=lambda i: best_by_image[i][0], reverse=True
-        )
+        by_image = _score_groups(queries, image_faces, "image_id", match_mode)
+        ranked_images = sorted(by_image, key=lambda i: by_image[i].score, reverse=True)
         # Row by row: one unusable record must not hide every other match.
         matches: List[ImageData] = []
         for image in db_get_images_by_ids(ranked_images):
@@ -112,7 +258,8 @@ def perform_face_search(image_path: str) -> GetAllImagesResponse:
                         metadata=image_util_parse_metadata(image["metadata"]),
                         isTagged=image["isTagged"],
                         tags=image["tags"],
-                        bboxes=best_by_image[image["id"]][1],
+                        bboxes=by_image[image["id"]].bbox,
+                        match_count=by_image[image["id"]].match_count,
                     )
                 )
             except ValidationError as e:
@@ -120,17 +267,8 @@ def perform_face_search(image_path: str) -> GetAllImagesResponse:
 
         # Several keyframe faces can belong to one video, so rank each video by
         # its best-matching face rather than listing it once per keyframe.
-        best_by_video: Dict[str, float] = {}
-        for video_face in video_faces:
-            similarity = FaceNet_util_cosine_similarity(
-                new_embedding, video_face["embeddings"]
-            )
-            if similarity >= CONFIDENCE_PERCENT:
-                video_id = video_face["video_id"]
-                if similarity > best_by_video.get(video_id, 0.0):
-                    best_by_video[video_id] = similarity
-
-        ranked = sorted(best_by_video, key=lambda v: best_by_video[v], reverse=True)
+        by_video = _score_groups(queries, video_faces, "video_id", match_mode)
+        ranked = sorted(by_video, key=lambda v: by_video[v].score, reverse=True)
         videos = video_util_to_video_data(db_get_videos_by_ids(ranked))
 
         return GetAllImagesResponse(
