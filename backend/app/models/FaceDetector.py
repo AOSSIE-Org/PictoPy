@@ -2,7 +2,6 @@
 
 from typing import Dict, List, Optional, TypedDict
 
-import cv2
 import numpy as np
 from app.models.FaceNet import FaceNet
 from app.utils.FaceNet import FaceNet_util_preprocess_image, FaceNet_util_get_model_path
@@ -44,7 +43,9 @@ class FaceDetector:
         """Detect and embed the faces in an image file. Pure inference: the caller
         persists them, so photos, face search and video keyframes share this path.
         """
-        img = cv2.imread(image_path)
+        from app.utils.images import image_util_load_cv2_image
+
+        img = image_util_load_cv2_image(image_path)
         if img is None:
             logger.error(f"Failed to load image: {image_path}")
             return None
