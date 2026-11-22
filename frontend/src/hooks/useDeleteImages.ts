@@ -5,6 +5,7 @@ import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { deleteImages } from '@/api/api-functions/images';
 import { removeImages } from '@/features/imageSlice';
+import { MEMORIES_QUERY_KEY } from '@/hooks/useMemories';
 
 interface DeleteImagesArgs {
   imageIds: string[];
@@ -47,6 +48,7 @@ export const useDeleteImages = () => {
       // and matches by prefix, so neither of these matches ['images'].
       queryClient.invalidateQueries({ queryKey: ['album-images'] });
       queryClient.invalidateQueries({ queryKey: ['person-images'] });
+      queryClient.invalidateQueries({ queryKey: MEMORIES_QUERY_KEY });
     },
   });
 
