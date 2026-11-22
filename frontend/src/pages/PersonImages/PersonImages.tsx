@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useQueryClient } from '@tanstack/react-query';
 import { ImageCard } from '@/components/Media/ImageCard';
 import { MediaView } from '@/components/Media/MediaView';
 import { VideoCard } from '@/components/Media/VideoCard';
@@ -11,24 +12,29 @@ import {
   setVideos,
 } from '@/features/videoSlice';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
+import { showInfoDialog } from '@/features/infoDialogSlice';
+import { updateClusterName } from '@/features/faceClustersSlice';
 import { selectImages, selectIsImageViewOpen } from '@/features/imageSelectors';
 import { selectIsVideoViewOpen, selectVideos } from '@/features/videoSelectors';
 import { usePictoQuery, usePictoMutation } from '@/hooks/useQueryExtension';
+import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { fetchClusterImages, renameCluster } from '@/api/api-functions';
 import { useNavigate, useParams } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Check, Pencil, ArrowLeft } from 'lucide-react';
+import { Check, Pencil, ArrowLeft, X } from 'lucide-react';
 
 export const PersonImages = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { clusterId } = useParams<{ clusterId: string }>();
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
   const images = useSelector(selectImages);
   const isVideoViewOpen = useSelector(selectIsVideoViewOpen);
   const videos = useSelector(selectVideos);
   const [clusterName, setClusterName] = useState<string>('random_name');
+  const [draftName, setDraftName] = useState<string>('');
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
   const [loadedClusterId, setLoadedClusterId] = useState<string | undefined>(
@@ -39,10 +45,51 @@ export const PersonImages = () => {
     queryFn: async () => fetchClusterImages({ clusterId: clusterId || '' }),
   });
 
-  const { mutate: renameClusterMutate } = usePictoMutation({
-    mutationFn: async (newName: string) =>
-      renameCluster({ clusterId: clusterId || '', newName }),
+  const renameMutation = usePictoMutation({
+    mutationFn: async ({
+      targetClusterId,
+      newName,
+    }: {
+      targetClusterId: string;
+      newName: string;
+    }) => renameCluster({ clusterId: targetClusterId, newName }),
+    onSuccess: (_data, { targetClusterId, newName }) => {
+      if (targetClusterId === clusterId) {
+        setClusterName(newName);
+        setIsEditing(false);
+      }
+      dispatch(
+        updateClusterName({
+          clusterId: targetClusterId,
+          clusterName: newName,
+        }),
+      );
+      void queryClient.invalidateQueries({ queryKey: ['clusters'] });
+      void queryClient.invalidateQueries({
+        queryKey: ['person-images', targetClusterId],
+      });
+    },
   });
+
+  const feedbackOptions = useMemo(
+    () => ({
+      loadingMessage: 'Renaming person...',
+      successTitle: 'Success',
+      successMessage:
+        renameMutation.successMessage || 'Person renamed successfully.',
+      errorTitle: 'Error',
+      errorMessage:
+        renameMutation.errorMessage ||
+        'Failed to rename person. Please try again.',
+    }),
+    [renameMutation.successMessage, renameMutation.errorMessage],
+  );
+
+  useMutationFeedback(renameMutation, feedbackOptions);
+
+  useEffect(() => {
+    setIsEditing(false);
+  }, [clusterId]);
 
   useEffect(() => {
     if (isLoading) {
@@ -74,23 +121,49 @@ export const PersonImages = () => {
       : (data?.data?.cluster_name ?? 'random_name');
 
   const handleEditName = () => {
-    setClusterName(clusterName);
+    setDraftName(displayName);
     setIsEditing(true);
   };
 
-  const handleSaveName = () => {
-    setClusterName(clusterName);
-    renameClusterMutate(clusterName);
+  const handleCancelEdit = () => {
+    setDraftName(displayName);
     setIsEditing(false);
   };
 
+  const handleSaveName = () => {
+    if (!clusterId || renameMutation.isPending) return;
+
+    const trimmedName = draftName.trim();
+    if (!trimmedName) {
+      dispatch(
+        showInfoDialog({
+          title: 'Invalid Name',
+          message: 'Person name cannot be empty.',
+          variant: 'error',
+        }),
+      );
+      return;
+    }
+
+    if (trimmedName === displayName) {
+      setIsEditing(false);
+      return;
+    }
+
+    renameMutation.mutate({ targetClusterId: clusterId, newName: trimmedName });
+  };
+
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setClusterName(e.target.value);
+    setDraftName(e.target.value);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.nativeEvent.isComposing) return;
+
     if (e.key === 'Enter') {
       handleSaveName();
+    } else if (e.key === 'Escape') {
+      handleCancelEdit();
     }
   };
   return (
@@ -108,19 +181,33 @@ export const PersonImages = () => {
         {isEditing ? (
           <div className="flex items-center gap-2">
             <Input
-              value={clusterName}
+              value={draftName}
               onChange={handleNameChange}
               onKeyDown={handleKeyDown}
+              disabled={renameMutation.isPending}
               className="max-w-xs"
               placeholder="Enter person name"
+              aria-label="Person name"
             />
             <Button
               variant="outline"
               size="icon"
               onClick={handleSaveName}
+              disabled={renameMutation.isPending}
+              aria-label="Save person name"
               className="h-10 w-10 cursor-pointer"
             >
               <Check className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleCancelEdit}
+              disabled={renameMutation.isPending}
+              aria-label="Cancel editing"
+              className="h-10 w-10 cursor-pointer"
+            >
+              <X className="h-4 w-4" />
             </Button>
           </div>
         ) : (
