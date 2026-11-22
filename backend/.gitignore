@@ -60,8 +60,8 @@ coverage.xml
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
-# Written by the test suite when GITHUB_ACTIONS=true, which is how CI is
-# reproduced locally.
+# Written by every test run: tests/conftest.py sets GITHUB_ACTIONS=true, so local
+# runs use the same throwaway database as CI.
 test_db.sqlite3
 
 # Flask stuff:

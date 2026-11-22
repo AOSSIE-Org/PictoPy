@@ -572,18 +572,16 @@ developer runs deliberately.
 | `tests/test_embedding_pipeline.py` | `image_util_process_unembedded_images`: skips cleanly with no vision model installed, batches per `SIGLIP2_EMBED_BATCH_SIZE`, excludes corrupt images from both the embeddings upsert and the embedded-marking (so they're retried on a later pass), always closes the vision session even if scoring raises mid-batch. |
 | `tests/test_onnx_session_base.py` | `ONNXSessionBase.close()`: normal decrement, the registration-leak regression scenario, no-op-when-never-opened, idempotency. Fully mocks `onnxruntime.InferenceSession` and `os.path.exists` — does not depend on the real (multi-hundred-MB, not checked into git) ONNX files existing on disk. |
 
-!!! warning "Local test runs and the real database"
-    `DATABASE_PATH` only redirects to a throwaway SQLite file when the
-    `GITHUB_ACTIONS` environment variable is set (true automatically in CI,
-    not on a developer's machine). `test_image_embeddings.py` patches
-    `DATABASE_PATH` directly on every module that independently binds it
-    (`images.py`, `folders.py`, `yolo_mapping.py` each do their own
+!!! note "Per-test databases"
+    `tests/conftest.py` sets `GITHUB_ACTIONS` before any app import, so every
+    run, local or CI, uses a throwaway `test_db.sqlite3` rather than the
+    user's library. `test_image_embeddings.py` goes further and gives each
+    test its own SQLite file, patching `DATABASE_PATH` directly on every
+    module that independently binds it (`images.py`, `folders.py`,
+    `yolo_mapping.py` each do their own
     `from app.config.settings import DATABASE_PATH`, so patching the
     original attribute on `settings` alone does not propagate to any of
-    them) to guarantee isolation regardless of that environment variable.
-    This was confirmed by running the suite with `GITHUB_ACTIONS` unset and
-    checking a real user's production database was untouched before and
-    after.
+    them).
 
 ## Known limitations and deferred work
 

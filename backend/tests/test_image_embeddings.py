@@ -18,11 +18,7 @@ from app.database.image_embeddings import (
 @pytest.fixture(autouse=True)
 def _isolated_db(tmp_path, monkeypatch):
     """Route every _connect()/sqlite3.connect(DATABASE_PATH) call to a
-    disposable per-test SQLite file instead of the real DATABASE_PATH.
-    Without this, these tests would read/write the user's actual
-    production database on a local run -- DATABASE_PATH only redirects to
-    a throwaway file when GITHUB_ACTIONS is set (true in CI, not on a dev
-    machine).
+    disposable per-test SQLite file instead of the shared test database.
 
     Patching app.config.settings.DATABASE_PATH alone would NOT work:
     images.py, folders.py, and yolo_mapping.py each do their own
