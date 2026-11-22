@@ -8,9 +8,13 @@ what the exclusion table is for.
 import os
 import sqlite3
 import tempfile
+from concurrent.futures import ProcessPoolExecutor
 from typing import Iterator, List
+from unittest.mock import MagicMock, patch
 
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 from PIL import Image
 
 from app.database.folders import db_create_folders_table
@@ -20,6 +24,7 @@ from app.database.images import (
 )
 from app.database.semantic_labels import db_create_semantic_labels_table
 from app.database.yolo_mapping import db_create_YOLO_classes_table
+from app.routes.images import router as images_router, _curate_memories
 from app.utils.images import (
     image_util_delete_images,
     image_util_process_folder_images,
@@ -75,6 +80,16 @@ def library(tmp_path, test_db, monkeypatch) -> Iterator[str]:
 
     image_util_process_folder_images([(str(photos), FOLDER_ID, False)])
     yield str(photos)
+
+
+@pytest.fixture
+def client():
+    """Create a FastAPI test client mounting the images router with mocked executor."""
+    app = FastAPI()
+    app.include_router(images_router, prefix="/images")
+    app.state.executor = MagicMock(spec=ProcessPoolExecutor)
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 def _rows(db_path: str) -> List[tuple]:
@@ -260,3 +275,134 @@ class TestUnknownIds:
 
         assert result == {"deleted_ids": [], "failed_paths": []}
         assert len(_rows(test_db)) == 3
+
+
+class TestDeleteImagesRoute:
+    @patch("app.utils.memory_curator.memory_curator_prune_empty")
+    @patch("app.routes.images.image_util_delete_images")
+    def test_delete_images_triggers_prune_and_curation(
+        self, mock_delete: MagicMock, mock_prune: MagicMock, client: TestClient
+    ) -> None:
+        """Successful deletion triggers synchronous pruning and queues background curation."""
+        mock_delete.return_value = {
+            "deleted_ids": ["img-1", "img-2"],
+            "failed_paths": [],
+        }
+
+        response = client.request(
+            "DELETE",
+            "/images/delete-images",
+            json={"image_ids": ["img-1", "img-2"], "delete_from_device": False},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["data"]["deleted_ids"] == ["img-1", "img-2"]
+
+        # Empty memories pruned synchronously before response returns
+        mock_prune.assert_called_once_with()
+
+        # Background re-curation queued with trigger 'image_delete'
+        client.app.state.executor.submit.assert_called_once_with(
+            _curate_memories, "image_delete"
+        )
+
+    @patch("app.utils.memory_curator.memory_curator_prune_empty")
+    @patch("app.routes.images.image_util_delete_images")
+    def test_delete_images_survives_pruning_failure(
+        self, mock_delete: MagicMock, mock_prune: MagicMock, client: TestClient
+    ) -> None:
+        """Pruning failure does not break successful deletion."""
+        mock_delete.return_value = {
+            "deleted_ids": ["img-1"],
+            "failed_paths": [],
+        }
+        mock_prune.side_effect = RuntimeError("prune failed")
+
+        response = client.request(
+            "DELETE",
+            "/images/delete-images",
+            json={"image_ids": ["img-1"], "delete_from_device": False},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["data"]["deleted_ids"] == ["img-1"]
+        client.app.state.executor.submit.assert_called_once_with(
+            _curate_memories, "image_delete"
+        )
+
+    @patch("app.utils.memory_curator.memory_curator_prune_empty")
+    @patch("app.routes.images.image_util_delete_images")
+    def test_delete_images_survives_curation_submission_failure(
+        self, mock_delete: MagicMock, mock_prune: MagicMock, client: TestClient
+    ) -> None:
+        """Executor submission failure does not break successful deletion."""
+        mock_delete.return_value = {
+            "deleted_ids": ["img-1"],
+            "failed_paths": [],
+        }
+        client.app.state.executor.submit.side_effect = RuntimeError(
+            "cannot schedule new futures after shutdown"
+        )
+
+        response = client.request(
+            "DELETE",
+            "/images/delete-images",
+            json={"image_ids": ["img-1"], "delete_from_device": False},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["data"]["deleted_ids"] == ["img-1"]
+        mock_prune.assert_called_once_with()
+        client.app.state.executor.submit.assert_called_once()
+
+    @patch("app.utils.memory_curator.memory_curator_prune_empty")
+    @patch("app.routes.images.image_util_delete_images")
+    def test_delete_images_zero_deleted_skips_pruning_and_curation(
+        self, mock_delete: MagicMock, mock_prune: MagicMock, client: TestClient
+    ) -> None:
+        """Zero deleted images do not trigger pruning or curation."""
+        mock_delete.return_value = {
+            "deleted_ids": [],
+            "failed_paths": [],
+        }
+
+        response = client.request(
+            "DELETE",
+            "/images/delete-images",
+            json={"image_ids": ["nonexistent-id"], "delete_from_device": False},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["data"]["deleted_ids"] == []
+        mock_prune.assert_not_called()
+        client.app.state.executor.submit.assert_not_called()
+
+    @patch("app.utils.memory_curator.memory_curator_prune_empty")
+    @patch("app.routes.images.image_util_delete_images")
+    def test_delete_images_failed_gallery_only_skips_pruning_and_curation(
+        self, mock_delete: MagicMock, mock_prune: MagicMock, client: TestClient
+    ) -> None:
+        """Failed gallery-only deletion rolls back and does not trigger pruning or curation."""
+        mock_delete.return_value = {
+            "deleted_ids": [],
+            "failed_paths": ["/path/to/img1.jpg"],
+        }
+
+        response = client.request(
+            "DELETE",
+            "/images/delete-images",
+            json={"image_ids": ["img-1"], "delete_from_device": False},
+        )
+
+        assert response.status_code == 500
+        mock_prune.assert_not_called()
+        client.app.state.executor.submit.assert_not_called()
+
+    @patch("app.utils.memory_curator.memory_curator_run")
+    def test_curate_memories_helper(self, mock_run: MagicMock) -> None:
+        """_curate_memories invokes memory_curator_run and swallows exceptions."""
+        _curate_memories("image_delete")
+        mock_run.assert_called_once_with(trigger="image_delete")
+
+        mock_run.side_effect = RuntimeError("curation error")
+        _curate_memories("image_delete")

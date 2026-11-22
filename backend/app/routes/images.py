@@ -1,3 +1,4 @@
+from concurrent.futures import ProcessPoolExecutor
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from starlette.datastructures import State
 from app.routes.dependencies import get_state, request_metadata_export
@@ -16,6 +17,24 @@ from app.logging.setup_logging import get_logger
 # Initialize logger
 logger = get_logger(__name__)
 router = APIRouter()
+
+
+def _curate_memories(trigger: str) -> None:
+    """
+    Refresh memories after the library changed.
+
+    Imported late to keep the curator out of the module import graph, and
+    swallowed on failure: a curation problem must never fail an import.
+
+    Never forced: force is what overrides the user's memories preference, and
+    a background import is not the user asking for memories.
+    """
+    try:
+        from app.utils.memory_curator import memory_curator_run
+
+        memory_curator_run(trigger=trigger)
+    except Exception as e:
+        logger.error(f"Memory curation failed after {trigger}: {e}")
 
 
 # Response Models
@@ -387,7 +406,7 @@ class DeleteImagesResponse(BaseModel):
     response_model=DeleteImagesResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
-def delete_images(request: DeleteImagesRequest):
+def delete_images(request: DeleteImagesRequest, app_state: State = Depends(get_state)):
     """Delete images from the gallery, optionally from the device as well."""
     try:
         if not request.image_ids:
@@ -403,6 +422,24 @@ def delete_images(request: DeleteImagesRequest):
         # request (via the 500 handler below) rather than report success.
         if not request.delete_from_device and result["failed_paths"]:
             raise RuntimeError("Gallery-only delete rolled back; no images removed")
+
+        if result["deleted_ids"]:
+            # Synchronous so the response can't race the frontend's next
+            # Memories fetch; imported late, like _curate_memories below.
+            try:
+                from app.utils.memory_curator import memory_curator_prune_empty
+
+                memory_curator_prune_empty()
+            except Exception:
+                logger.exception("Failed to prune empty memories after image delete")
+
+            # New memories from what's left can still be found in the
+            # background -- best-effort, a dropped submit just delays it.
+            executor: ProcessPoolExecutor = app_state.executor
+            try:
+                executor.submit(_curate_memories, "image_delete")
+            except Exception:
+                logger.exception("Failed to queue memory curation after image delete")
 
         return DeleteImagesResponse(
             success=True,
