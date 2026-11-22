@@ -201,44 +201,56 @@ const AccountSettingsCard = forwardRef<AccountSettingsCardHandle>(
       setPendingLeave(null);
     };
 
+    // Full-width card; `*:pb-0` drops the Card's bottom padding so the footer sits flush.
     return (
-      <div className="@container w-full min-w-0 *:mx-0 *:mt-0 *:w-full *:max-w-none">
+      <div className="@container -mt-7 w-full min-w-0 *:mx-0 *:mt-0 *:w-full *:max-w-none *:pb-0">
         <SettingsCard
           icon={User}
           title="Account Information"
           description="Manage your account details and profile information."
         >
-          <CardContent className="p-0">
-            <div className="flex flex-col gap-8 p-4 [--av:5.5rem] @max-xl:p-6 @max-xl:[--av:4.5rem] @7xl:[--av:6rem]">
+          <CardContent
+            className={cn(
+              // -mt-6 cancels the gap SettingsCard adds below its divider.
+              '-mt-6 p-0',
+              // --k scales every size below and steps up with the card's own width.
+              '[--k:1] @max-xl:[--k:0.85] @7xl:[--k:1.1] @min-[100rem]:[--k:1.2] @min-[125rem]:[--k:1.4] @min-[160rem]:[--k:1.6] @min-[200rem]:[--k:1.8]',
+              // Avatar size grows with the card width up to a cap.
+              '[--av:clamp(4.25rem,8cqw,calc(7rem*var(--k)))] [--gap:calc(2.25rem*var(--k))]',
+              '[--fs-label:calc(0.8rem*var(--k))] [--fs-md:calc(1rem*var(--k))] [--fs-sm:calc(0.95rem*var(--k))]',
+              '[--ctl-h:calc(2.75rem*var(--k))] [--field-h:calc(2.25rem*var(--k))] [--field-w:calc(20rem*var(--k))]',
+            )}
+          >
+            <div className="flex flex-col gap-(--gap) px-8 py-(--gap) @max-xl:px-6">
               {/* TOP ROW: avatar preview + display name */}
-              <div className="flex min-w-0 items-center gap-8 @max-xl:gap-6 @max-[26rem]:flex-col @max-[26rem]:items-start">
+              <div className="flex min-w-0 items-center gap-6 @max-[26rem]:flex-col @max-[26rem]:items-start">
                 <Button
                   variant="ghost"
                   type="button"
                   onClick={handleUploadClick}
                   aria-label="Change profile avatar"
-                  className="group focus-visible:ring-ring focus-visible:ring-offset-card relative inline-flex size-24 shrink-0 items-center justify-center rounded-full p-0 hover:bg-transparent focus-visible:ring-2 focus-visible:ring-offset-2"
+                  className="group focus-visible:ring-ring focus-visible:ring-offset-card relative inline-flex size-(--av) shrink-0 items-center justify-center rounded-full p-0 hover:bg-transparent focus-visible:ring-2 focus-visible:ring-offset-2"
                 >
-                  <span className="ring-primary/45 ring-offset-card relative inline-flex size-24 items-center justify-center rounded-full ring-2 ring-offset-1">
+                  <span className="ring-primary/60 ring-offset-card relative inline-flex size-(--av) items-center justify-center rounded-full ring-2 ring-offset-2">
                     {selectedAvatar ? (
                       <img
                         src={selectedAvatar}
                         alt="Current avatar"
-                        className="size-24 rounded-full object-cover"
+                        className="size-(--av) rounded-full object-cover"
                       />
                     ) : (
-                      <div className="bg-muted text-muted-foreground flex size-24 items-center justify-center rounded-full">
-                        <User className="size-8" />
+                      <div className="bg-muted text-muted-foreground flex size-(--av) items-center justify-center rounded-full">
+                        <User className="size-6" />
                       </div>
                     )}
                   </span>
-                  <span className="bg-primary text-primary-foreground ring-card absolute right-1 bottom-1 flex size-8 items-center justify-center rounded-full shadow-sm ring-1">
-                    <Pencil className="h-4 w-4" />
+                  <span className="bg-primary text-primary-foreground ring-card absolute -right-0.5 -bottom-0.5 flex size-7 items-center justify-center rounded-full shadow-md ring-2">
+                    <Pencil className="h-3.5 w-3.5" />
                   </span>
                 </Button>
 
-                <div className="w-full max-w-80 min-w-0 space-y-2">
-                  <Label className="text-muted-foreground text-xs font-semibold tracking-normal uppercase">
+                <div className="w-full max-w-(--field-w) min-w-0 space-y-3">
+                  <Label className="text-foreground/70 text-(length:--fs-label) leading-none font-semibold tracking-wider uppercase">
                     Display name
                   </Label>
                   {isEditingName ? (
@@ -262,19 +274,19 @@ const AccountSettingsCard = forwardRef<AccountSettingsCardHandle>(
                           }
                         }}
                         className={cn(
-                          'bg-background focus-visible:ring-primary/30 h-11 w-full rounded-lg border px-3 text-base shadow-none focus-visible:ring-2',
+                          'bg-background focus-visible:ring-primary/30 h-(--field-h) w-full rounded-lg border px-4 text-(length:--fs-md) shadow-none focus-visible:ring-2 md:text-(length:--fs-md)',
                           nameError
                             ? 'border-destructive placeholder:text-destructive/70'
                             : 'border-border focus-visible:border-primary',
                         )}
                       />
                       {longWordError ? (
-                        <p className="text-destructive text-xs">
+                        <p className="text-destructive text-(length:--fs-sm)">
                           A single word in your name cannot exceed 30
                           characters.
                         </p>
                       ) : (
-                        <p className="text-muted-foreground text-xs">
+                        <p className="text-muted-foreground text-(length:--fs-sm)">
                           Press Enter to save • Esc to cancel
                         </p>
                       )}
@@ -285,24 +297,29 @@ const AccountSettingsCard = forwardRef<AccountSettingsCardHandle>(
                       type="button"
                       onClick={handleStartEditName}
                       aria-label="Edit name"
-                      className="group border-input hover:border-primary/50 bg-background hover:bg-background focus-visible:ring-primary/30 flex h-auto min-h-11 w-full min-w-0 items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left transition-colors motion-reduce:transition-none"
+                      className="group border-input hover:border-primary/50 bg-background hover:bg-background focus-visible:ring-primary/30 flex h-auto min-h-(--field-h) w-full min-w-0 items-center justify-between gap-3 rounded-lg border px-4 py-1.5 text-left transition-colors motion-reduce:transition-none"
                     >
-                      <span className="min-w-0 text-base font-medium wrap-anywhere whitespace-normal">
+                      <span className="min-w-0 text-(length:--fs-md) font-medium wrap-anywhere whitespace-normal">
                         {name || 'Add your name'}
                       </span>
                       <Pencil className="text-muted-foreground group-hover:text-foreground size-4 shrink-0 transition-colors motion-reduce:transition-none" />
                     </Button>
+                  )}
+                  {!isEditingName && (
+                    <p className="text-muted-foreground text-(length:--fs-sm)">
+                      Shown on albums and shared memories.
+                    </p>
                   )}
                 </div>
               </div>
 
               {/* AVATAR PICKER */}
               <div>
-                <Label className="text-muted-foreground text-xs font-semibold tracking-normal uppercase">
+                <Label className="text-foreground/70 text-(length:--fs-label) leading-none font-semibold tracking-wider uppercase">
                   Choose avatar
                 </Label>
-                <div className="-m-1.5 overflow-x-auto p-1.5">
-                  <div className="mt-4 grid w-max grid-cols-[repeat(4,var(--av))] gap-9 pb-1 @max-xl:gap-8">
+                <div className="-m-2 overflow-x-auto p-2">
+                  <div className="mt-5 grid w-max grid-cols-[repeat(8,var(--av))] gap-[calc(1.1rem*var(--k))] @max-3xl:grid-cols-[repeat(4,var(--av))]">
                     {avatars.map((avatar) => {
                       const isSelected = selectedAvatar === avatar;
                       return (
@@ -315,7 +332,7 @@ const AccountSettingsCard = forwardRef<AccountSettingsCardHandle>(
                             'group focus-visible:ring-ring focus-visible:ring-offset-card relative size-(--av) shrink-0 rounded-full p-0 transition-transform duration-200 hover:bg-transparent focus-visible:ring-2 focus-visible:ring-offset-2 motion-reduce:transition-none',
                             isSelected
                               ? 'ring-primary ring-offset-card ring-2 ring-offset-2'
-                              : 'ring-border hover:ring-foreground/30 ring-1 motion-safe:hover:-translate-y-0.5',
+                              : 'bg-muted ring-border hover:ring-foreground/30 opacity-90 ring-1 hover:opacity-100 motion-safe:hover:-translate-y-0.5',
                           )}
                         >
                           <span className="block h-full w-full overflow-hidden rounded-full">
@@ -339,15 +356,24 @@ const AccountSettingsCard = forwardRef<AccountSettingsCardHandle>(
             </div>
 
             {/* FOOTER */}
-            <div className="border-border bg-muted/40 flex flex-col items-stretch gap-4 border-t px-6 py-4 @xl:flex-row @xl:items-center @xl:justify-between @xl:px-8">
-              <p className="text-muted-foreground flex items-center gap-2 text-sm">
+            <div className="border-border bg-muted/30 flex flex-col items-stretch gap-4 border-t px-6 py-[calc(1rem*var(--k))] @xl:flex-row @xl:items-center @xl:justify-between @xl:px-8">
+              <p
+                role="status"
+                aria-live="polite"
+                className={cn(
+                  'flex items-center gap-3 text-(length:--fs-md) font-medium',
+                  hasUnsavedChanges
+                    ? 'text-amber-700 dark:text-amber-500'
+                    : 'text-muted-foreground',
+                )}
+              >
                 <span
                   aria-hidden="true"
                   className={cn(
-                    'size-2 shrink-0 rounded-full ring-[3px]',
+                    'size-3 shrink-0 rounded-full transition-colors',
                     hasUnsavedChanges
-                      ? 'bg-amber-500 ring-amber-500/18'
-                      : 'bg-green-500 ring-green-500/18',
+                      ? 'bg-amber-500 motion-safe:animate-pulse'
+                      : 'bg-green-500',
                   )}
                 />
                 {hasUnsavedChanges
@@ -359,7 +385,7 @@ const AccountSettingsCard = forwardRef<AccountSettingsCardHandle>(
                   variant="outline"
                   onClick={handleDiscardChanges}
                   disabled={!hasUnsavedChanges}
-                  className="flex-1 @xl:flex-none"
+                  className="h-(--ctl-h) flex-1 px-[calc(1.5rem*var(--k))] text-(length:--fs-md) font-medium @xl:flex-none"
                 >
                   Cancel
                 </Button>
@@ -368,7 +394,7 @@ const AccountSettingsCard = forwardRef<AccountSettingsCardHandle>(
                   disabled={
                     !selectedAvatar || longWordError || !hasUnsavedChanges
                   }
-                  className="flex-1 @xl:flex-none"
+                  className="h-(--ctl-h) flex-1 px-[calc(1.5rem*var(--k))] text-(length:--fs-md) font-medium @xl:flex-none"
                 >
                   Save Changes
                 </Button>
