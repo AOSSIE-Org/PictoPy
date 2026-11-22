@@ -954,6 +954,25 @@ class TestFoldersAPI:
         assert data["detail"]["success"] is False
         assert data["detail"]["error"] == "Permission denied"
 
+    @patch("app.utils.folders.os.listdir")
+    def test_sync_folder_not_a_directory_returns_404(
+        self, mock_listdir: MagicMock, client: TestClient
+    ) -> None:
+        """Test syncing a folder which is not directory returns 404."""
+        mock_listdir.side_effect = NotADirectoryError("Not A Directory")
+
+        request_data = {
+            "folder_id": "dummy-folder-id",
+            "folder_path": "/path/to/some/file.txt",
+        }
+
+        response = client.post("/folders/sync-folder", json=request_data)
+
+        assert response.status_code == 404
+        data = response.json()
+        assert data["detail"]["success"] is False
+        assert data["detail"]["error"] == "Folder not found"
+
     @patch("app.routes.folders.post_sync_folder_sequence")
     def test_sync_folder_success(
         self, mock_post_sync: MagicMock, client: TestClient

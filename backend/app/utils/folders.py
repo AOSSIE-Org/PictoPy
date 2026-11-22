@@ -85,7 +85,7 @@ def folder_util_get_filesystem_direct_child_folders(folder_path: str) -> List[st
             if os.path.isdir(item_path):
                 filesystem_folders.append(os.path.abspath(item_path))
         return filesystem_folders
-    except FileNotFoundError:
+    except (FileNotFoundError, NotADirectoryError):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ErrorResponse(
