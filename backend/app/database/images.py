@@ -62,6 +62,7 @@ class ImageSyncState(TypedDict):
     thumbnailPath: Optional[str]
     file_size: Optional[int]
     file_mtime: Optional[int]
+    date_source: Optional[str]
 
 
 ImageClassPair = Tuple[ImageId, ClassId]
@@ -586,6 +587,7 @@ def db_get_image_sync_state_by_folder_ids(
                 thumbnailPath=thumbnail_path,
                 file_size=_as_int(parsed.get("file_size")),
                 file_mtime=_as_int(parsed.get("file_mtime")),
+                date_source=parsed.get("date_source"),
             )
 
         return state

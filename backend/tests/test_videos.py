@@ -1,3 +1,4 @@
+import datetime
 import os
 import sqlite3
 import tempfile
@@ -693,6 +694,24 @@ class TestVideoUtilEdgeCases:
 
     def test_source_is_unchanged_missing_file(self):
         assert video_util_source_is_unchanged("/nope/missing.mp4", {}) is False
+
+    def test_late_sidecar_rereads_a_filesystem_dated_video(self, tmp_path):
+        video = tmp_path / "a.mp4"
+        video.write_bytes(b"x")
+        stats = os.stat(video)
+        stored = {
+            "file_size": stats.st_size,
+            "file_modified": datetime.datetime.fromtimestamp(
+                stats.st_mtime
+            ).isoformat(),
+            "date_source": "filesystem",
+        }
+        assert video_util_source_is_unchanged(str(video), stored) is True
+
+        (tmp_path / "a.mp4.supplemental-metadata.json").write_text(
+            '{"photoTakenTime": {"timestamp": "1600000000"}}'
+        )
+        assert video_util_source_is_unchanged(str(video), stored) is False
 
     def test_remove_thumbnail_files_tolerates_os_error(
         self, temp_media_dir, monkeypatch

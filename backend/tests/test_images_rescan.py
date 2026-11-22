@@ -128,6 +128,26 @@ class TestIsUnchanged:
             is False
         )
 
+    @pytest.mark.parametrize(
+        "date_source, has_sidecar, expected",
+        [
+            ("filesystem", False, True),
+            ("filesystem", True, False),
+            ("exif", True, True),
+        ],
+    )
+    def test_a_late_sidecar_rereads_only_a_filesystem_dated_photo(
+        self, tmp_path, date_source, has_sidecar, expected
+    ):
+        photo = _photo(tmp_path / "a.jpg")
+        thumb = _thumbnail(tmp_path / "thumb.jpg")
+        if has_sidecar:
+            (tmp_path / "a.jpg.supplemental-metadata.json").write_text(
+                '{"photoTakenTime": {"timestamp": "1600000000"}}'
+            )
+        recorded = _state(photo, thumb, date_source=date_source)
+        assert image_util_is_unchanged(photo, recorded) is expected  # type: ignore[arg-type]
+
     def test_an_unknown_path_is_changed(self, tmp_path):
         assert image_util_is_unchanged(str(tmp_path / "a.jpg"), None) is False
 
@@ -258,6 +278,7 @@ class TestSyncStateQuery:
             "thumbnailPath": "/thumbs/img-1.jpg",
             "file_size": 4096,
             "file_mtime": 1700000000,
+            "date_source": None,
         }
 
     def test_a_non_finite_size_does_not_abort_the_scan(self, folder, tmp_path):
@@ -392,6 +413,21 @@ class TestRescanningAFolder:
         conn.close()
 
         assert before == after
+
+    def test_a_sidecar_copied_in_after_the_photo_is_read(self, library, test_db):
+        folder_data = [(str(library), "folder-1", False)]
+        image_util_process_folder_images(folder_data)
+        (library / "p2.jpg.supplemental-metadata.json").write_text(
+            '{"photoTakenTime": {"timestamp": "1600000000"}}'
+        )
+        image_util_process_folder_images(folder_data)
+
+        conn = sqlite3.connect(test_db)
+        (metadata,) = conn.execute(
+            "SELECT metadata FROM images WHERE path = ?", (str(library / "p2.jpg"),)
+        ).fetchone()
+        conn.close()
+        assert json.loads(metadata)["date_source"] == "sidecar"
 
 
 class TestExtractMetadataRecordsMtime:

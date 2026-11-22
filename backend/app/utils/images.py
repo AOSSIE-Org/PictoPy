@@ -308,6 +308,14 @@ def image_util_is_unchanged(
     if stats.st_size != recorded_size or int(stats.st_mtime) != recorded_mtime:
         return False
 
+    # A Takeout sidecar can land after its photo, and that leaves the photo's
+    # own size and mtime untouched. Only rows still on the mtime stand-in can
+    # gain from it, so only they pay for the lookup.
+    if recorded.get("date_source") == DATE_SOURCE_FILESYSTEM:
+        sidecar_dt, _, _ = takeout_sidecar_read(image_path)
+        if sidecar_dt:
+            return False
+
     # Skipping the file means keeping its existing thumbnail, so that thumbnail
     # has to still be there. Zero bytes is a half-written one, not a usable one.
     thumbnail_path = recorded.get("thumbnailPath")
