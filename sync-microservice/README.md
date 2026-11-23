@@ -127,6 +127,15 @@ The service automatically:
 
 ## Development
 
+### Running Tests
+
+Install development/test dependencies and run the test suite:
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
 ### Adding New Features
 
 1. **Database Operations**: Add new functions to `app/database/folders.py`

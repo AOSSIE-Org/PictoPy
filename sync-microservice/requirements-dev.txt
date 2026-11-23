@@ -1,0 +1,4 @@
+# Development and test dependencies for sync-microservice
+-r requirements.txt
+pytest>=8.2
+pytest-asyncio>=1.0.0

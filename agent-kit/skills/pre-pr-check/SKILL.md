@@ -89,6 +89,7 @@ mapfile -t sync_files < <(git diff --name-only --diff-filter=ACMR "$BASE_SHA...$
 (( ${#backend_files[@]} > 0 )) && mypy --config-file backend/pyproject.toml "${backend_files[@]}"
 (( ${#sync_files[@]} > 0 )) && mypy --config-file sync-microservice/pyproject.toml "${sync_files[@]}"
 (cd backend && pytest)
+(cd sync-microservice && pytest)
 ```
 
 If the black hook reformats files, that is a pass with changes — re-stage them. **Never**

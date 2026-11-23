@@ -80,6 +80,7 @@ repository root.
 (cd backend && pip install -r requirements.txt && pyinstaller main.py --name PictoPy_Server --onedir --distpath dist)
 (cd sync-microservice && pip install -r requirements.txt && pyinstaller main.py --name PictoPy_Sync_Microservice --onedir --distpath dist)
 (cd backend && pytest)
+(cd sync-microservice && pip install -r requirements-dev.txt && pytest)
 ```
 
 The PyInstaller steps catch imports that work in development but break when frozen — a new
