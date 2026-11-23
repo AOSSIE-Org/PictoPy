@@ -1,0 +1,101 @@
+import { videosEndpoints } from '../apiEndpoints';
+import { apiClient } from '../axiosConfig';
+import { APIResponse } from '@/types/API';
+import { ScoredVideo, Video } from '@/types/Media';
+
+export interface GetAllVideosResponse extends APIResponse {
+  data?: Video[];
+}
+
+export const fetchAllVideos = async (): Promise<GetAllVideosResponse> => {
+  const response = await apiClient.get<GetAllVideosResponse>(
+    videosEndpoints.getAllVideos,
+  );
+  return response.data;
+};
+
+export const toggleVideoFav = async (
+  video_id: string,
+): Promise<APIResponse> => {
+  const response = await apiClient.post<APIResponse>(
+    videosEndpoints.setFavourite,
+    { video_id },
+  );
+  return response.data;
+};
+
+export interface SearchVideosByTagRequest {
+  tag: string;
+}
+
+export const searchVideosByTag = async (
+  request: SearchVideosByTagRequest,
+): Promise<APIResponse> => {
+  const response = await apiClient.get<APIResponse>(
+    videosEndpoints.searchByTag(request.tag),
+  );
+  return response.data;
+};
+
+export interface SemanticSearchVideosRequest {
+  query: string;
+}
+
+export interface SemanticSearchVideosAPIResponse extends APIResponse {
+  data?: {
+    videos: ScoredVideo[];
+    total: number;
+  };
+}
+
+export const semanticSearchVideos = async (
+  request: SemanticSearchVideosRequest,
+): Promise<SemanticSearchVideosAPIResponse> => {
+  const response = await apiClient.get<SemanticSearchVideosAPIResponse>(
+    videosEndpoints.semanticSearch(request.query),
+  );
+  return response.data;
+};
+
+export interface PurgeFrameCacheResponse {
+  success: boolean;
+  message: string;
+  bytes_reclaimed: number;
+}
+
+export const purgeVideoFrameCache =
+  async (): Promise<PurgeFrameCacheResponse> => {
+    const response = await apiClient.post<PurgeFrameCacheResponse>(
+      videosEndpoints.purgeFrameCache,
+    );
+    return response.data;
+  };
+
+export interface FaceScanStatus {
+  total: number;
+  scanned: number;
+  pending: number;
+  /** The scan started from Settings, not one a folder sync runs itself. */
+  running: boolean;
+  failed: boolean;
+}
+
+export interface FaceScanStatusResponse extends APIResponse {
+  data: FaceScanStatus;
+}
+
+/** Starts the scan in the background; the response is its starting point. */
+export const startVideoFaceScan = async (): Promise<FaceScanStatusResponse> => {
+  const response = await apiClient.post<FaceScanStatusResponse>(
+    videosEndpoints.scanFaces,
+  );
+  return response.data;
+};
+
+export const getVideoFaceScanStatus =
+  async (): Promise<FaceScanStatusResponse> => {
+    const response = await apiClient.get<FaceScanStatusResponse>(
+      videosEndpoints.faceScanStatus,
+    );
+    return response.data;
+  };

@@ -11,7 +11,34 @@ class FolderTaggingInfo(BaseModel):
         ...,
         ge=0,
         le=100,
-        description="Percentage of images that have been tagged (0-100)",
+        description="Percentage of images and videos tagged (0-100)",
+    )
+    embedding_percentage: float = Field(
+        ...,
+        ge=0,
+        le=100,
+        description="Percentage of images and videos with embeddings (0-100)",
+    )
+    total_images: int = Field(
+        ..., ge=0, description="Total number of images in the folder"
+    )
+    tagged_images: int = Field(
+        ..., ge=0, description="Number of images that have been tagged"
+    )
+    embedded_images: int = Field(
+        ..., ge=0, description="Number of images with semantic embeddings"
+    )
+    total_videos: int = Field(
+        ..., ge=0, description="Total number of videos in the folder"
+    )
+    tagged_videos: int = Field(
+        ..., ge=0, description="Number of videos that have been tagged"
+    )
+    embedded_videos: int = Field(
+        ..., ge=0, description="Number of videos whose frames are embedded"
+    )
+    ai_tagging: bool = Field(
+        ..., description="Whether AI tagging is enabled for the folder"
     )
 
 

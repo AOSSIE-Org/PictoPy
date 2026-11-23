@@ -1,17 +1,25 @@
 import logging
 from binascii import Error as Base64Error
 import base64
+from concurrent.futures import CancelledError, Future, ProcessPoolExecutor
 from typing import Annotated
 import uuid
 import os
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.database.face_clusters import (
     db_get_cluster_by_id,
     db_update_cluster,
     db_get_all_clusters_with_face_counts,
     db_get_images_by_cluster_id,
     db_get_images_by_face_clusters,
+    db_get_video_ids_by_cluster_id,
+    db_get_video_matches_by_face_clusters,
 )
+from app.database.videos import db_get_videos_by_ids
+from app.utils.videos import video_util_to_video_data
+from starlette.datastructures import State
+
+from app.routes.dependencies import get_state, request_metadata_export
 from app.utils.face_clusters import cluster_util_face_clusters_sync
 from app.schemas.face_clusters import (
     RenameClusterRequest,
@@ -30,6 +38,7 @@ from app.schemas.face_clusters import (
     MultiPersonSearchResponse,
     MultiPersonSearchData,
     MultiPersonSearchImage,
+    MultiPersonSearchVideo,
 )
 from app.schemas.images import FaceSearchRequest, InputType
 from app.utils.faceSearch import perform_face_search
@@ -38,12 +47,48 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _log_rescore_outcome(cluster_id: str, done: "Future[int]") -> None:
+    """
+    Report a rescore that died in the worker.
+
+    A submitted job's exception surfaces only through its Future, so without
+    this a failed rescore is silent. The rename itself already stands.
+    """
+    try:
+        done.result()
+    except CancelledError:
+        logger.info(f"Memory rescore for cluster {cluster_id} was cancelled")
+    except Exception:
+        logger.error(f"Memory rescore for cluster {cluster_id} failed", exc_info=True)
+
+
+def _rescore_memories_for_cluster(app_state: State, cluster_id: str) -> None:
+    """
+    Queue a rescore of memories containing this cluster.
+
+    Offloaded to the shared executor and swallowed on failure: renaming a
+    person must succeed whether or not memories can be refreshed.
+    """
+    try:
+        from app.utils.memory_curator import memory_curator_rescore_for_cluster
+
+        executor: ProcessPoolExecutor = app_state.executor
+        future = executor.submit(memory_curator_rescore_for_cluster, cluster_id)
+        future.add_done_callback(lambda done: _log_rescore_outcome(cluster_id, done))
+    except Exception as e:
+        logger.error(f"Failed to queue memory rescore for cluster {cluster_id}: {e}")
+
+
 @router.put(
     "/{cluster_id}",
     response_model=RenameClusterResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 404, 500]},
 )
-def rename_cluster(cluster_id: str, request: RenameClusterRequest):
+def rename_cluster(
+    cluster_id: str,
+    request: RenameClusterRequest,
+    app_state: State = Depends(get_state),
+):
     """Rename a face cluster by its ID."""
     try:
         # Step 1: Data Validation
@@ -80,6 +125,13 @@ def rename_cluster(cluster_id: str, request: RenameClusterRequest):
                     message=f"Failed to update cluster '{cluster_id}'.",
                 ).model_dump(),
             )
+
+        # Naming a person raises the known_people signal for every photo they
+        # appear in, so memories already holding those photos are now ranked
+        # on stale inputs.
+        _rescore_memories_for_cluster(app_state, cluster_id)
+        # The name is written into every photo of this person.
+        request_metadata_export(app_state)
 
         return RenameClusterResponse(
             success=True,
@@ -128,6 +180,7 @@ def get_all_clusters():
                 cluster_id=cluster["cluster_id"],
                 cluster_name=cluster["cluster_name"],
                 face_count=cluster["face_count"],
+                video_count=cluster["video_count"],
                 face_image_base64=cluster["face_image_base64"],
             )
             for cluster in clusters_data
@@ -187,14 +240,25 @@ def get_cluster_images(cluster_id: str):
             for img in images_data
         ]
 
+        # Step 4: Videos the same person appears in, as the videos routes
+        # return them, so the frontend renders them with the same card.
+        videos = video_util_to_video_data(
+            db_get_videos_by_ids(db_get_video_ids_by_cluster_id(cluster_id))
+        )
+
         return GetClusterImagesResponse(
             success=True,
-            message=f"Successfully retrieved {len(images)} image(s) for cluster '{cluster_id}'",
+            message=(
+                f"Successfully retrieved {len(images)} image(s) and "
+                f"{len(videos)} video(s) for cluster '{cluster_id}'"
+            ),
             data=GetClusterImagesData(
                 cluster_id=cluster_id,
                 cluster_name=cluster["cluster_name"],
                 images=images,
                 total_images=len(images),
+                videos=videos,
+                total_videos=len(videos),
             ),
         )
 
@@ -311,7 +375,7 @@ def face_tagging(
     response_model=GlobalReclusterResponse,
     responses={code: {"model": ErrorResponse} for code in [500]},
 )
-def trigger_global_reclustering():
+def trigger_global_reclustering(app_state: State = Depends(get_state)):
     """
     Manually trigger global face reclustering.
     This forces full reclustering regardless of the 24-hour rule.
@@ -322,6 +386,7 @@ def trigger_global_reclustering():
         result, total_faces_skipped = cluster_util_face_clusters_sync(
             force_full_reclustering=True
         )
+        request_metadata_export(app_state)
 
         if result == 0:
             return GlobalReclusterResponse(
@@ -394,13 +459,33 @@ def search_images_by_multiple_faces(body: MultiPersonSearchRequest):
             for row in rows
         ]
 
+        # Same people, in videos. Keyed rather than zipped: db_get_videos_by_ids
+        # drops ids it can't find, which would shift counts onto other videos.
+        matches = db_get_video_matches_by_face_clusters(
+            body.cluster_ids, body.match_mode
+        )
+        match_counts = dict(matches)
+        videos = [
+            MultiPersonSearchVideo(
+                **video.model_dump(), match_count=match_counts[video.id]
+            )
+            for video in video_util_to_video_data(
+                db_get_videos_by_ids([video_id for video_id, _ in matches])
+            )
+        ]
+
         return MultiPersonSearchResponse(
             success=True,
-            message=f"Found {len(images)} image(s) matching the selected people.",
+            message=(
+                f"Found {len(images)} image(s) and {len(videos)} video(s) "
+                "matching the selected people."
+            ),
             data=MultiPersonSearchData(
                 images=images,
                 total=len(images),
                 match_mode=body.match_mode,
+                videos=videos,
+                total_videos=len(videos),
             ),
         )
     except HTTPException:

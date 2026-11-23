@@ -21,8 +21,13 @@ from app.database.faces import (
     db_update_face_cluster_ids_batch,
     db_get_faces_unassigned_clusters,
     db_get_cluster_mean_embeddings,
+    db_get_cluster_media_pairs,
 )
-from app.database.face_clusters import db_delete_all_clusters, db_insert_clusters_batch
+from app.database.face_clusters import (
+    db_delete_all_clusters,
+    db_insert_clusters_batch,
+    db_get_clusters_count,
+)
 from app.database.metadata import (
     db_get_metadata,
     db_update_metadata,
@@ -70,6 +75,7 @@ def cluster_util_is_reclustering_needed(metadata) -> bool:
     Check if reclustering is needed based on:
     1. Time since last clustering (24 hours)
     2. Number of faces without cluster ID (> 100)
+    3. No clusters existing yet while faces are waiting to be assigned
 
     Returns:
         bool: True if reclustering is needed, False otherwise
@@ -90,9 +96,18 @@ def cluster_util_is_reclustering_needed(metadata) -> bool:
             # If we can't parse the time, assume we need to recluster
             return True
 
-    # Check if number of faces without cluster ID is greater than 100
-    unassigned_faces = db_get_faces_unassigned_clusters()
+    # Check if number of faces without cluster ID is greater than 100. Keyframe
+    # faces are left out: many never match a photo cluster, and they can't form
+    # one, so counting them would force a full recluster on every sync.
+    unassigned_faces = [
+        face for face in db_get_faces_unassigned_clusters() if not face.get("frame_id")
+    ]
     if len(unassigned_faces) > 100:
+        return True
+
+    # Incremental assignment matches faces against the means of existing clusters, so
+    # it can never create the first one. Bootstrap that case with a full pass.
+    if unassigned_faces and db_get_clusters_count() == 0:
         return True
 
     return False
@@ -112,6 +127,16 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
         results, total_faces_skipped = cluster_util_cluster_all_face_embeddings()
 
         if not results:
+            # A full recluster rebuilds from scratch, so producing no clusters means
+            # none should remain. Without this the rows outlive the faces that
+            # justified them (e.g. after their folder is deleted) and keep surfacing.
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                db_delete_all_clusters(cursor)
+
+                current_metadata = metadata or {}
+                current_metadata["reclustering_time"] = datetime.now().timestamp()
+                db_update_metadata(current_metadata, cursor)
             return 0, total_faces_skipped
 
         results = [result.to_dict() for result in results]
@@ -160,6 +185,9 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
             current_metadata = metadata or {}
             current_metadata["reclustering_time"] = datetime.now().timestamp()
             db_update_metadata(current_metadata, cursor)
+        # Deleting the old clusters above unassigned every keyframe face too
+        # (ON DELETE SET NULL); re-attach them to the rebuilt clusters.
+        cluster_util_attach_keyframe_faces()
         return len(cluster_list), total_faces_skipped
     else:
         face_cluster_mappings, total_faces_skipped = (
@@ -168,7 +196,27 @@ def cluster_util_face_clusters_sync(force_full_reclustering: bool = False):
         with get_db_connection() as conn:
             cursor = conn.cursor()
             db_update_face_cluster_ids_batch(face_cluster_mappings, cursor)
+        cluster_util_attach_keyframe_faces()
         return len(face_cluster_mappings), total_faces_skipped
+
+
+def cluster_util_attach_keyframe_faces() -> int:
+    """
+    Attach unassigned video keyframe faces to the nearest photo cluster.
+
+    Keyframe faces never seed or bridge clusters -- a full DBSCAN pass chains
+    through them and fuses different people -- so this is their only way in.
+    One threshold on every path, or the same face would join after a full
+    recluster but not after an incremental sync. Returns faces attached.
+    """
+    mappings, _ = cluster_util_assign_cluster_to_faces_without_clusterId(
+        PICTO_CLUSTERING_SIMILARITY_THRESHOLD, keyframe_faces=True
+    )
+    if mappings:
+        with get_db_connection() as conn:
+            db_update_face_cluster_ids_batch(mappings, conn.cursor())
+        logger.info(f"Attached {len(mappings)} video keyframe face(s) to clusters")
+    return len(mappings)
 
 
 def _validate_embedding(embedding: NDArray, min_norm: float = 1e-6) -> bool:
@@ -220,21 +268,27 @@ def cluster_util_cluster_all_face_embeddings(
     Args:
         eps: DBSCAN epsilon parameter for maximum distance between samples (default: 0.75)
         min_samples: DBSCAN minimum samples parameter for core points (default: 2)
-        similarity_threshold: Minimum similarity to consider same person (default: 0.85, range: 0.75-0.90)
+        similarity_threshold: Minimum similarity to consider same person (default: 0.65, range: 0.65-0.90)
         merge_threshold: Similarity threshold for post-clustering merge (default: None, uses similarity_threshold)
 
     Returns:
         List of ClusterResult objects containing face_id, embedding, cluster_uuid, and cluster_name
     """
-    # Get all faces with their existing cluster names
-    faces_data = db_get_all_faces_with_cluster_names()
+    # Photo faces only: DBSCAN chains through keyframe faces and fuses different
+    # people, so those are attached afterwards by cluster_util_attach_keyframe_faces.
+    faces_data = [
+        face
+        for face in db_get_all_faces_with_cluster_names()
+        if not face.get("frame_id")
+    ]
 
     if not faces_data:
-        return []
+        return [], 0
 
     # Extract embeddings and face IDs with validation
     embeddings = []
     face_ids = []
+    image_ids = []
     existing_cluster_names = []
     invalid_count = 0
 
@@ -244,6 +298,7 @@ def cluster_util_cluster_all_face_embeddings(
         # Validate embedding before adding
         if _validate_embedding(embedding):
             face_ids.append(face["face_id"])
+            image_ids.append(face.get("image_id"))
             embeddings.append(embedding)
             existing_cluster_names.append(face["cluster_name"])
         else:
@@ -286,8 +341,18 @@ def cluster_util_cluster_all_face_embeddings(
 
     estimated_eps = estimate_eps(embeddings_array, k=min_samples)
     if estimated_eps is not None:
-        logger.info(f"Adaptive eps estimated: {estimated_eps:.4f}")
-        eps = estimated_eps
+        clamped_eps = min(estimated_eps, max_distance)
+        # DBSCAN requires eps to be strictly positive
+        clamped_eps = max(clamped_eps, 1e-6)
+        if clamped_eps < estimated_eps:
+            logger.warning(
+                f"Adaptive eps {estimated_eps:.4f} exceeded max_distance "
+                f"{max_distance:.4f} (similarity_threshold={similarity_threshold}); "
+                f"clamping to {clamped_eps:.4f}"
+            )
+        else:
+            logger.info(f"Adaptive eps estimated: {clamped_eps:.4f}")
+        eps = clamped_eps
     else:
         logger.warning(
             f"Too few embeddings for eps estimation, using config default: {eps}"
@@ -350,11 +415,16 @@ def cluster_util_cluster_all_face_embeddings(
         results, merge_threshold=effective_merge_threshold
     )
 
+    # Cannot-link constraint: faces co-occurring in one photo are different people
+    face_to_image = dict(zip(face_ids, image_ids))
+    results = _enforce_one_face_per_image(results, face_to_image)
+
     return results, total_faces_skipped
 
 
 def cluster_util_assign_cluster_to_faces_without_clusterId(
     similarity_threshold: float = 0.8,
+    keyframe_faces: bool = False,
 ) -> Tuple[List[Dict], int]:
     """
     Assign cluster IDs to faces that don't have clusters using nearest mean method with similarity threshold.
@@ -369,13 +439,20 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
     Args:
         similarity_threshold:
             Minimum cosine similarity required for assignment (0.0 to 1.0)
-            Higher values = more strict assignment. Default: 0.7
+            Higher values = more strict assignment. Default: 0.8
+        keyframe_faces:
+            Assign video keyframe faces instead of photo faces. The two use
+            different thresholds, so each call handles one population.
 
     Returns:
         List of face-cluster mappings ready for batch update
     """
-    # Get faces without cluster assignments
-    unassigned_faces = db_get_faces_unassigned_clusters()
+    # Get faces without cluster assignments, from one population only
+    unassigned_faces = [
+        face
+        for face in db_get_faces_unassigned_clusters()
+        if bool(face.get("frame_id")) == keyframe_faces
+    ]
     if not unassigned_faces:
         return [], 0
 
@@ -412,8 +489,12 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
 
     mean_embeddings_array = np.array(mean_embeddings)
 
-    # Prepare batch update data
-    face_cluster_mappings = []
+    # (cluster_id, photo or keyframe id) pairs already taken: faces sharing one
+    # photo or one keyframe are distinct people
+    occupied_pairs = db_get_cluster_media_pairs()
+
+    # (similarity, face_id, cluster_id, photo or keyframe id) for every match
+    candidates = []
     skipped_invalid = 0
 
     for face in unassigned_faces:
@@ -441,12 +522,19 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
 
         # Only assign if similarity is above threshold
         if max_similarity >= similarity_threshold:
-            nearest_cluster_idx = np.argmin(distances)
-            nearest_cluster_id = cluster_ids[nearest_cluster_idx]
+            nearest_cluster_id = cluster_ids[int(np.argmin(distances))]
+            unit = face.get("image_id") or face.get("frame_id")
+            candidates.append((max_similarity, face_id, nearest_cluster_id, unit))
 
-            face_cluster_mappings.append(
-                {"face_id": face_id, "cluster_id": nearest_cluster_id}
-            )
+    # Closest match first, so when two faces from one photo or keyframe want the
+    # same cluster the better one wins, as in _enforce_one_face_per_image.
+    face_cluster_mappings = []
+    for _, face_id, cluster_id, unit in sorted(candidates, key=lambda c: -c[0]):
+        if unit is not None and (cluster_id, unit) in occupied_pairs:
+            continue
+        face_cluster_mappings.append({"face_id": face_id, "cluster_id": cluster_id})
+        if unit is not None:
+            occupied_pairs.add((cluster_id, unit))
 
     if skipped_invalid > 0:
         logger.warning(
@@ -456,6 +544,56 @@ def cluster_util_assign_cluster_to_faces_without_clusterId(
     total_faces_skipped = skipped_invalid
 
     return face_cluster_mappings, total_faces_skipped
+
+
+def _enforce_one_face_per_image(
+    results: List[ClusterResult], face_to_image: Dict[int, Optional[str]]
+) -> List[ClusterResult]:
+    """
+    Keep at most one face per image in each cluster: co-occurring faces belong
+    to different people. The face closest to the cluster centroid wins; the
+    rest are dropped from results (left unclustered).
+    """
+    by_cluster = defaultdict(list)
+    for result in results:
+        by_cluster[result.cluster_uuid].append(result)
+
+    kept = []
+    dropped = 0
+    for cluster_results in by_cluster.values():
+        centroid = np.mean([r.embedding for r in cluster_results], axis=0)
+        centroid_norm = np.linalg.norm(centroid)
+
+        best_per_image: Dict[str, Tuple[float, ClusterResult]] = {}
+        for result in cluster_results:
+            image_id = face_to_image.get(result.face_id)
+            if image_id is None:
+                kept.append(result)
+                continue
+
+            emb_norm = np.linalg.norm(result.embedding)
+            if centroid_norm < 1e-6 or emb_norm < 1e-6:
+                similarity = 0.0
+            else:
+                similarity = float(
+                    np.dot(result.embedding, centroid) / (emb_norm * centroid_norm)
+                )
+
+            prev = best_per_image.get(image_id)
+            if prev is None:
+                best_per_image[image_id] = (similarity, result)
+            else:
+                dropped += 1
+                if similarity > prev[0]:
+                    best_per_image[image_id] = (similarity, result)
+
+        kept.extend(result for _, result in best_per_image.values())
+
+    if dropped:
+        logger.info(
+            f"Cannot-link constraint: dropped {dropped} same-image duplicate face(s) from clusters"
+        )
+    return kept
 
 
 def _merge_similar_clusters(

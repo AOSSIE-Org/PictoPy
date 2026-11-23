@@ -103,7 +103,7 @@ Before setting up the Python backend and sync-microservice, you need to have **M
 
    The server will start on `http://localhost:52123` by default. In test mode, the server will automatically restart if any errors are detected or if source files are modified.
 
-   ![Server running screenshot](/docs/assets/screenshots/serverRunning.png)
+   ![Server running screenshot](assets/screenshots/serverRunning.png)
 
 ## Sync-Microservice Setup Steps
 
@@ -140,6 +140,35 @@ Before setting up the Python backend and sync-microservice, you need to have **M
    ```
 
    The server will start on `http://localhost:52124` by default. In development mode, the server will automatically restart if any errors are detected or if source files are modified.
+
+## Running the Complete Application
+
+To run PictoPy in development mode with live data, all three services must run concurrently in separate terminal sessions. Open three terminals from the project root:
+
+1. **Terminal 1: Start the Backend Server (port 52123)**
+
+   ```bash
+   cd backend
+   conda activate ./.env
+   fastapi dev --port 52123
+   ```
+
+2. **Terminal 2: Start the Sync-Microservice (port 52124)**
+
+   ```bash
+   cd sync-microservice
+   conda activate ./.sync-env
+   fastapi dev --port 52124
+   ```
+
+3. **Terminal 3: Start the Frontend Desktop App**
+
+   ```bash
+   cd frontend
+   npm run tauri dev
+   ```
+
+> **Note:** If the frontend is launched before the backend and sync services are up and listening, the desktop window will display *"Waiting for servers to start"*. Always ensure Terminals 1 and 2 are running with Terminal 3.
 
 ## Troubleshooting Common Issues
 

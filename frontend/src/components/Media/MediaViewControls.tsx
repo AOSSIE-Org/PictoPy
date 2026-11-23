@@ -1,11 +1,13 @@
 import React from 'react';
-import { Info, Heart, Play, Pause, X, Folder } from 'lucide-react';
+import { Info, Heart, Play, Pause, X, Folder, Trash2 } from 'lucide-react';
 
 interface MediaViewControlsProps {
   showInfo: boolean;
   onToggleInfo: () => void;
   onToggleFavourite: () => void;
   onOpenFolder: () => Promise<void>;
+  /** Omit to hide the delete button, for media that cannot be deleted yet. */
+  onDelete?: () => void;
   isFavourite: boolean;
   isSlideshowActive: boolean;
   onToggleSlideshow: () => void;
@@ -19,6 +21,7 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
   onToggleInfo,
   onToggleFavourite,
   onOpenFolder,
+  onDelete,
   isFavourite,
   isSlideshowActive,
   onToggleSlideshow,
@@ -30,17 +33,30 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
       <button
         onClick={onToggleInfo}
         className={`cursor-pointer rounded-full ${
-          showInfo ? 'bg-indigo-500/70' : 'bg-black/50'
-        } p-2.5 text-white/90 transition-all duration-200 hover:bg-black/20 hover:text-white hover:shadow-lg`}
+          showInfo
+            ? 'bg-indigo-500/70 text-white hover:bg-indigo-600/80'
+            : 'bg-white/80 text-gray-700 shadow-md hover:bg-white hover:text-black dark:bg-black/50 dark:text-white/90 dark:shadow-none dark:hover:bg-black/20 dark:hover:text-white'
+        } p-2.5 transition-all duration-200 hover:shadow-lg`}
         aria-label="Show Info"
         title="Show Info"
       >
         <Info className="h-5 w-5" />
       </button>
 
+      {onDelete && (
+        <button
+          onClick={onDelete}
+          className="cursor-pointer rounded-full bg-white/80 p-2.5 text-gray-700 shadow-md transition-all duration-200 hover:bg-rose-500/80 hover:text-white hover:shadow-lg dark:bg-black/50 dark:text-white/90 dark:shadow-none dark:hover:bg-rose-500/80 dark:hover:text-white"
+          aria-label="Delete"
+          title="Delete"
+        >
+          <Trash2 className="h-5 w-5" />
+        </button>
+      )}
+
       <button
         onClick={onOpenFolder}
-        className="cursor-pointer rounded-full bg-black/50 p-2.5 text-white/90 transition-all duration-200 hover:bg-black/20 hover:text-white hover:shadow-lg"
+        className="cursor-pointer rounded-full bg-white/80 p-2.5 text-gray-700 shadow-md transition-all duration-200 hover:bg-white hover:text-black hover:shadow-lg dark:bg-black/50 dark:text-white/90 dark:shadow-none dark:hover:bg-black/20 dark:hover:text-white"
         aria-label="Open Folder"
         title="Open Folder"
       >
@@ -49,10 +65,10 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
 
       <button
         onClick={onToggleFavourite}
-        className={`cursor-pointer rounded-full p-2.5 text-white transition-all duration-300 ${
+        className={`cursor-pointer rounded-full p-2.5 transition-all duration-300 ${
           isFavourite
-            ? 'bg-rose-500/80 hover:bg-rose-600 hover:shadow-lg'
-            : 'bg-black/50 hover:bg-black/20 hover:text-white hover:shadow-lg'
+            ? 'bg-rose-500/80 text-white hover:bg-rose-600 hover:shadow-lg'
+            : 'bg-white/80 text-gray-700 shadow-md hover:bg-white hover:text-black hover:shadow-lg dark:bg-black/50 dark:text-white dark:shadow-none dark:hover:bg-black/20 dark:hover:text-white'
         }`}
         aria-label={
           isFavourite ? 'Remove from favourites' : 'Add to favourites'
@@ -82,7 +98,7 @@ export const MediaViewControls: React.FC<MediaViewControlsProps> = ({
 
       <button
         onClick={onClose}
-        className="ml-2 cursor-pointer rounded-full bg-black/50 p-2.5 text-white/90 transition-all duration-200 hover:bg-black/20 hover:text-white hover:shadow-lg"
+        className="ml-2 cursor-pointer rounded-full bg-white/80 p-2.5 text-gray-700 shadow-md transition-all duration-200 hover:bg-white hover:text-black hover:shadow-lg dark:bg-black/50 dark:text-white/90 dark:shadow-none dark:hover:bg-black/20 dark:hover:text-white"
         aria-label="Close"
         title="Close"
       >

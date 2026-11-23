@@ -5,7 +5,9 @@ export type ModelTier = (typeof MODEL_TIERS)[number];
 export type ModelFeature =
   | 'object_detection'
   | 'face_detection'
-  | 'face_embedding';
+  | 'face_embedding'
+  | 'semantic_vision'
+  | 'semantic_text';
 
 export interface ModelEntry {
   feature: ModelFeature;
@@ -60,9 +62,9 @@ export type ModelDownloadProgressMessage =
   | ModelDownloadProgressErrorMessage;
 
 export const MODEL_TIER_LABELS: Record<ModelTier, string> = {
-  nano: 'Nano (~21 MB)',
-  small: 'Small (~75.7 MB)',
-  medium: 'Medium (~161 MB)',
+  nano: 'Nano (~20 MB)',
+  small: 'Small (~72 MB)',
+  medium: 'Medium (~154 MB)',
 };
 
 export const MODEL_TIER_DESCRIPTIONS: Record<ModelTier, string> = {
@@ -70,6 +72,17 @@ export const MODEL_TIER_DESCRIPTIONS: Record<ModelTier, string> = {
   small: 'Balanced accuracy and speed for most systems',
   medium: 'Best accuracy recommended for modern hardware',
 };
+
+export const SEMANTIC_BUNDLE_KEYS = [
+  'siglip2_base_vision',
+  'siglip2_base_text',
+  'siglip2_base_tokenizer',
+] as const;
+
+export const SEMANTIC_BUNDLE_TITLE = 'Semantic Search';
+export const SEMANTIC_BUNDLE_LABEL = 'Semantic Search (~1.5 GB)';
+export const SEMANTIC_BUNDLE_DESCRIPTION =
+  'Search photos by describing them in your own words. Downloads three model files; runs fully on-device.';
 
 export const getModelTierLabel = (tier: ModelTier) => MODEL_TIER_LABELS[tier];
 
@@ -103,4 +116,14 @@ export const getInstalledModelTiers = (
 
     return Boolean(objectModel && faceModel);
   });
+};
+
+export const isSemanticSearchAvailable = (
+  models: Record<string, ModelEntry>,
+): boolean => {
+  const semanticTextModels = Object.values(models).filter(
+    (model) => model.feature === 'semantic_text',
+  );
+  if (semanticTextModels.length === 0) return false;
+  return semanticTextModels.every((model) => model.installed === true);
 };

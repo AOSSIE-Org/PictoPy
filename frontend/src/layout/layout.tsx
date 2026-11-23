@@ -5,11 +5,14 @@ import { Outlet, useLocation } from 'react-router';
 import { clearSearch } from '@/features/searchSlice';
 import { useDispatch } from 'react-redux';
 import { useEffect } from 'react';
+import { isFaceSearchLocation } from '@/utils/faceSearch';
 const Layout: React.FC = () => {
   const dispatch = useDispatch();
   const location = useLocation();
   useEffect(() => {
-    if (location.pathname !== '/home') {
+    // The face search results page owns the search state while it is open;
+    // leaving it for any other page resets the search.
+    if (!isFaceSearchLocation(location)) {
       dispatch(clearSearch());
     }
   }, [location, dispatch]);
@@ -20,7 +23,12 @@ const Layout: React.FC = () => {
         <Navbar />
         <div className="flex" style={{ height: 'calc(100vh - 56px)' }}>
           <AppSidebar />
-          <div className="m-4 w-full">
+          {/* Contain scrolling here so Navbar's parent height never exceeds 100vh — now the navbar is stuck it will not go away.
+              hide-scrollbar keeps overflow-y-auto (needed for the sticky navbar) from painting a second, default scrollbar on Windows/WebView2. */}
+          <div
+            id="main-scroll-container"
+            className="hide-scrollbar m-4 w-full overflow-y-auto"
+          >
             <Outlet />
           </div>
         </div>

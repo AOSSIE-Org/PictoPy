@@ -71,3 +71,4 @@ setuptools==66.1.1
 platformdirs==4.5.1
 psutil==7.2.2
 httpx==0.28.1
+tokenizers==0.23.1

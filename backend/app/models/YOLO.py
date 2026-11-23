@@ -120,8 +120,22 @@ class YOLO:
     def prepare_input(self, image):
         self.img_height, self.img_width = image.shape[:2]
         input_img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        input_img = cv2.resize(input_img, (self.input_width, self.input_height))
-        input_img = input_img / 255.0
+        # Letterbox: resize preserving aspect ratio, pad the rest with gray
+        self.scale = min(
+            self.input_width / self.img_width, self.input_height / self.img_height
+        )
+        new_w = round(self.img_width * self.scale)
+        new_h = round(self.img_height * self.scale)
+        self.pad_x = (self.input_width - new_w) // 2
+        self.pad_y = (self.input_height - new_h) // 2
+        resized = cv2.resize(input_img, (new_w, new_h))
+        padded = np.full(
+            (self.input_height, self.input_width, 3), 114, dtype=input_img.dtype
+        )
+        padded[self.pad_y : self.pad_y + new_h, self.pad_x : self.pad_x + new_w] = (
+            resized
+        )
+        input_img = padded / 255.0
         input_img = input_img.transpose(2, 0, 1)
         input_tensor = input_img[np.newaxis, :, :, :].astype(np.float32)
         return input_tensor
@@ -145,16 +159,16 @@ class YOLO:
         boxes = predictions[:, :4]
         boxes = self.rescale_boxes(boxes)
         boxes = YOLO_util_xywh2xyxy(boxes)
+        boxes[:, [0, 2]] = boxes[:, [0, 2]].clip(0, self.img_width)
+        boxes[:, [1, 3]] = boxes[:, [1, 3]].clip(0, self.img_height)
         return boxes
 
     def rescale_boxes(self, boxes):
-        input_shape = np.array(
-            [self.input_width, self.input_height, self.input_width, self.input_height]
-        )
-        boxes = np.divide(boxes, input_shape, dtype=np.float32)
-        boxes *= np.array(
-            [self.img_width, self.img_height, self.img_width, self.img_height]
-        )
+        # Undo the letterbox: remove padding offset, then unscale (boxes are xywh)
+        boxes = boxes.astype(np.float32).copy()
+        boxes[:, 0] = (boxes[:, 0] - self.pad_x) / self.scale
+        boxes[:, 1] = (boxes[:, 1] - self.pad_y) / self.scale
+        boxes[:, 2:4] /= self.scale
         return boxes
 
     def draw_detections(self, image, draw_scores=True, mask_alpha=0.4):

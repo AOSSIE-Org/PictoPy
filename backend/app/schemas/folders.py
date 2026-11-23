@@ -15,6 +15,8 @@ class UpdateAITaggingRequest(BaseModel):
 
 class DeleteFoldersRequest(BaseModel):
     folder_ids: List[str]  # List of folder UUIDs to delete
+    # False (default) keeps the old behaviour: subfolders are deleted with the parent.
+    keep_subfolders: bool = False
 
 
 class SyncFolderRequest(BaseModel):
@@ -31,6 +33,10 @@ class FolderDetails(BaseModel):
     AI_Tagging: bool
     taggingCompleted: Optional[bool] = None
     image_count: int = 0
+    video_count: int = 0
+    indexing_status: Optional[str] = (
+        "completed"  # Default to "completed" if not provided
+    )
 
 
 class GetAllFoldersData(BaseModel):

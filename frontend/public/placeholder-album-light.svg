@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+  <!-- Background -->
+  <rect width="400" height="400" fill="#f5f5f5"/>
+
+  <!-- Image icon in center -->
+  <g transform="translate(200, 180)">
+    <!-- Photo frame -->
+    <rect x="-70" y="-50" width="140" height="110" rx="6" fill="#d0d0d0" stroke="#999999" stroke-width="2"/>
+
+    <!-- Sun/circle -->
+    <circle cx="-30" cy="-15" r="18" fill="#999999"/>
+
+    <!-- Mountains -->
+    <path d="M -70,60 L -40,15 L -10,40 L 20,10 L 50,40 L 70,60 Z" fill="#999999"/>
+  </g>
+
+  <!-- Text at bottom -->
+  <text x="200" y="260" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#666666" font-weight="500">
+    Album Image
+  </text>
+</svg>

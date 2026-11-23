@@ -18,8 +18,42 @@ export interface Image {
   isTagged: boolean;
   metadata?: ImageMetadata;
   isFavourite?: boolean;
+  favouritedAt?: string | null;
   tags?: string[];
   bboxes?: { x: number; y: number; width: number; height: number }[];
+}
+
+export interface ScoredImage extends Image {
+  score: number;
+}
+
+export interface VideoMetadata {
+  name: string;
+  date_created: string | null;
+  width: number;
+  height: number;
+  duration?: number | null;
+  fps?: number | null;
+  file_location: string;
+  file_size: number;
+  item_type: string;
+}
+
+export interface Video {
+  id: string;
+  path: string;
+  thumbnailPath: string | null;
+  folder_id: string;
+  metadata?: VideoMetadata;
+  isFavourite?: boolean;
+  favouritedAt?: string | null;
+  tags?: string[];
+}
+
+export interface ScoredVideo extends Video {
+  score: number;
+  /** Timestamp (seconds) of the keyframe that matched best. */
+  best_frame_timestamp?: number | null;
 }
 
 export interface ImageGalleryProps {
@@ -52,7 +86,9 @@ export interface PaginationControlsProps {
 
 export interface Cluster {
   cluster_id: string;
-  cluster_name: string;
+  /** Photos only; videos are counted separately. */
   face_count: number;
+  cluster_name: string | null;
+  video_count: number;
   face_image_base64?: string;
 }

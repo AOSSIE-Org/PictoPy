@@ -1,6 +1,8 @@
 import { useMemo, useRef, useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { ImageCard } from '@/components/Media/ImageCard';
+import { MEDIA_GRID_CLASS } from '@/constants/layout';
+import { cn } from '@/lib/utils';
 import { Image } from '@/types/Media';
 import { groupImagesByYearMonthFromMetadata } from '@/utils/dateUtils';
 import { setCurrentViewIndex } from '@/features/imageSlice';
@@ -160,7 +162,7 @@ export const ChronologicalGallery = ({
                   </div>
 
                   {/* Images Grid */}
-                  <div className="grid grid-cols-[repeat(auto-fill,_minmax(224px,_1fr))] gap-4 p-2">
+                  <div className={cn(MEDIA_GRID_CLASS, 'p-2')}>
                     {imgs.map((img) => {
                       const chronologicalIndex =
                         imageIndexMap.get(img.id) ?? -1;

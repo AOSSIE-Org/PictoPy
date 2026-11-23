@@ -7,7 +7,9 @@ export const ROUTES = {
   VIDEOS: 'videos',
   SETTINGS: 'settings',
   ALBUMS: 'albums',
+  ALBUM_DETAIL: 'albums/:albumId',
   MEMORIES: 'memories',
-  MEMORY_DETAIL: 'memories/:memoryId',
   PERSON: 'person/:clusterId',
+  MODEL_MANAGER: 'model-manager',
+  SEARCH: 'search',
 };

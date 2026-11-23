@@ -2,19 +2,30 @@ import os
 import json
 import uuid
 import asyncio
-from typing import Dict
+from concurrent.futures import ProcessPoolExecutor
+from typing import Any, Dict, List
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
+from starlette.datastructures import State
 from app.models.model_registry import MODEL_REGISTRY, TIER_MODELS, get_model_path
 from app.models.session_registry import (
     try_mark_model_for_deletion,
     release_model_deletion_mark,
+    _registry_lock,
 )
+from app.routes.dependencies import get_state
+from app.utils.xmp.exporter import xmp_export_if_enabled
 from app.utils.hardware_detect import get_hardware_info
+from app.utils.images import image_util_process_unembedded_images
+from app.utils.semantic_labels import (
+    semantic_util_build_label_embeddings,
+    semantic_util_score_images,
+)
 from app.utils.model_downloader import ensure_model
+from app.database.metadata import db_get_metadata
 import logging
 
 logger = logging.getLogger(__name__)
@@ -23,13 +34,37 @@ router = APIRouter()
 
 REQUIRED_MODELS = ["facenet"]
 
+SEMANTIC_FEATURES = ("semantic_vision", "semantic_text")
+
+
+def submit_embedding_backfill_if_semantic(
+    model_keys: List[str], executor: ProcessPoolExecutor
+) -> None:
+    """Run the SigLIP2 embedding pass after a semantic model install.
+
+    Covers images processed before the models were installed. The pass is
+    self-gating and idempotent, so over-triggering is a cheap no-op.
+    """
+    if any(
+        MODEL_REGISTRY[key].get("feature") in SEMANTIC_FEATURES for key in model_keys
+    ):
+        # The executor is single-worker, so these run in order: label
+        # embeddings, then image embeddings, then the scoring sweep that
+        # depends on both.
+        executor.submit(semantic_util_build_label_embeddings)
+        executor.submit(image_util_process_unembedded_images)
+        executor.submit(semantic_util_score_images)
+        # New embeddings and semantic tags belong in the photos too.
+        executor.submit(xmp_export_if_enabled)
+
 
 # Global dict to track download tasks
 @dataclass
 class DownloadTaskEntry:
     queue: asyncio.Queue
     task: asyncio.Task
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    # Updated on every progress event, so cleanup only stops stuck downloads.
+    last_activity: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     active_listeners: int = 0
     listener_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
@@ -50,6 +85,12 @@ async def _get_model_download_lock(model_key: str) -> asyncio.Lock:
         return _model_download_locks[model_key]
 
 
+def _mark_activity(task_id: str) -> None:
+    entry = download_tasks.get(task_id)
+    if entry:
+        entry.last_activity = datetime.now(timezone.utc)
+
+
 async def _cleanup_stale_tasks(max_age_minutes: int = 10):
     while True:
         await asyncio.sleep(300)  # run every 5 minutes
@@ -57,7 +98,7 @@ async def _cleanup_stale_tasks(max_age_minutes: int = 10):
         stale = [
             tid
             for tid, entry in download_tasks.items()
-            if (now - entry.created_at).total_seconds() > max_age_minutes * 60
+            if (now - entry.last_activity).total_seconds() > max_age_minutes * 60
         ]
         for tid in stale:
             entry = download_tasks.pop(tid, None)
@@ -76,6 +117,10 @@ def get_model_status():
     """
     status_dict = {}
     for key, spec in MODEL_REGISTRY.items():
+        # Hide placeholder models that aren't actually ready/uploaded yet
+        if spec["url"] == "PLACEHOLDER_URL" or spec["sha256"] == "PLACEHOLDER_SHA256":
+            continue
+
         path = get_model_path(key)
         is_installed = os.path.exists(path)
         status_dict[key] = {
@@ -115,18 +160,49 @@ async def delete_model(model_key: str):
             detail=f"Model key '{model_key}' not found in registry.",
         )
 
-    path = get_model_path(model_key)
+    spec = MODEL_REGISTRY[model_key]
 
-    # Check no sessions are active and reserve the model for deletion.
-    active_session_count = try_mark_model_for_deletion(model_key)
-    if active_session_count is not None:
+    # Guard 1: Prevent deletion of required models
+    if spec.get("tier") == "required":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                f"Model {model_key} is currently in use by {active_session_count} active session(s). "
-                "Close active model sessions before deleting."
-            ),
+            detail="Cannot delete a required model. No fallback exists for this slot.",
         )
+
+    with _registry_lock:
+        # Guard 2: Prevent deletion of the currently active tier
+        metadata = db_get_metadata()
+        active_tier = "small"  # Default model size if no preferences found
+        if metadata and "user_preferences" in metadata:
+            user_prefs = metadata["user_preferences"]
+            active_tier = user_prefs.get("YOLO_model_size", "small")
+
+        if spec.get("tier") == active_tier:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Cannot delete model '{model_key}' because its tier '{spec.get('tier')}' is currently active. Switch to a different tier before deleting.",
+            )
+
+        # The SigLIP2 text model is kept in a persistent cross-request cache
+        # (see siglip_util_get_text_model) whose session would otherwise stay
+        # registered as "active" forever, permanently blocking the guard below.
+        if spec.get("feature") == "semantic_text":
+            from app.utils.SigLIP import siglip_util_invalidate_text_model
+
+            siglip_util_invalidate_text_model(model_key)
+
+        # Check no sessions are active and reserve the model for deletion.
+        active_session_count = try_mark_model_for_deletion(model_key)
+        if active_session_count is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Model {model_key} is currently in use by {active_session_count} active session(s). "
+                    "Close active model sessions before deleting."
+                ),
+            )
+
+    path = get_model_path(model_key)
 
     try:
         if os.path.exists(path):
@@ -152,7 +228,7 @@ async def delete_model(model_key: str):
 
 
 @router.post("/setup")
-async def setup_models(request: SetupRequest):
+async def setup_models(request: SetupRequest, app_state: State = Depends(get_state)):
     """
     Initializes setup by starting downloads for a specific tier + required models.
     Returns a single task_id to track overall progress.
@@ -170,7 +246,7 @@ async def setup_models(request: SetupRequest):
     )
 
     task_id = str(uuid.uuid4())
-    queue = asyncio.Queue()
+    queue: asyncio.Queue[Dict[str, Any]] = asyncio.Queue()
 
     async def background_setup():
         try:
@@ -186,6 +262,7 @@ async def setup_models(request: SetupRequest):
                     _idx: int = idx,
                     _total_models: int = total_models,
                 ):
+                    _mark_activity(task_id)
                     # Send progress update
                     queue.put_nowait(
                         {
@@ -203,7 +280,14 @@ async def setup_models(request: SetupRequest):
                 async with model_lock:
                     await ensure_model(model_key, progress_callback=progress_callback)
 
+            submit_embedding_backfill_if_semantic(
+                models_to_download, app_state.executor
+            )
             queue.put_nowait({"status": "complete"})
+        except asyncio.CancelledError:
+            # CancelledError is not an Exception, so tell the client here.
+            queue.put_nowait({"status": "error", "message": "Download cancelled"})
+            raise
         except Exception as e:
             logger.error(f"Error during setup download: {e}")
             queue.put_nowait({"status": "error", "message": str(e)})
@@ -220,7 +304,7 @@ async def setup_models(request: SetupRequest):
 
 
 @router.post("/download/{model_key}")
-async def start_download_model(model_key: str):
+async def start_download_model(model_key: str, app_state: State = Depends(get_state)):
     """
     Starts download for a specific model by key. Returns a task_id.
     """
@@ -231,12 +315,13 @@ async def start_download_model(model_key: str):
         )
 
     task_id = str(uuid.uuid4())
-    queue = asyncio.Queue()
+    queue: asyncio.Queue[Dict[str, Any]] = asyncio.Queue()
 
     async def background_download():
         try:
 
             def progress_callback(percent: float, downloaded: int, total: int):
+                _mark_activity(task_id)
                 queue.put_nowait(
                     {
                         "status": "downloading",
@@ -250,7 +335,12 @@ async def start_download_model(model_key: str):
             model_lock = await _get_model_download_lock(model_key)
             async with model_lock:
                 await ensure_model(model_key, progress_callback=progress_callback)
+            submit_embedding_backfill_if_semantic([model_key], app_state.executor)
             queue.put_nowait({"status": "complete", "model_key": model_key})
+        except asyncio.CancelledError:
+            # CancelledError is not an Exception, so tell the client here.
+            queue.put_nowait({"status": "error", "message": "Download cancelled"})
+            raise
         except Exception as e:
             logger.error(f"Error downloading model {model_key}: {e}")
             queue.put_nowait({"status": "error", "message": str(e)})

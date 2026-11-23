@@ -1,0 +1,18 @@
+---
+description: PictoPy project conventions
+alwaysApply: true
+---
+
+# PictoPy project conventions
+
+Follow `AGENTS.md` at the repository root, and the nearest `AGENTS.md` to the file you are
+editing (`backend/`, `frontend/`, `frontend/src-tauri/`, and `sync-microservice/` each have
+one). Those files are the source of truth for this project's conventions.
+
+The rules contributors' agents break most often:
+
+- Format Python with **black** at 88 columns. **Never run `ruff format`** — Ruff is
+  configured here as a linter only, at a 300-column width.
+- **Never write `TODO` or `FIXME` comments.** ESLint fails the build on them.
+- Run the checks for every area you touched before finishing. `agent-kit/skills/pre-pr-check/`
+  lists them in the order CI runs them.

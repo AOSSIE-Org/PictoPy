@@ -15,6 +15,19 @@ FolderData = Tuple[FolderId, FolderPath, Optional[FolderId], int, bool, Optional
 FolderMap = Dict[FolderPath, Tuple[FolderId, Optional[FolderId]]]
 FolderIdPath = Tuple[FolderId, str]
 
+# indexing_status vocabulary. Only 'in_progress' counts as busy; 'interrupted'
+# means a walk stopped partway and the folder needs a sync to finish.
+INDEXING_NOT_STARTED = "not_started"
+INDEXING_IN_PROGRESS = "in_progress"
+INDEXING_COMPLETED = "completed"
+INDEXING_INTERRUPTED = "interrupted"
+INDEXING_STATUSES = (
+    INDEXING_NOT_STARTED,
+    INDEXING_IN_PROGRESS,
+    INDEXING_COMPLETED,
+    INDEXING_INTERRUPTED,
+)
+
 
 def db_create_folders_table() -> None:
     conn = None
@@ -30,6 +43,7 @@ def db_create_folders_table() -> None:
                 last_modified_time INTEGER,
                 AI_Tagging BOOLEAN,
                 taggingCompleted BOOLEAN,
+                indexing_status TEXT DEFAULT 'not_started',
                 FOREIGN KEY (parent_folder_id) REFERENCES folders(folder_id) ON DELETE CASCADE
             )
             """
@@ -141,9 +155,14 @@ def db_get_folder_path_from_id(folder_id: FolderId) -> Optional[FolderPath]:
 
 
 def db_get_all_folders() -> List[FolderPath]:
-    with sqlite3.connect(DATABASE_PATH) as conn:
+    # try/finally, not `with`: sqlite3's context manager commits the
+    # transaction but leaves the connection (and its file handle) open.
+    conn = sqlite3.connect(DATABASE_PATH)
+    try:
         rows = conn.execute("SELECT folder_path FROM folders").fetchall()
         return [row[0] for row in rows] if rows else []
+    finally:
+        conn.close()
 
 
 def db_get_all_folder_ids() -> List[FolderId]:
@@ -157,10 +176,14 @@ def db_get_all_folder_ids() -> List[FolderId]:
         conn.close()
 
 
-def db_delete_folders_batch(folder_ids: List[FolderId]) -> int:
+def db_delete_folders_batch(
+    folder_ids: List[FolderId], keep_subfolders: bool = False
+) -> int:
     """
     Delete multiple folders in a single database transaction.
     folder_ids: list of folder IDs to delete
+    keep_subfolders: if True, surviving subfolders are re-attached to the nearest
+        surviving ancestor (or become top-level) instead of cascading away.
     Returns the number of folders deleted
     """
     if not folder_ids:
@@ -176,6 +199,25 @@ def db_delete_folders_batch(folder_ids: List[FolderId]) -> int:
 
         # Create placeholders for the IN clause
         placeholders = ",".join("?" * len(folder_ids))
+
+        if keep_subfolders:
+            # Hop children up one level per pass so they skip every deleted
+            # ancestor; a chain can't be longer than the ids being deleted.
+            for _ in range(len(folder_ids)):
+                cursor.execute(
+                    f"""
+                    UPDATE folders
+                    SET parent_folder_id = (
+                        SELECT p.parent_folder_id FROM folders p
+                        WHERE p.folder_id = folders.parent_folder_id
+                    )
+                    WHERE parent_folder_id IN ({placeholders})
+                      AND folder_id NOT IN ({placeholders})
+                    """,
+                    folder_ids + folder_ids,
+                )
+                if cursor.rowcount == 0:
+                    break
 
         cursor.execute(
             f"DELETE FROM folders WHERE folder_id IN ({placeholders})",
@@ -309,7 +351,7 @@ def db_update_ai_tagging_batch(
 
         cursor.execute(
             f"UPDATE folders SET AI_Tagging = ? WHERE folder_id IN ({placeholders})",
-            [ai_tagging_enabled] + folder_ids,
+            [ai_tagging_enabled, *folder_ids],
         )
 
         updated_count = cursor.rowcount
@@ -402,30 +444,43 @@ def db_get_folder_ids_by_paths(
 
 
 def db_get_all_folder_details() -> (
-    List[Tuple[str, str, Optional[str], int, bool, Optional[bool], int]]
+    List[Tuple[str, str, Optional[str], int, bool, Optional[bool], str, int, int]]
 ):
     """
     Get all folder details including folder_id, folder_path, parent_folder_id,
-    last_modified_time, AI_Tagging, taggingCompleted, and image_count.
+    last_modified_time, AI_Tagging, taggingCompleted, indexing_status,
+    image_count and video_count.
     Returns list of tuples with all folder information.
     """
     conn = sqlite3.connect(DATABASE_PATH)
     cursor = conn.cursor()
 
     try:
+        # Count each media table in its own pre-aggregated subquery instead of
+        # joining both onto folders at once. Joining both multiplies the rows
+        # (a folder with 3 images and 4 videos yields 12 join rows), so the old
+        # COUNT(DISTINCT ...) query scanned images x videos rows per folder.
         cursor.execute(
             """
-            SELECT 
-                f.folder_id, 
-                f.folder_path, 
-                f.parent_folder_id, 
-                f.last_modified_time, 
-                f.AI_Tagging, 
+            SELECT
+                f.folder_id,
+                f.folder_path,
+                f.parent_folder_id,
+                f.last_modified_time,
+                f.AI_Tagging,
                 f.taggingCompleted,
-                COUNT(i.id) as image_count
+                f.indexing_status,
+                COALESCE(i.image_count, 0) as image_count,
+                COALESCE(v.video_count, 0) as video_count
             FROM folders f
-            LEFT JOIN images i ON f.folder_id = i.folder_id
-            GROUP BY f.folder_id
+            LEFT JOIN (
+                SELECT folder_id, COUNT(id) as image_count
+                FROM images GROUP BY folder_id
+            ) i ON i.folder_id = f.folder_id
+            LEFT JOIN (
+                SELECT folder_id, COUNT(id) as video_count
+                FROM videos GROUP BY folder_id
+            ) v ON v.folder_id = f.folder_id
             ORDER BY f.folder_path
             """
         )
@@ -452,5 +507,107 @@ def db_get_direct_child_folders(parent_folder_id: str) -> List[Tuple[str, str]]:
         )
 
         return cursor.fetchall()
+    finally:
+        conn.close()
+
+
+def db_set_tagging_completed(completed: bool) -> int:
+    """
+    Mark every AI-tagged folder as finished tagging, or back to pending.
+
+    The column exists on the folders table but nothing used to write it after
+    insert, so anything reading it saw every AI-tagged folder as permanently
+    mid-tagging. The tagging sequences now clear it on entry and set it on
+    exit. Returns the number of folders updated.
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "UPDATE folders SET taggingCompleted = ? WHERE AI_Tagging = 1",
+            (1 if completed else 0,),
+        )
+        conn.commit()
+        return cursor.rowcount
+    except sqlite3.Error as e:
+        logger.error(f"Error updating tagging completion: {e}")
+        conn.rollback()
+        return 0
+    finally:
+        conn.close()
+
+
+def db_clear_stale_processing_flags() -> int:
+    """
+    Clear processing flags left behind by a previous session.
+
+    Call only at startup. Indexing and tagging both run in the executor and
+    are only ever started by a request, so nothing can be in flight yet: any
+    folder still marked busy was interrupted, or predates the code that
+    finishes the flag. Either way it would block memory generation forever.
+
+    An interrupted walk becomes 'interrupted', not 'completed': it stopped
+    partway, so the folder's images are incomplete and it still needs a sync.
+    Not 'not_started' either, which reads as queued and would leave the UI
+    waiting on a walk nobody is going to run.
+
+    Returns the number of folders corrected.
+    """
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        # One statement, not two: a folder that is both mid-tagging and
+        # mid-index is one folder, and counting each flag would report two.
+        cursor.execute(
+            """
+            UPDATE folders
+               SET taggingCompleted = CASE
+                       WHEN AI_Tagging = 1 AND IFNULL(taggingCompleted, 0) = 0
+                       THEN 1
+                       ELSE taggingCompleted
+                   END,
+                   indexing_status = CASE
+                       WHEN indexing_status = ? THEN ?
+                       ELSE indexing_status
+                   END
+             WHERE (AI_Tagging = 1 AND IFNULL(taggingCompleted, 0) = 0)
+                OR indexing_status = ?
+            """,
+            (INDEXING_IN_PROGRESS, INDEXING_INTERRUPTED, INDEXING_IN_PROGRESS),
+        )
+        corrected = cursor.rowcount
+        conn.commit()
+        if corrected:
+            logger.info(f"Cleared stale processing flags on {corrected} folder(s)")
+        return corrected
+    except sqlite3.Error as e:
+        logger.error(f"Error clearing stale processing flags: {e}")
+        conn.rollback()
+        return 0
+    finally:
+        conn.close()
+
+
+def db_update_folder_indexing_status(folder_id: str, status: str) -> None:
+    """
+    Update the indexing_status of a specific folder.
+
+    The column has no CHECK constraint, so a typo would otherwise persist as a
+    status nothing recognises and the folder would read as busy forever.
+    """
+    if status not in INDEXING_STATUSES:
+        raise ValueError(f"unknown indexing status: {status}")
+
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "UPDATE folders SET indexing_status = ? WHERE folder_id = ?",
+            (status, folder_id),
+        )
+        conn.commit()
+    except sqlite3.Error as e:
+        logger.error(f"Error updating indexing status: {e}")
+        conn.rollback()
     finally:
         conn.close()

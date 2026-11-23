@@ -3,25 +3,43 @@ from __future__ import annotations
 import os
 import uuid
 import datetime
+from typing import Iterable, List, Optional, Tuple, Dict, Any, Mapping
 import json
 import logging
-from typing import List, Tuple, Dict, Any, Mapping
+import sqlite3
+
 from PIL import Image, ExifTags
 from pathlib import Path
 
-from app.config.settings import THUMBNAIL_IMAGES_PATH
+from app.config.settings import THUMBNAIL_IMAGES_PATH, SUPPORTED_IMAGE_EXTENSIONS
 from app.database.images import (
+    FolderId,
+    ImageRecord,
+    ImageSyncState,
+    UntaggedImageRecord,
     db_bulk_insert_images,
     db_get_untagged_images,
     db_update_image_tagged_status,
     db_insert_image_classes_batch,
+    db_get_image_sync_state_by_folder_ids,
     db_get_images_by_folder_ids,
+    db_get_images_by_ids,
     db_delete_images_by_ids,
+    db_exclude_and_delete_images,
+    db_get_excluded_image_paths,
 )
+from app.database.faces import db_insert_face_embeddings_by_image_id
 from app.models.FaceDetector import FaceDetector
 from app.models.ObjectClassifier import ObjectClassifier
 from app.logging.setup_logging import get_logger
-from app.utils.extract_location_metadata import MetadataExtractor
+from app.utils.extract_location_metadata import (
+    DATE_SOURCE_EXIF,
+    DATE_SOURCE_FILESYSTEM,
+    DATE_SOURCE_SIDECAR,
+    DATE_SOURCE_UNKNOWN,
+    MetadataExtractor,
+)
+from app.utils.takeout_sidecar import takeout_sidecar_read
 
 logger = get_logger(__name__)
 
@@ -32,7 +50,9 @@ GPS_INFO_TAG = 34853
 logger = logging.getLogger(__name__)
 
 
-def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -> bool:
+def image_util_process_folder_images(
+    folder_data: List[Tuple[str, FolderId, bool]],
+) -> bool:
     """Main function to process images in multiple folders based on provided folder data.
 
     Args:
@@ -48,6 +68,17 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
         all_image_records = []
         all_folder_ids = []
 
+        # One query up front. The watcher calls sync-folder on any file change,
+        # so this walk reruns constantly over folders that are almost entirely
+        # unchanged, and rereading each file is the expensive part.
+        known_state = db_get_image_sync_state_by_folder_ids(
+            [folder_id for _, folder_id, _ in folder_data]
+        )
+
+        # Photos the user removed from the gallery but kept on disk. Without this
+        # the next sync-folder would import them straight back.
+        excluded_paths = db_get_excluded_image_paths()
+
         # Process each folder in the provided data
         for folder_path, folder_id, recursive in folder_data:
             try:
@@ -56,6 +87,11 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
 
                 # Step 1: Get all image files from current folder
                 image_files = image_util_get_images_from_folder(folder_path, recursive)
+                image_files = [
+                    path
+                    for path in image_files
+                    if os.path.normcase(os.path.abspath(path)) not in excluded_paths
+                ]
 
                 if not image_files:
                     continue  # No images in this folder, continue to next
@@ -65,7 +101,7 @@ def image_util_process_folder_images(folder_data: List[Tuple[str, int, bool]]) -
 
                 # Step 3: Prepare image records for this folder
                 folder_image_records = image_util_prepare_image_records(
-                    image_files, folder_path_to_id
+                    image_files, folder_path_to_id, known_state
                 )
                 all_image_records.extend(folder_image_records)
 
@@ -104,8 +140,96 @@ def image_util_process_untagged_images() -> bool:
         return False
 
 
+def image_util_process_unembedded_images() -> None:
+    from app.config.settings import (
+        SIGLIP2_ACTIVE_CHECKPOINT,
+        SIGLIP2_SCORING_METADATA,
+        SIGLIP2_EMBED_BATCH_SIZE,
+    )
+    from app.models.model_registry import get_siglip2_registry_keys, get_model_path
+    from app.database.images import db_get_unembedded_images, db_mark_images_embedded
+    from app.database.image_embeddings import db_upsert_image_embeddings
+    from app.models.SigLIP2Vision import SigLIP2Vision
+    from app.utils.SigLIP import siglip_util_preprocess_image
+    import os
+    import time
+    import numpy as np
+
+    try:
+        vision_key, _ = get_siglip2_registry_keys(SIGLIP2_ACTIVE_CHECKPOINT)
+        vision_model_path = get_model_path(vision_key)
+        if not os.path.exists(vision_model_path):
+            logger.info("SigLIP2 vision model not installed; skipping embedding pass")
+            return
+
+        unembedded_images = db_get_unembedded_images()
+        if not unembedded_images:
+            return
+
+        metadata = SIGLIP2_SCORING_METADATA[SIGLIP2_ACTIVE_CHECKPOINT]
+        resolution = metadata["input_resolution"]
+        model_version = metadata["model_version"]
+
+        vision_model = SigLIP2Vision(vision_model_path)
+        try:
+            total_images = len(unembedded_images)
+            embedded_count = 0
+            corrupt_count = 0
+            start_time = time.time()
+
+            for i in range(0, total_images, SIGLIP2_EMBED_BATCH_SIZE):
+                batch = unembedded_images[i : i + SIGLIP2_EMBED_BATCH_SIZE]
+
+                good_arrays = []
+                good_ids = []
+
+                for image in batch:
+                    image_id = image["id"]
+                    image_path = image["path"]
+
+                    preprocessed = siglip_util_preprocess_image(image_path, resolution)
+                    if preprocessed is None:
+                        corrupt_count += 1
+                        continue
+
+                    good_arrays.append(preprocessed)
+                    good_ids.append(image_id)
+
+                if good_arrays:
+                    stacked = np.stack(good_arrays)  # [N, 3, R, R]
+                    embeddings = vision_model.get_embedding(stacked)  # [N, D]
+
+                    rows = []
+                    for idx, emb in enumerate(embeddings):
+                        rows.append((good_ids[idx], model_version, emb))
+
+                    db_upsert_image_embeddings(rows)
+                    embedded_count += len(good_arrays)
+
+                if good_ids:
+                    # Only mark images that actually got an embedding row.
+                    # Corrupt images stay isEmbedded=False and get retried on
+                    # the next pass -- unlike YOLO/FaceNet inference, preprocessing
+                    # is a cheap check (PIL failing to open/decode), so the retry
+                    # cost is low, and a file that becomes readable later (a
+                    # transient lock, a restored backup) eventually gets embedded
+                    # instead of being permanently excluded from semantic search.
+                    db_mark_images_embedded(good_ids)
+
+            elapsed = time.time() - start_time
+            logger.info(
+                f"SigLIP2 embedding pass complete. Total: {total_images}, Embedded: {embedded_count}, Corrupt: {corrupt_count}, Elapsed: {elapsed:.2f}s"
+            )
+
+        finally:
+            vision_model.close()
+
+    except Exception as e:
+        logger.error(f"Error processing unembedded images: {e}")
+
+
 def image_util_classify_and_face_detect_images(
-    untagged_images: List[Dict[str, str]],
+    untagged_images: List[UntaggedImageRecord],
 ) -> int:
     """Classify untagged images and detect faces if applicable."""
     object_classifier = ObjectClassifier()
@@ -129,10 +253,25 @@ def image_util_classify_and_face_detect_images(
                 db_insert_image_classes_batch(image_class_pairs)
 
             # Step 3: Detect faces if "person" class is present
-            if classes and 0 in classes and 0 < classes.count(0) < 7:
-                result = face_detector.detect_faces(image_id, image_path)
+            if classes and 0 in classes:
+                result = face_detector.detect_faces(image_path)
+                if result and result["embeddings"]:
+                    try:
+                        db_insert_face_embeddings_by_image_id(
+                            image_id,
+                            result["embeddings"],
+                            confidence=result["confidences"],
+                            bbox=result["bboxes"],
+                        )
+                    except sqlite3.IntegrityError:
+                        # The image can be deleted during inference, which fails
+                        # the faces FK; skip it rather than abort the whole pass.
+                        logger.info(
+                            f"Image {image_id} was removed during tagging; skipping"
+                        )
+                        continue
                 if result:
-                    total_faces_skipped += result.get("faces_skipped", 0)
+                    total_faces_skipped += result["faces_skipped"]
 
             # Step 4: Update the image status in the database
             db_update_image_tagged_status(image_id, True)
@@ -144,9 +283,55 @@ def image_util_classify_and_face_detect_images(
     return total_faces_skipped
 
 
+def image_util_is_unchanged(
+    image_path: str, recorded: Optional[ImageSyncState]
+) -> bool:
+    """
+    True when the file and its thumbnail both match what the last scan recorded.
+
+    A row written before file_mtime was tracked has no mtime to compare, so it
+    gets reread once and carries the field from then on.
+    """
+    if not recorded:
+        return False
+
+    recorded_size = recorded.get("file_size")
+    recorded_mtime = recorded.get("file_mtime")
+    if recorded_size is None or recorded_mtime is None:
+        return False
+
+    try:
+        stats = os.stat(image_path)
+    except OSError:
+        return False
+
+    if stats.st_size != recorded_size or int(stats.st_mtime) != recorded_mtime:
+        return False
+
+    # A Takeout sidecar can land after its photo, and that leaves the photo's
+    # own size and mtime untouched. Only rows still on the mtime stand-in can
+    # gain from it, so only they pay for the lookup.
+    if recorded.get("date_source") == DATE_SOURCE_FILESYSTEM:
+        sidecar_dt, _, _ = takeout_sidecar_read(image_path)
+        if sidecar_dt:
+            return False
+
+    # Skipping the file means keeping its existing thumbnail, so that thumbnail
+    # has to still be there. Zero bytes is a half-written one, not a usable one.
+    thumbnail_path = recorded.get("thumbnailPath")
+    if not thumbnail_path:
+        return False
+    try:
+        return os.path.getsize(thumbnail_path) > 0
+    except OSError:
+        return False
+
+
 def image_util_prepare_image_records(
-    image_files: List[str], folder_path_to_id: Dict[str, int]
-) -> List[Dict]:
+    image_files: List[str],
+    folder_path_to_id: Dict[str, FolderId],
+    known_state: Optional[Dict[str, ImageSyncState]] = None,
+) -> List[ImageRecord]:
     """
     Prepare image records with thumbnails for database insertion.
     Automatically extracts GPS coordinates and capture datetime from metadata.
@@ -154,18 +339,27 @@ def image_util_prepare_image_records(
     Args:
         image_files: List of image file paths
         folder_path_to_id: Dictionary mapping folder paths to IDs
+        known_state: Size/mtime recorded for already-stored paths. Files matching
+            it are left alone; omit to reread every file.
 
     Returns:
         List of image record dictionaries ready for database insertion
     """
     image_records = []
     extractor = MetadataExtractor()
+    known_state = known_state or {}
+    skipped = 0
 
     for image_path in image_files:
         folder_id = image_util_find_folder_id_for_image(image_path, folder_path_to_id)
 
         if not folder_id:
             continue  # Skip if no matching folder ID found
+
+        recorded = known_state.get(os.path.normcase(os.path.abspath(image_path)))
+        if image_util_is_unchanged(image_path, recorded):
+            skipped += 1
+            continue
 
         image_id = str(uuid.uuid4())
         thumbnail_name = f"thumbnail_{image_id}.jpg"
@@ -187,7 +381,8 @@ def image_util_prepare_image_records(
                 latitude, longitude, captured_at = extractor.extract_all(metadata_json)
 
                 # Log GPS extraction results
-                if latitude and longitude:
+                # (0 is a valid coordinate, so test for None rather than truthiness)
+                if latitude is not None and longitude is not None:
                     logger.info(
                         f"GPS extracted for {os.path.basename(image_path)}: ({latitude}, {longitude})"
                     )
@@ -204,13 +399,14 @@ def image_util_prepare_image_records(
             # Build image record with GPS data
             # ALWAYS include latitude, longitude, captured_at (even if None)
             # to satisfy SQL INSERT statement named parameters
-            image_record = {
+            image_record: ImageRecord = {
                 "id": image_id,
                 "path": image_path,
                 "folder_id": folder_id,
                 "thumbnailPath": thumbnail_path,
                 "metadata": metadata_json,
                 "isTagged": False,
+                "isEmbedded": False,
                 "latitude": latitude,  # Can be None
                 "longitude": longitude,  # Can be None
                 "captured_at": (
@@ -221,6 +417,9 @@ def image_util_prepare_image_records(
             }
 
             image_records.append(image_record)
+
+    if skipped:
+        logger.info(f"Skipped {skipped} unchanged image(s) during rescan")
 
     return image_records
 
@@ -278,7 +477,30 @@ def image_util_generate_thumbnail(
         return False
 
 
-def image_util_remove_obsolete_images(folder_id_list: List[int]) -> int:
+def image_util_remove_files(file_paths: Iterable[Optional[str]]) -> List[str]:
+    """Delete files, tolerating ones that are already gone.
+
+    Returns the paths that could not be deleted, so callers can report them
+    instead of pretending the file is gone.
+    """
+    failed: List[str] = []
+
+    for file_path in file_paths:
+        if not file_path:
+            continue
+        try:
+            os.remove(file_path)
+            logger.info(f"Removed file: {file_path}")
+        except FileNotFoundError:
+            pass  # Already gone is the outcome we wanted.
+        except OSError as e:
+            logger.error(f"Error removing file {file_path}: {e}")
+            failed.append(file_path)
+
+    return failed
+
+
+def image_util_remove_obsolete_images(folder_id_list: List[FolderId]) -> int:
     """
     Remove obsolete images that no longer exist in the filesystem.
 
@@ -291,27 +513,106 @@ def image_util_remove_obsolete_images(folder_id_list: List[int]) -> int:
     existing_db_images = db_get_images_by_folder_ids(folder_id_list)
 
     obsolete_images = []
+    obsolete_thumbnails = []
     for image_id, image_path, thumbnail_path in existing_db_images:
         if not os.path.exists(image_path):
             obsolete_images.append(image_id)
-            # Also remove thumbnail if it exists
-            if thumbnail_path and os.path.exists(thumbnail_path):
-                try:
-                    os.remove(thumbnail_path)
-                    logger.info(f"Removed obsolete thumbnail: {thumbnail_path}")
-                except OSError as e:
-                    logger.error(f"Error removing thumbnail {thumbnail_path}: {e}")
+            obsolete_thumbnails.append(thumbnail_path)
 
     if obsolete_images:
+        image_util_remove_files(obsolete_thumbnails)
         db_delete_images_by_ids(obsolete_images)
         logger.info(f"Removed {len(obsolete_images)} obsolete image(s) from database")
 
     return len(obsolete_images)
 
 
+def image_util_delete_images(
+    image_ids: List[str], delete_from_device: bool = False
+) -> Dict[str, List[str]]:
+    """Delete images from the gallery, optionally deleting the files as well.
+
+    Args:
+        image_ids: Images to delete.
+        delete_from_device: True also deletes each file from its folder on disk.
+            False leaves the files alone and records their paths so a later
+            folder scan does not re-import them.
+
+    Returns:
+        {"deleted_ids": ids whose database row was actually removed,
+         "failed_paths": paths that did not end up fully deleted -- either the
+         file itself could not be removed, or the database delete failed
+         after the file was already gone (delete_from_device=True), or the
+         exclude+delete transaction failed outright (delete_from_device=False)}
+    """
+    # db_get_images_by_ids keeps repeated ids, which would delete the same photo
+    # twice and report its id once per repeat. dict.fromkeys drops the repeats
+    # and keeps request order.
+    image_ids = list(dict.fromkeys(image_ids))
+    images = db_get_images_by_ids(image_ids)
+    if not images:
+        return {"deleted_ids": [], "failed_paths": []}
+
+    failed_paths: List[str] = []
+    deletable: List[dict] = []
+    deleted_ids: List[str] = []
+
+    if delete_from_device:
+        # Delete the file first: a row is only dropped once its file is actually
+        # gone, so a permission error never leaves the gallery claiming a photo
+        # was deleted while the file is still sitting in the folder.
+        for image in images:
+            failed = image_util_remove_files([image["path"]])
+            if failed:
+                failed_paths.extend(failed)
+            else:
+                deletable.append(image)
+
+        candidate_ids = [image["id"] for image in deletable]
+        if candidate_ids:
+            if db_delete_images_by_ids(candidate_ids):
+                deleted_ids = candidate_ids
+            else:
+                # The files above are already gone from disk, but the row
+                # delete failed and was rolled back, so none of these rows
+                # actually went away. Don't claim them as deleted, don't
+                # touch their thumbnails, and flag their paths so the caller
+                # knows these files were removed but need to be restored.
+                failed_paths.extend(image["path"] for image in deletable)
+                deletable = []
+    else:
+        deletable = list(images)
+        # db_get_images_by_ids hands folder_id back as "" when the image has none,
+        # and the foreign key needs a real folder id or NULL.
+        entries = [
+            (image["path"], image.get("folder_id") or None) for image in deletable
+        ]
+        # Exclusion insert and row delete share one transaction, so a failure
+        # partway through can't leave the file re-importable (row gone, no
+        # exclusion) or the exclusion orphaned (row still there).
+        exclude_and_delete_result = db_exclude_and_delete_images(
+            entries, [image["id"] for image in deletable]
+        )
+        if exclude_and_delete_result is None:
+            # Transaction failed and was rolled back -- nothing was excluded
+            # or deleted, so don't report any of these as removed.
+            failed_paths.extend(image["path"] for image in deletable)
+            deletable = []
+        else:
+            deleted_ids = exclude_and_delete_result
+            deleted = set(deleted_ids)
+            deletable = [image for image in deletable if image["id"] in deleted]
+
+    # Thumbnails are PictoPy's own cache, so they go in both modes -- only for
+    # images whose row delete actually committed.
+    image_util_remove_files([image.get("thumbnailPath") for image in deletable])
+
+    return {"deleted_ids": deleted_ids, "failed_paths": failed_paths}
+
+
 def image_util_create_folder_path_mapping(
-    folder_ids: List[Tuple[int, str]],
-) -> Dict[str, int]:
+    folder_ids: List[Tuple[FolderId, str]],
+) -> Dict[str, FolderId]:
     """
     Create a dictionary mapping folder paths to their IDs.
 
@@ -321,7 +622,7 @@ def image_util_create_folder_path_mapping(
     Returns:
         Dictionary mapping absolute folder paths to folder IDs
     """
-    folder_path_to_id: Dict[str, int] = {}
+    folder_path_to_id: Dict[str, FolderId] = {}
     for folder_id, folder_path in folder_ids:
         path = os.path.abspath(folder_path)
         folder_path_to_id[path] = folder_id
@@ -329,8 +630,8 @@ def image_util_create_folder_path_mapping(
 
 
 def image_util_find_folder_id_for_image(
-    image_path: str, folder_path_to_id: Dict[str, int]
-) -> int:
+    image_path: str, folder_path_to_id: Dict[str, FolderId]
+) -> Optional[FolderId]:
     """
     Find the most specific folder ID for a given image path.
 
@@ -355,10 +656,9 @@ def image_util_find_folder_id_for_image(
 def image_util_is_valid_image(file_path: str) -> bool:
     """Check if the file is a valid image with allowed extensions."""
     # Check file extension first
-    allowed_extensions = {".jpg", ".jpeg", ".png"}
     file_extension = Path(file_path).suffix.lower()
 
-    if file_extension not in allowed_extensions:
+    if file_extension not in SUPPORTED_IMAGE_EXTENSIONS:
         return False
 
     # Then verify it's a valid image
@@ -374,11 +674,14 @@ def _convert_to_degrees(value):
     """Converts a GPS coordinate value from DMS to decimal degrees."""
 
     def to_float(v):
-        return (
-            float(v.numerator) / float(v.denominator)
-            if hasattr(v, "numerator")
-            else float(v)
-        )
+        # Handle rational EXIF values (IFDRational/Fraction objects having numerator & denominator)
+        if hasattr(v, "numerator") and hasattr(v, "denominator"):
+            den = float(v.denominator)
+            # Edge case: corrupted EXIF metadata can have denominator == 0, raising ZeroDivisionError
+            if den == 0.0:
+                raise ZeroDivisionError("EXIF GPS rational denominator is zero")
+            return float(v.numerator) / den
+        return float(v)
 
     d, m, s = (to_float(v) for v in value[:3])
     return d + (m / 60.0) + (s / 3600.0)
@@ -423,13 +726,72 @@ def _extract_gps_coordinates(exif_data: Any) -> Tuple[float | None, float | None
                 TypeError,
                 ValueError,
                 AttributeError,
+                ZeroDivisionError,
             ):
+                # Edge case: corrupted DMS tuples or zero denominators fall back to None
+                # so an invalid GPS tag never aborts the wider metadata extraction or folder scan.
                 latitude = None
                 longitude = None
         else:
             pass
 
     return latitude, longitude
+
+
+# Pointer to the EXIF sub-IFD, where the capture timestamps actually live.
+EXIF_IFD_POINTER = 0x8769
+
+# Preference order. DateTimeOriginal is when the shutter fired; DateTime is
+# the file's own timestamp and can be a later edit, so it comes last.
+CAPTURE_DATE_TAGS = ("DateTimeOriginal", "DateTimeDigitized", "DateTime")
+
+
+def _extract_capture_datetime(exif_data: Any) -> Optional[str]:
+    """
+    Read the capture timestamp out of EXIF.
+
+    getexif() returns IFD0 only, and DateTimeOriginal lives in the EXIF
+    sub-IFD, so reading the top level alone finds nothing and every photo
+    silently falls back to the file's modification time. Both are searched
+    here, sub-IFD first.
+    """
+    # Identity check, not truthiness: an Exif object is a mapping over IFD0,
+    # so one whose dates live only in the sub-IFD is falsy while still
+    # carrying exactly the value being looked for.
+    if exif_data is None:
+        return None
+
+    tag_ids = {
+        name: tag_id
+        for tag_id, name in ExifTags.TAGS.items()
+        if name in CAPTURE_DATE_TAGS
+    }
+
+    sources = []
+    try:
+        sources.append(exif_data.get_ifd(EXIF_IFD_POINTER) or {})
+    except (AttributeError, KeyError, OSError, ValueError):
+        pass
+    try:
+        sources.append(dict(exif_data))
+    except (TypeError, ValueError):
+        pass
+
+    for name in CAPTURE_DATE_TAGS:
+        tag_id = tag_ids.get(name)
+        if tag_id is None:
+            continue
+        for source in sources:
+            value = source.get(tag_id)
+            if not value:
+                continue
+            if isinstance(value, (bytes, bytearray)):
+                value = value.decode("utf-8", "ignore")
+            value = str(value).strip().split("\x00", 1)[0]
+            if value:
+                return value
+
+    return None
 
 
 def image_util_extract_metadata(image_path: str) -> dict:
@@ -440,16 +802,19 @@ def image_util_extract_metadata(image_path: str) -> dict:
         return {
             "name": os.path.basename(image_path),
             "date_created": None,
+            "date_source": DATE_SOURCE_UNKNOWN,
             "width": 0,
             "height": 0,
             "file_location": image_path,
             "file_size": 0,
+            "file_mtime": 0,
             "item_type": "unknown",
         }
 
     try:
         stats = os.stat(image_path)
         logger.debug(f"File exists. Size = {stats.st_size} bytes")
+        date_source = DATE_SOURCE_EXIF
 
         try:
             with Image.open(image_path) as img:
@@ -467,18 +832,26 @@ def image_util_extract_metadata(image_path: str) -> dict:
                 except Exception:
                     exif_data = None
 
-                exif = dict(exif_data) if exif_data else {}
-                dt_original = None
+                dt_original = _extract_capture_datetime(exif_data)
+                # A placeholder like "0000:00:00 00:00:00" must not block the sidecar.
+                if dt_original:
+                    try:
+                        datetime.datetime.strptime(dt_original, "%Y:%m:%d %H:%M:%S")
+                    except ValueError:
+                        dt_original = None
                 latitude, longitude = _extract_gps_coordinates(exif_data)
 
-                for k, v in exif.items():
-                    if ExifTags.TAGS.get(k) == "DateTimeOriginal":
-                        dt_original = (
-                            v.decode("utf-8", "ignore")
-                            if isinstance(v, (bytes, bytearray))
-                            else str(v)
-                        )
-                        break
+                # A Google Takeout export drops EXIF from part of its own
+                # library and keeps the real values in a sibling JSON file.
+                if not dt_original or latitude is None:
+                    sidecar_dt, sidecar_lat, sidecar_lon = takeout_sidecar_read(
+                        image_path
+                    )
+                    if not dt_original and sidecar_dt:
+                        dt_original = sidecar_dt
+                        date_source = DATE_SOURCE_SIDECAR
+                    if latitude is None and sidecar_lat is not None:
+                        latitude, longitude = sidecar_lat, sidecar_lon
 
                 # Safe parse; fall back to mtime without losing width/height
                 if dt_original:
@@ -491,18 +864,25 @@ def image_util_extract_metadata(image_path: str) -> dict:
                         date_created = datetime.datetime.fromtimestamp(
                             stats.st_mtime
                         ).isoformat()
+                        date_source = DATE_SOURCE_FILESYSTEM
                 else:
                     date_created = datetime.datetime.fromtimestamp(
                         stats.st_mtime
                     ).isoformat()
+                    date_source = DATE_SOURCE_FILESYSTEM
 
             metadata_dict = {
                 "name": os.path.basename(image_path),
                 "date_created": date_created,
+                "date_source": date_source,
                 "width": width,
                 "height": height,
                 "file_location": image_path,
                 "file_size": stats.st_size,
+                # Whole seconds: external drives are often FAT/exFAT, whose
+                # coarser mtime would otherwise never compare equal to its own
+                # float from a previous scan.
+                "file_mtime": int(stats.st_mtime),
                 "item_type": mime_type,
             }
 
@@ -519,8 +899,10 @@ def image_util_extract_metadata(image_path: str) -> dict:
                 "date_created": datetime.datetime.fromtimestamp(
                     stats.st_mtime
                 ).isoformat(),
+                "date_source": DATE_SOURCE_FILESYSTEM,
                 "file_location": image_path,
                 "file_size": stats.st_size,
+                "file_mtime": int(stats.st_mtime),
                 "width": 0,
                 "height": 0,
                 "item_type": "unknown",
@@ -530,10 +912,12 @@ def image_util_extract_metadata(image_path: str) -> dict:
         return {
             "name": os.path.basename(image_path),
             "date_created": None,
+            "date_source": DATE_SOURCE_UNKNOWN,
             "width": 0,
             "height": 0,
             "file_location": image_path,
             "file_size": 0,
+            "file_mtime": 0,
             "item_type": "unknown",
         }
 

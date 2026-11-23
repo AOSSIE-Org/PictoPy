@@ -1,5 +1,14 @@
-import React, { useState } from 'react';
-import { Folder, Trash2, Check } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import {
+  AlertTriangle,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Folder,
+  Loader2,
+  Trash2,
+} from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
@@ -7,15 +16,129 @@ import { Progress } from '@/components/ui/progress';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/app/store';
 import FolderPicker from '@/components/FolderPicker/FolderPicker';
+import { DeleteFolderDialog } from '@/components/Dialog/DeleteFolderDialog';
+import {
+  getDeleteSubfoldersPreference,
+  setDeleteSubfoldersPreference,
+  getSkipFolderDeleteConfirmationPreference,
+  setSkipFolderDeleteConfirmationPreference,
+} from '@/hooks/useDeleteSubfoldersPreference';
+
+import { Badge } from '@/components/ui/badge';
 
 import { useFolderOperations } from '@/hooks/useFolderOperations';
-import { FolderDetails } from '@/types/Folder';
+import { useLibraryProcessingStatus } from '@/hooks/useLibraryProcessingStatus';
+import {
+  FolderDetails,
+  countSubfolders,
+  isIndexingPending,
+} from '@/types/Folder';
 import SettingsCard from './SettingsCard';
 
-/**
- * Component for managing folder operations in settings
- */
+type TaggingStatus = RootState['folders']['taggingStatus'];
+
+// A single labeled progress bar with a percentage.
+
+const ProgressRow: React.FC<{ label: string; percentage: number }> = ({
+  label,
+  percentage,
+}) => {
+  const roundedPercentage = Math.round(percentage);
+  const isComplete = roundedPercentage >= 100;
+  return (
+    <div>
+      <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs">
+        <span>{label}</span>
+        <span
+          className={
+            isComplete
+              ? 'flex items-center gap-1 text-green-500'
+              : 'text-muted-foreground'
+          }
+        >
+          {isComplete && <Check className="h-3 w-3" />}
+          {roundedPercentage}%
+        </span>
+      </div>
+      <Progress
+        value={percentage}
+        indicatorClassName={isComplete ? 'bg-green-500' : 'bg-blue-500'}
+      />
+    </div>
+  );
+};
+
+//Progress display for a single folder.
+
+const FolderProgress: React.FC<{
+  folder: FolderDetails;
+  taggingStatus: TaggingStatus;
+  semanticAvailable: boolean;
+  isExpanded: boolean;
+  onToggleExpanded: () => void;
+}> = ({
+  folder,
+  taggingStatus,
+  semanticAvailable,
+  isExpanded,
+  onToggleExpanded,
+}) => {
+  const taggingPercentage =
+    taggingStatus[folder.folder_id]?.tagging_percentage ?? 0;
+
+  if (!semanticAvailable) {
+    return (
+      <ProgressRow label="AI Tagging Progress" percentage={taggingPercentage} />
+    );
+  }
+
+  const embeddingPercentage =
+    taggingStatus[folder.folder_id]?.embedding_percentage ?? 0;
+  const combinedPercentage = (taggingPercentage + embeddingPercentage) / 2;
+
+  return (
+    <>
+      <ProgressRow label="Overall Progress" percentage={combinedPercentage} />
+
+      <button
+        type="button"
+        onClick={onToggleExpanded}
+        aria-expanded={isExpanded}
+        className="text-muted-foreground hover:text-foreground mt-2 flex cursor-pointer items-center gap-1 text-xs transition-colors"
+      >
+        {isExpanded ? (
+          <>
+            <ChevronUp className="h-3 w-3" />
+            Hide details
+          </>
+        ) : (
+          <>
+            <ChevronDown className="h-3 w-3" />
+            Show details
+          </>
+        )}
+      </button>
+
+      {isExpanded && (
+        <div className="border-border mt-3 space-y-3 border-t pt-3">
+          <ProgressRow
+            label="AI Tagging Progress"
+            percentage={taggingPercentage}
+          />
+          <ProgressRow
+            label="Semantic Indexing"
+            percentage={embeddingPercentage}
+          />
+        </div>
+      )}
+    </>
+  );
+};
+
+//  Component for managing folder operations in settings
+
 const FolderManagementCard: React.FC = () => {
+  const queryClient = useQueryClient();
   const {
     folders,
     toggleAITagging,
@@ -29,10 +152,88 @@ const FolderManagementCard: React.FC = () => {
     (state: RootState) => state.folders.taggingStatus,
   );
 
+  const { semanticAvailable } = useLibraryProcessingStatus();
+
   const [visibleFoldersCount, setVisibleFoldersCount] = useState(6);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
+    new Set(),
+  );
+  const [folderToDelete, setFolderToDelete] = useState<FolderDetails | null>(
+    null,
+  );
+
+  // --- NEW: Force data refresh when window regains focus or visibility ---
+  useEffect(() => {
+    const handleFocus = () => {
+      // Invalidating targeted queries forces useLibraryProcessingStatus() and folder hooks
+      // to fetch fresh data instantly without invalidating the entire app cache
+      queryClient.invalidateQueries({ queryKey: ['models', 'status'] });
+      queryClient.invalidateQueries({ queryKey: ['folders'] });
+      queryClient.invalidateQueries({
+        queryKey: ['folders', 'tagging-status'],
+      });
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        handleFocus();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [queryClient]);
 
   const handleViewMore = () => {
     setVisibleFoldersCount((prevCount) => prevCount + 5);
+  };
+
+  // Ask only when the list shows subfolders and the user hasn't opted out of
+  // the dialog. Otherwise the saved "Delete Subfolders" setting decides, also
+  // for a folder the cached list shows as a leaf: a subfolder may have been
+  // added since the list loaded, and it must not be cascaded away against the
+  // setting.
+  const handleDeleteClick = (folder: FolderDetails) => {
+    const hasSubfolders = countSubfolders(folders, folder.folder_id) > 0;
+    if (hasSubfolders && !getSkipFolderDeleteConfirmationPreference()) {
+      setFolderToDelete(folder);
+    } else {
+      deleteFolder(folder.folder_id, !getDeleteSubfoldersPreference());
+    }
+  };
+
+  const handleConfirmDelete = (
+    folder: FolderDetails,
+    deleteSubfolders: boolean,
+    dontShowAgain: boolean,
+  ) => {
+    // What was chosen in the dialog becomes the default for next time.
+    const defaultSaved = setDeleteSubfoldersPreference(deleteSubfolders);
+    // "Don't show again" lets later deletions run under the saved default, so
+    // grant it only if that default is the one chosen here. If the write failed
+    // the old default would silently apply to folders with subfolders.
+    if (dontShowAgain && defaultSaved) {
+      setSkipFolderDeleteConfirmationPreference(true);
+    }
+    // Fire-and-forget on purpose, like the photo-delete dialog: the hook owns
+    // the loading and error UI (useMutationFeedback), so the dialog doesn't
+    // need the promise and closes right away. This deletion uses the choice
+    // made in the dialog, whether or not it could be saved as the default.
+    deleteFolder(folder.folder_id, !deleteSubfolders);
+  };
+
+  const toggleFolderExpanded = (folderId: string) => {
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderId)) {
+        next.delete(folderId);
+      } else {
+        next.add(folderId);
+      }
+      return next;
+    });
   };
 
   return (
@@ -53,7 +254,7 @@ const FolderManagementCard: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-3">
-                      <Folder className="h-4 w-4 flex-shrink-0 text-gray-500 dark:text-gray-400" />
+                      <Folder className="h-4 w-4 shrink-0 text-gray-500 dark:text-gray-400" />
                       <span className="text-foreground truncate">
                         {folder.folder_path}
                       </span>
@@ -76,7 +277,8 @@ const FolderManagementCard: React.FC = () => {
                     </div>
 
                     <Button
-                      onClick={() => deleteFolder(folder.folder_id)}
+                      onClick={() => handleDeleteClick(folder)}
+                      aria-label={`Delete folder ${folder.folder_path}`}
                       variant="outline"
                       size="sm"
                       className="h-8 w-8 cursor-pointer text-gray-500 hover:border-red-300 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
@@ -89,46 +291,36 @@ const FolderManagementCard: React.FC = () => {
 
                 {folder.AI_Tagging && (
                   <div className="mt-3">
-                    {!folder.image_count ? (
+                    {isIndexingPending(folder.indexing_status) ? (
+                      <div className="flex items-center gap-4 [--radius:1.2rem]">
+                        <Badge className="bg-zinc-900 text-white hover:bg-black/90">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Indexing Folder...
+                        </Badge>
+                      </div>
+                    ) : folder.indexing_status === 'interrupted' ? (
+                      // A previous session died mid-walk, so nothing is
+                      // running and the folder is only partly indexed.
+                      <div className="flex items-center gap-4 [--radius:1.2rem]">
+                        <Badge variant="outline" className="text-amber-600">
+                          <AlertTriangle className="h-4 w-4" />
+                          Indexing was interrupted - sync to finish
+                        </Badge>
+                      </div>
+                    ) : !folder.image_count && !folder.video_count ? (
                       <div className="text-muted-foreground text-sm italic">
                         Folder is empty
                       </div>
                     ) : (
-                      <>
-                        <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs">
-                          <span>AI Tagging Progress</span>
-                          <span
-                            className={
-                              (taggingStatus[folder.folder_id]
-                                ?.tagging_percentage ?? 0) >= 100
-                                ? 'flex items-center gap-1 text-green-500'
-                                : 'text-muted-foreground'
-                            }
-                          >
-                            {(taggingStatus[folder.folder_id]
-                              ?.tagging_percentage ?? 0) >= 100 && (
-                              <Check className="h-3 w-3" />
-                            )}
-                            {Math.round(
-                              taggingStatus[folder.folder_id]
-                                ?.tagging_percentage ?? 0,
-                            )}
-                            %
-                          </span>
-                        </div>
-                        <Progress
-                          value={
-                            taggingStatus[folder.folder_id]
-                              ?.tagging_percentage ?? 0
-                          }
-                          indicatorClassName={
-                            (taggingStatus[folder.folder_id]
-                              ?.tagging_percentage ?? 0) >= 100
-                              ? 'bg-green-500'
-                              : 'bg-blue-500'
-                          }
-                        />
-                      </>
+                      <FolderProgress
+                        folder={folder}
+                        taggingStatus={taggingStatus}
+                        semanticAvailable={semanticAvailable}
+                        isExpanded={expandedFolders.has(folder.folder_id)}
+                        onToggleExpanded={() =>
+                          toggleFolderExpanded(folder.folder_id)
+                        }
+                      />
                     )}
                   </div>
                 )}
@@ -160,6 +352,19 @@ const FolderManagementCard: React.FC = () => {
       <div className="border-border mt-6 border-t pt-6">
         <FolderPicker />
       </div>
+
+      {folderToDelete && (
+        <DeleteFolderDialog
+          open
+          onOpenChange={(open) => !open && setFolderToDelete(null)}
+          folderPath={folderToDelete.folder_path}
+          subfolderCount={countSubfolders(folders, folderToDelete.folder_id)}
+          defaultDeleteSubfolders={getDeleteSubfoldersPreference()}
+          onConfirm={(deleteSubfolders, dontShowAgain) =>
+            handleConfirmDelete(folderToDelete, deleteSubfolders, dontShowAgain)
+          }
+        />
+      )}
     </SettingsCard>
   );
 };

@@ -52,7 +52,31 @@ Object.defineProperty(window, 'matchMedia', {
 
 // Mock the module imports
 jest.mock('@tauri-apps/api/core', () => ({
-  invoke: jest.fn().mockResolvedValue(null),
+  invoke: jest.fn().mockImplementation((cmd: string) => {
+    switch (cmd) {
+      case 'is_autostart_enabled':
+        return Promise.resolve(false);
+      case 'enable_autostart':
+      case 'disable_autostart':
+        return Promise.resolve(undefined);
+      default:
+        return Promise.resolve(null);
+    }
+  }),
+}));
+
+jest.mock('@tauri-apps/api/event', () => ({
+  listen: jest.fn().mockResolvedValue(() => {}),
+  emit: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('@tauri-apps/api/window', () => ({
+  getCurrentWindow: jest.fn(() => ({
+    onFocusChanged: jest.fn().mockResolvedValue(() => {}),
+    onCloseRequested: jest.fn().mockResolvedValue(() => {}),
+    close: jest.fn().mockResolvedValue(undefined),
+    destroy: jest.fn().mockResolvedValue(undefined),
+  })),
 }));
 
 jest.mock('@tauri-apps/api/app', () => ({
@@ -78,6 +102,12 @@ jest.mock('@tauri-apps/plugin-fs', () => ({
 
 jest.mock('@tauri-apps/plugin-shell', () => ({
   open: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('@tauri-apps/plugin-notification', () => ({
+  isPermissionGranted: jest.fn().mockResolvedValue(true),
+  requestPermission: jest.fn().mockResolvedValue('granted'),
+  sendNotification: jest.fn(),
 }));
 
 jest.mock('@tauri-apps/plugin-store', () => ({
@@ -106,6 +136,7 @@ jest.mock('axios', () => {
     put: jest.fn().mockResolvedValue({ data: {} }),
     patch: jest.fn().mockResolvedValue({ data: {} }),
     delete: jest.fn().mockResolvedValue({ data: {} }),
+    isAxiosError: jest.fn((error) => !!error?.isAxiosError),
     interceptors: {
       request: { use: jest.fn(), eject: jest.fn() },
       response: { use: jest.fn(), eject: jest.fn() },

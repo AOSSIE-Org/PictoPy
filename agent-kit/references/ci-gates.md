@@ -1,0 +1,105 @@
+# CI gates
+
+Every check that runs on a pull request, and how to reproduce it locally. Source of truth:
+`.github/workflows/lint.yml` (linting) and `.github/workflows/pr-check-tests.yml` (tests).
+**If either workflow changes, change this file and `agent-kit/skills/pre-pr-check/SKILL.md`
+with it.**
+
+Both workflows trigger on `pull_request` against `dev` and `main` (the latter only sees the
+release PR that merges `dev` into `main`).
+
+## Job: Linting (`lint.yml`)
+
+| Check | Local command |
+| --- | --- |
+| Markdown | `npx markdownlint-cli2@0.22.1 --config .github/.markdownlint-cli2.jsonc` |
+| Frontend lint | `(cd frontend && npm run lint:check)` |
+| Frontend format | `(cd frontend && npm run format:check)` |
+| Python lint + format | `pre-commit run --config .pre-commit-config.yaml --all-files` |
+| Python type check | See the changed-file command below |
+| Agent hook tests | `node scripts/agent-format-hook.test.mjs` |
+| Rust format | `(cd frontend/src-tauri && cargo fmt -- --check)` |
+
+Every command above runs from the repository root, and each `cd` is wrapped in a subshell so
+it does not leak into the next one.
+
+The markdownlint version is pinned to match `markdownlint-cli2-action@v23`, which CI uses.
+Bare `npx markdownlint-cli2` resolves to the latest release instead, so it can disagree with
+CI over rules that changed between versions.
+
+CI installs the linters from `backend/requirements-lint.txt`, which pins `pre-commit`,
+`ruff`, `black`, and `mypy` — install from that file locally so your versions match the
+runner's.
+It runs pre-commit from inside `backend/` with `--config ../.pre-commit-config.yaml`;
+running it from the repository root with `--config .pre-commit-config.yaml` is equivalent
+and covers `sync-microservice/` too.
+
+MyPy compares the pull request's merge base and head commits and checks only added, copied,
+modified, or renamed `.py` files in `backend/` and `sync-microservice/`. It skips cleanly
+when a pull request changes no Python files. The pre-commit configuration also runs MyPy
+for staged Python files in either service. CI skips those local hooks during its all-files
+lint run, then uses the dynamic PR diff step above so legacy files outside the PR do not
+block it.
+
+Run the CI-equivalent MyPy check from the repository root, replacing `origin/dev` with the
+pull request's base commit when needed:
+
+```bash
+BASE_SHA=origin/dev
+HEAD_SHA=HEAD
+if ! git rev-parse --verify --quiet "${BASE_SHA}^{commit}" > /dev/null || \
+  ! git rev-parse --verify --quiet "${HEAD_SHA}^{commit}" > /dev/null; then
+  echo "Unable to resolve pull request commits for MyPy."
+  exit 1
+fi
+mapfile -t backend_files < <(git diff --name-only --diff-filter=ACMR "$BASE_SHA...$HEAD_SHA" -- ':(glob)backend/**/*.py')
+mapfile -t sync_files < <(git diff --name-only --diff-filter=ACMR "$BASE_SHA...$HEAD_SHA" -- ':(glob)sync-microservice/**/*.py')
+(( ${#backend_files[@]} > 0 )) && mypy --config-file backend/pyproject.toml "${backend_files[@]}"
+(( ${#sync_files[@]} > 0 )) && mypy --config-file sync-microservice/pyproject.toml "${sync_files[@]}"
+```
+
+The agent hook tests cover the formatting hook's guard, its path exclusions, and the
+entrypoint's exit codes. They need no dependencies, so the step runs before `npm ci`.
+
+## Job: Frontend Tests (`pr-check-tests.yml`)
+
+```bash
+cd frontend && npm install && npm test
+```
+
+Jest with `jest.config.ts`. Node 18 on the runner.
+
+## Job: Backend Tests (`pr-check-tests.yml`)
+
+Three steps, and the two build checks fail more often than the tests do:
+
+Each step runs in a subshell so the `cd` does not leak into the next one. Run them from the
+repository root.
+
+```bash
+(cd backend && pip install -r requirements.txt && pyinstaller main.py --name PictoPy_Server --onedir --distpath dist)
+(cd sync-microservice && pip install -r requirements.txt && pyinstaller main.py --name PictoPy_Sync_Microservice --onedir --distpath dist)
+(cd backend && pytest)
+```
+
+The PyInstaller steps catch imports that work in development but break when frozen — a new
+dependency that is imported dynamically will pass `pytest` and fail here. Python 3.11 on
+the runner.
+
+## Not in these workflows
+
+- `cargo test` is not run by `pr-check-tests.yml`, but `CONTRIBUTING.md` asks contributors
+  to run it and `pr-check-build.yml` builds the Rust side. Run it for any `src-tauri/`
+  change.
+- CodeRabbit reviews every PR (`.coderabbit.yaml`), configured against `dev` as its base
+  branch, matching where day-to-day PR checks target.
+- `linked-issue.yml` copies labels from the issue referenced in the PR body onto the PR. A
+  PR body without a `#<number>` reference gets no labels.
+
+## Known local-only noise
+
+`.github/.markdownlint-cli2.jsonc` excludes `node_modules`, `target`, `venv`, and `.venv`,
+but not the virtualenv names this project's setup guides actually use — `.env`,
+`.docs-env`, `.sync-env`. Running markdownlint locally therefore reports errors from
+`site-packages` LICENSE files. CI is unaffected because a fresh checkout has no
+virtualenvs. Ignore those paths; do not "fix" vendored files.

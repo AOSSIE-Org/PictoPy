@@ -1,0 +1,406 @@
+{
+  "notes": "Stratified eval set for bucket calibration. query is a Wikimedia Commons search; label is the expected ground-truth vocabulary entry.",
+  "images_per_label": 2,
+  "entries": [
+    {
+      "label": "beach",
+      "category": "scene",
+      "query": "sandy beach"
+    },
+    {
+      "label": "forest",
+      "category": "scene",
+      "query": "forest trees"
+    },
+    {
+      "label": "mountain",
+      "category": "scene",
+      "query": "mountain peak"
+    },
+    {
+      "label": "waterfall",
+      "category": "scene",
+      "query": "waterfall"
+    },
+    {
+      "label": "desert",
+      "category": "scene",
+      "query": "desert sand dunes"
+    },
+    {
+      "label": "city",
+      "category": "scene",
+      "query": "city skyline"
+    },
+    {
+      "label": "street",
+      "category": "scene",
+      "query": "city street pedestrians"
+    },
+    {
+      "label": "bridge",
+      "category": "scene",
+      "query": "suspension bridge"
+    },
+    {
+      "label": "castle",
+      "category": "scene",
+      "query": "medieval castle"
+    },
+    {
+      "label": "church",
+      "category": "scene",
+      "query": "church building"
+    },
+    {
+      "label": "temple",
+      "category": "scene",
+      "query": "hindu temple"
+    },
+    {
+      "label": "mosque",
+      "category": "scene",
+      "query": "mosque minaret"
+    },
+    {
+      "label": "library",
+      "category": "scene",
+      "query": "library bookshelves"
+    },
+    {
+      "label": "kitchen",
+      "category": "scene",
+      "query": "home kitchen interior"
+    },
+    {
+      "label": "bedroom",
+      "category": "scene",
+      "query": "bedroom interior"
+    },
+    {
+      "label": "living room",
+      "category": "scene",
+      "query": "living room interior"
+    },
+    {
+      "label": "swimming pool",
+      "category": "scene",
+      "query": "swimming pool"
+    },
+    {
+      "label": "stadium",
+      "category": "scene",
+      "query": "football stadium crowd"
+    },
+    {
+      "label": "market",
+      "category": "scene",
+      "query": "street market vegetables"
+    },
+    {
+      "label": "harbor",
+      "category": "scene",
+      "query": "harbor boats"
+    },
+    {
+      "label": "lake",
+      "category": "scene",
+      "query": "mountain lake"
+    },
+    {
+      "label": "playground",
+      "category": "scene",
+      "query": "children playground"
+    },
+    {
+      "label": "snowy mountain",
+      "category": "scene",
+      "query": "snow covered mountain"
+    },
+    {
+      "label": "vineyard",
+      "category": "scene",
+      "query": "vineyard rows"
+    },
+    {
+      "label": "guitar",
+      "category": "object",
+      "query": "playing acoustic guitar"
+    },
+    {
+      "label": "piano",
+      "category": "object",
+      "query": "grand piano"
+    },
+    {
+      "label": "camera",
+      "category": "object",
+      "query": "dslr camera"
+    },
+    {
+      "label": "balloon",
+      "category": "object",
+      "query": "colorful balloons"
+    },
+    {
+      "label": "candle",
+      "category": "object",
+      "query": "burning candle"
+    },
+    {
+      "label": "butterfly",
+      "category": "object",
+      "query": "butterfly on flower"
+    },
+    {
+      "label": "tiger",
+      "category": "object",
+      "query": "tiger"
+    },
+    {
+      "label": "lion",
+      "category": "object",
+      "query": "male lion"
+    },
+    {
+      "label": "panda",
+      "category": "object",
+      "query": "giant panda"
+    },
+    {
+      "label": "penguin",
+      "category": "object",
+      "query": "penguin"
+    },
+    {
+      "label": "parrot",
+      "category": "object",
+      "query": "parrot bird"
+    },
+    {
+      "label": "dolphin",
+      "category": "object",
+      "query": "dolphin jumping"
+    },
+    {
+      "label": "strawberry",
+      "category": "object",
+      "query": "strawberries"
+    },
+    {
+      "label": "watermelon",
+      "category": "object",
+      "query": "watermelon slices"
+    },
+    {
+      "label": "ice cream",
+      "category": "object",
+      "query": "ice cream cone"
+    },
+    {
+      "label": "hamburger",
+      "category": "object",
+      "query": "hamburger"
+    },
+    {
+      "label": "sushi",
+      "category": "object",
+      "query": "sushi rolls"
+    },
+    {
+      "label": "coffee",
+      "category": "object",
+      "query": "cup of coffee"
+    },
+    {
+      "label": "wine",
+      "category": "object",
+      "query": "glass of red wine"
+    },
+    {
+      "label": "christmas tree",
+      "category": "object",
+      "query": "decorated christmas tree"
+    },
+    {
+      "label": "sunflower",
+      "category": "object",
+      "query": "sunflower field"
+    },
+    {
+      "label": "rose",
+      "category": "object",
+      "query": "red rose flower"
+    },
+    {
+      "label": "tent",
+      "category": "object",
+      "query": "camping tent"
+    },
+    {
+      "label": "watch",
+      "category": "object",
+      "query": "wristwatch"
+    },
+    {
+      "label": "wedding",
+      "category": "event",
+      "query": "wedding ceremony bride groom"
+    },
+    {
+      "label": "birthday",
+      "category": "event",
+      "query": "birthday cake candles party"
+    },
+    {
+      "label": "graduation",
+      "category": "event",
+      "query": "graduation ceremony cap gown"
+    },
+    {
+      "label": "concert",
+      "category": "event",
+      "query": "rock concert crowd stage"
+    },
+    {
+      "label": "parade",
+      "category": "event",
+      "query": "street parade float"
+    },
+    {
+      "label": "fireworks",
+      "category": "event",
+      "query": "fireworks display night"
+    },
+    {
+      "label": "picnic",
+      "category": "event",
+      "query": "picnic blanket park"
+    },
+    {
+      "label": "hiking",
+      "category": "event",
+      "query": "hikers backpack trail"
+    },
+    {
+      "label": "surfing",
+      "category": "event",
+      "query": "surfer riding wave"
+    },
+    {
+      "label": "skiing",
+      "category": "event",
+      "query": "skier slope"
+    },
+    {
+      "label": "marathon",
+      "category": "event",
+      "query": "marathon runners race"
+    },
+    {
+      "label": "yoga",
+      "category": "event",
+      "query": "yoga pose mat"
+    },
+    {
+      "label": "cricket",
+      "category": "event",
+      "query": "cricket match batsman"
+    },
+    {
+      "label": "diwali",
+      "category": "event",
+      "query": "diwali diya oil lamps"
+    },
+    {
+      "label": "holi",
+      "category": "event",
+      "query": "holi festival colored powder"
+    },
+    {
+      "label": "christmas",
+      "category": "event",
+      "query": "christmas presents tree"
+    },
+    {
+      "label": "halloween",
+      "category": "event",
+      "query": "halloween jack o lantern"
+    },
+    {
+      "label": "easter",
+      "category": "event",
+      "query": "easter eggs decorated"
+    },
+    {
+      "label": "safari",
+      "category": "event",
+      "query": "safari jeep wildlife"
+    },
+    {
+      "label": "barbecue",
+      "category": "event",
+      "query": "barbecue grill food"
+    },
+    {
+      "label": "sunset",
+      "category": "attribute",
+      "query": "sunset over sea"
+    },
+    {
+      "label": "sunrise",
+      "category": "attribute",
+      "query": "sunrise landscape"
+    },
+    {
+      "label": "night",
+      "category": "attribute",
+      "query": "city at night"
+    },
+    {
+      "label": "rainbow",
+      "category": "attribute",
+      "query": "rainbow landscape"
+    },
+    {
+      "label": "snow",
+      "category": "attribute",
+      "query": "snow covered trees"
+    },
+    {
+      "label": "rain",
+      "category": "attribute",
+      "query": "rain umbrella street"
+    },
+    {
+      "label": "fog",
+      "category": "attribute",
+      "query": "foggy forest morning"
+    },
+    {
+      "label": "clouds",
+      "category": "attribute",
+      "query": "cumulus clouds sky"
+    },
+    {
+      "label": "autumn",
+      "category": "attribute",
+      "query": "autumn leaves park"
+    },
+    {
+      "label": "silhouette",
+      "category": "attribute",
+      "query": "person silhouette sunset"
+    },
+    {
+      "label": "reflection",
+      "category": "attribute",
+      "query": "mountain reflection lake"
+    },
+    {
+      "label": "aerial view",
+      "category": "attribute",
+      "query": "aerial view drone city"
+    }
+  ]
+}

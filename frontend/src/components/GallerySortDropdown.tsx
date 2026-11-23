@@ -5,17 +5,40 @@ import {
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { ArrowDownUp, ChevronDown, Check, Star, Calendar } from 'lucide-react';
+import {
+  ArrowDownUp,
+  ChevronDown,
+  Check,
+  Star,
+  Calendar,
+  type LucideIcon,
+} from 'lucide-react';
 
-interface GallerySortDropdownProps {
-  value: 'best_match' | 'date';
-  onValueChange: (value: 'best_match' | 'date') => void;
+export interface SortOption<T extends string> {
+  value: T;
+  label: string;
+  icon: LucideIcon;
 }
 
-export function GallerySortDropdown({
+export type GallerySortValue = 'best_match' | 'date';
+
+export const GALLERY_SORT_OPTIONS: SortOption<GallerySortValue>[] = [
+  { value: 'best_match', label: 'Best match', icon: Star },
+  { value: 'date', label: 'Date', icon: Calendar },
+];
+
+interface GallerySortDropdownProps<T extends string> {
+  value: T;
+  onValueChange: (value: T) => void;
+  /** Defaults to the gallery's best-match/date pair. */
+  options?: SortOption<T>[];
+}
+
+export function GallerySortDropdown<T extends string = GallerySortValue>({
   value,
   onValueChange,
-}: GallerySortDropdownProps) {
+  options = GALLERY_SORT_OPTIONS as SortOption<T>[],
+}: GallerySortDropdownProps<T>) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -26,20 +49,21 @@ export function GallerySortDropdown({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onSelect={() => onValueChange('best_match')}>
-          <Star className="mr-2 h-4 w-4" />
-          Best match
-          <Check
-            className={`ml-auto h-4 w-4 ${value === 'best_match' ? 'opacity-100' : 'opacity-0'}`}
-          />
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onValueChange('date')}>
-          <Calendar className="mr-2 h-4 w-4" />
-          Date
-          <Check
-            className={`ml-auto h-4 w-4 ${value === 'date' ? 'opacity-100' : 'opacity-0'}`}
-          />
-        </DropdownMenuItem>
+        {options.map((option) => {
+          const Icon = option.icon;
+          return (
+            <DropdownMenuItem
+              key={option.value}
+              onSelect={() => onValueChange(option.value)}
+            >
+              <Icon className="mr-2 h-4 w-4" />
+              {option.label}
+              <Check
+                className={`ml-auto h-4 w-4 ${value === option.value ? 'opacity-100' : 'opacity-0'}`}
+              />
+            </DropdownMenuItem>
+          );
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   );

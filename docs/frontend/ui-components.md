@@ -51,7 +51,10 @@ These implement specific features and often use the primitives above:
 ### Media and gallery
 
 - **Media/** – `ChronologicalGallery`, `ImageCard`, `ImageViewer`, `MediaView`, `MediaThumbnails`, `MediaInfoPanel`, `MediaViewControls`, `ZoomControls`, `NavigationButtons`, `ImageTags`
-- **FaceCollections** – Face clusters and naming UI
+- **FaceCollections** – Face clusters and naming UI. Each card counts a person's photos and, when finding
+  people in videos is on, their videos ("12 photos · 3 videos"), via `getPhotoCountText` in `utils/personUtils.ts`
+- **PersonImages** (`pages/PersonImages/`) – One person's page: their photos, then their videos, which open in the
+  shared `VideoPlayerOverlay`
 
 ### Navigation and layout
 
@@ -62,12 +65,51 @@ These implement specific features and often use the primitives above:
 
 - **OnboardingSteps/** – Steps, folder setup, avatar choice, theme selection, server check, etc.
 - **account-settings** – User account and preference UI
+- **UserPreferencesCard** (`pages/SettingsPage/components/`) – The Video Tagging group holds the keyframe interval,
+  the **Find People in Videos** switch, and, while that switch is on, a **Scan videos** button for videos tagged
+  before it. The scan runs in the background; the card polls `GET /videos/face-scan-status` for its progress,
+  and offers a retry if the scan stopped with an error
+- **MetadataExportCard** (`pages/SettingsPage/components/`) – The **Image Metadata** card: the **Save Metadata
+  Automatically** switch and an **Export metadata** button for the whole library. It polls
+  `GET /metadata-export/status` every 2 s while an export it started is running, and every 10 s while automatic
+  export is on and photos are still pending. See [Metadata Export](../overview/metadata-export.md)
 
 ### Dialogs and feedback
 
-- **Dialog/** – `InfoDialog`, `FaceSearchDialog`
+- **Dialog/** – `InfoDialog`, `FaceSearchDialog`, `MultiPersonSearchDialog`. Every face search, including the
+  webcam, dispatches the matching videos with `setVideos` as well as the photos; the Home and AI Tagging pages show them only while a
+  search is active, so the Videos page's own list never leaks into the gallery
 - **Loader/** – `GlobalLoader`
 - **EmptyStates/** – `EmptyGalleryState`, `EmptyAITaggingState`
+
+### Search
+
+- **SearchResults** (`pages/SearchResults/`) – Single search results page for
+  both tag search and semantic search (no separate mode toggle in the UI).
+  Tries an exact tag match first; falls back to semantic search only when
+  that returns zero results and the feature is installed. Renders results
+  through the same `ImageCard`/`MediaView` components as the rest of the
+  gallery — a `ScoredImage` (an `Image` plus a `score`) carries the match
+  score end-to-end, but it is never rendered; sorting happens on the
+  backend before the response is returned.
+
+### Model Manager
+
+- **ModelManager** (`pages/ModelManager/`) – Install/uninstall UI for all
+  optional AI model tiers, including the ~1.5 GB "Semantic Search" (SigLIP2)
+  bundle alongside the existing YOLO/FaceNet tiers.
+  - **AvailableTab** – Shows tiers/bundles not yet fully installed, with
+    per-model download progress. The semantic bundle card only appears when
+    at least one of its three files is missing.
+  - **InstalledTab** – Shows fully installed tiers/bundles with
+    set-active/uninstall actions. Uninstalling the semantic bundle removes
+    all three files (vision, text, tokenizer) via `Promise.allSettled`, so a
+    partial failure lands back in "Available" with a "Needs Repair" badge
+    rather than silently losing track of the partial state.
+  - Both tabs derive the semantic bundle's model keys and display text from
+    shared constants in `types/models.ts` (`SEMANTIC_BUNDLE_KEYS`,
+    `SEMANTIC_BUNDLE_TITLE`/`LABEL`/`DESCRIPTION`) rather than duplicating
+    them per-component.
 
 ### Other
 

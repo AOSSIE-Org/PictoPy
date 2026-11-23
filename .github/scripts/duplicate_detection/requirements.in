@@ -1,0 +1,5 @@
+# Dependencies for the duplicate detector and its evaluation harness.
+# Regenerate requirements.txt after editing:
+#   uv pip compile .github/scripts/requirements.in --universal --python-version 3.11 --generate-hashes -o .github/scripts/requirements.txt
+fastembed==0.9.1
+huggingface-hub

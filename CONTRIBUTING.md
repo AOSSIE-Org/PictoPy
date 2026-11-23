@@ -4,6 +4,8 @@ Hi there! Thank you for considering contributing to **PictoPy** – we’re exci
 
 NOTE: Please do not open a PR for the issue which is not yet reviewed and labelled by the maintainer. Wait for the maintainer to give a green light.
 
+NOTE: Low-effort, unreviewed, or AI-generated issues and PRs that don't engage/add much value to the actual codebase/product will be closed without discussion.
+
 ## Setting Up the Project
 
 ## Setup
@@ -54,6 +56,21 @@ To set up and run the docs website on your local machine:
    ```bash
    mkdocs build -f ../mkdocs.yml
    ```
+
+## Working with AI coding agents
+
+If you use Claude Code, Cursor, Copilot, Codex, or Gemini CLI, this repository ships
+committed configuration so your agent already knows our conventions — the formatting rules,
+the layering, and the checks CI runs. There is nothing to install.
+
+Start with `AGENTS.md` at the repository root. Ready-made playbooks for common tasks
+(adding an endpoint, adding a frontend feature, running every pre-PR check) live in
+`agent-kit/`.
+
+See [docs/ai-contributing.md](docs/ai-contributing.md) for the full explanation, including
+how to add rules and playbooks of your own.
+
+You remain the author of everything you submit — read your diff before opening a PR.
 
 ## Testing
 
@@ -136,6 +153,22 @@ cargo check
 ```
 
 > **Note:** The `--` separator between `version:bump` and the version number is required by npm to forward the argument to the underlying script.
+
+### Automated release prep
+
+When a release is approaching, trigger the release prep workflow from the GitHub Actions tab:
+
+1. Go to **Actions → Release Prep → Run workflow**
+2. Enter the target version in `X.Y.Z` format (no `v` prefix)
+3. The workflow will open a PR that includes:
+   - Version bumped across all manifest files
+   - A draft `CHANGELOG.md` entry scaffolded from merged PRs since the last release, grouped by label
+4. Review the PR, clean up the CHANGELOG entry prose, and merge
+5. Create the GitHub Release with tag `v<version>` to trigger the build pipeline
+
+### Release validation (CI gate)
+
+`build-and-release.yml` includes a `validate-changelog` job that runs on every release trigger. It checks that `CHANGELOG.md` contains a `## [X.Y.Z]` entry matching the release tag before the publish step is allowed to proceed. If the entry is missing, the release is blocked. Always merge the release prep PR before creating the GitHub Release.
 
 ## Additional Resources
 

@@ -1,3 +1,7 @@
+import sqlite3
+import uuid
+from typing import Iterator
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -5,10 +9,36 @@ from unittest.mock import patch, MagicMock
 import tempfile
 import os
 import shutil
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import Future, ProcessPoolExecutor
 
 
 from app.routes.folders import router as folders_router
+from app.routes.folders import _curate_memories
+
+from app.database.folders import (
+    db_create_folders_table,
+    db_disable_ai_tagging_batch,
+    db_enable_ai_tagging_batch,
+    db_update_ai_tagging_batch,
+    db_get_folder_ids_by_path_prefix,
+    db_get_folder_ids_by_paths,
+    db_get_all_folder_details,
+    db_get_direct_child_folders,
+    db_get_folder_path_from_id,
+    db_insert_folders_batch,
+    db_insert_folder,
+    db_get_folder_id_from_path,
+    db_delete_folder,
+    db_update_parent_ids_for_subtree,
+    db_folder_exists,
+    db_delete_folders_batch,
+    db_get_all_folder_ids,
+    db_get_all_folders,
+    db_find_parent_folder_id,
+)
+from app.database.images import db_create_images_table
+from app.database.videos import db_create_videos_table
+from app.database.yolo_mapping import db_create_YOLO_classes_table
 
 # ##############################
 # Pytest Fixtures
@@ -16,20 +46,29 @@ from app.routes.folders import router as folders_router
 
 
 @pytest.fixture(scope="function")
-def test_db():
-    """Create a temporary test database for each test."""
+def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
+    """Point the folder DB modules at a fresh tempfile database."""
     db_fd, db_path = tempfile.mkstemp()
-
-    import app.config.settings
-
-    original_db_path = app.config.settings.DATABASE_PATH
-    app.config.settings.DATABASE_PATH = db_path
-
-    yield db_path
-
-    app.config.settings.DATABASE_PATH = original_db_path
     os.close(db_fd)
-    os.unlink(db_path)
+    try:
+        monkeypatch.setattr("app.config.settings.DATABASE_PATH", db_path)
+        monkeypatch.setattr("app.database.folders.DATABASE_PATH", db_path)
+        monkeypatch.setattr("app.database.images.DATABASE_PATH", db_path)
+        monkeypatch.setattr("app.database.videos.DATABASE_PATH", db_path)
+        monkeypatch.setattr("app.database.yolo_mapping.DATABASE_PATH", db_path)
+
+        # Build the real schema rather than a hand-written copy: a divergent
+        # CREATE silently reorders columns and drops the ON DELETE CASCADE.
+        # db_delete_folder turns foreign keys on, so the whole FK chain
+        # (folders <- images <- image_classes -> mappings) has to resolve.
+        db_create_YOLO_classes_table()
+        db_create_folders_table()
+        db_create_images_table()  # db_get_all_folder_details LEFT JOINs it
+        db_create_videos_table()  # db_get_all_folder_details LEFT JOINs it too
+
+        yield db_path
+    finally:
+        os.unlink(db_path)
 
 
 @pytest.fixture
@@ -67,6 +106,7 @@ def app_with_state(test_db):
 
     # Mock the executor state
     app.state.executor = MagicMock(spec=ProcessPoolExecutor)
+    app.state.indexing_executor = MagicMock(spec=ProcessPoolExecutor)
 
     return app
 
@@ -98,7 +138,9 @@ def sample_folder_details():
             1693526400,  # timestamp
             True,  # AI_Tagging
             False,  # taggingCompleted
+            "completed",  # indexing_status
             0,  # image_count
+            7,  # video_count -- a video-only folder is not "empty"
         ),
         (
             "folder-id-2",
@@ -107,7 +149,9 @@ def sample_folder_details():
             1693526500,
             False,
             True,
+            "completed",
             25,
+            0,
         ),
     ]
 
@@ -319,9 +363,51 @@ class TestFoldersAPI:
 
         assert response.status_code == 200
 
-        # Verify that the executor.submit was called for background processing
+        # Indexing pool used, AI/misc pool untouched
         # Access the app state through the client
         app_state = client.app.state
+        app_state.indexing_executor.submit.assert_called_once()
+        app_state.executor.submit.assert_not_called()
+
+    @patch("app.routes.folders.folder_util_add_folder_tree")
+    @patch("app.routes.folders.db_update_parent_ids_for_subtree")
+    @patch("app.routes.folders.db_find_parent_folder_id")
+    @patch("app.routes.folders.db_folder_exists")
+    def test_add_folder_queues_tagging_sweep_once_indexing_completes(
+        self,
+        mock_folder_exists,
+        mock_find_parent,
+        mock_update_parent_ids,
+        mock_add_folder_tree,
+        client,
+        temp_folder_structure,
+    ):
+        """A tagging sweep can start and finish before this folder's images
+        are indexed (see _queue_post_index_tagging_sweep). Once indexing's
+        future resolves, a catch-up sweep must be queued on the AI pool so
+        those images don't sit untagged forever."""
+        mock_folder_exists.return_value = False
+        mock_find_parent.return_value = None
+        mock_add_folder_tree.return_value = ("test-folder-id", {})
+        mock_update_parent_ids.return_value = None
+
+        app_state = client.app.state
+        index_future: Future = Future()
+        app_state.indexing_executor.submit.return_value = index_future
+
+        request_data = {
+            "folder_path": temp_folder_structure["photos"],
+            "parent_folder_id": None,
+            "taggingCompleted": False,
+        }
+        response = client.post("/folders/add-folder", json=request_data)
+        assert response.status_code == 200
+
+        # Indexing hasn't finished yet - no sweep queued yet
+        app_state.executor.submit.assert_not_called()
+
+        # Indexing finishes -> catch-up sweep must be queued now
+        index_future.set_result(True)
         app_state.executor.submit.assert_called_once()
 
     # ============================================================================
@@ -531,7 +617,103 @@ class TestFoldersAPI:
         assert data["data"]["deleted_count"] == 3
         assert data["data"]["folder_ids"] == ["folder-1", "folder-2", "folder-3"]
 
-        mock_delete_batch.assert_called_once_with(["folder-1", "folder-2", "folder-3"])
+        mock_delete_batch.assert_called_once_with(
+            ["folder-1", "folder-2", "folder-3"], keep_subfolders=False
+        )
+
+    @patch("app.routes.folders.db_delete_folders_batch")
+    def test_delete_folders_keep_subfolders_flag_forwarded(
+        self, mock_delete_batch, client
+    ):
+        """keep_subfolders from the request body reaches the DB layer."""
+        mock_delete_batch.return_value = 1
+
+        response = client.request(
+            "DELETE",
+            "/folders/delete-folders",
+            content='{"folder_ids": ["folder-1"], "keep_subfolders": true}',
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 200
+        mock_delete_batch.assert_called_once_with(["folder-1"], keep_subfolders=True)
+
+    @patch("app.utils.memory_curator.memory_curator_prune_empty")
+    @patch("app.routes.folders.db_delete_folders_batch")
+    def test_delete_folders_background_processing_called(
+        self, mock_delete_batch: MagicMock, mock_prune: MagicMock, client: TestClient
+    ) -> None:
+        """Pruning and re-curation are both triggered after deleting folders."""
+        mock_delete_batch.return_value = 3
+
+        response = client.request(
+            "DELETE",
+            "/folders/delete-folders",
+            content='{"folder_ids": ["folder-1", "folder-2", "folder-3"]}',
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 200
+
+        # Empty memories are pruned synchronously, before the response returns.
+        mock_prune.assert_called_once_with()
+
+        # The heavier curation pass still runs in the background.
+        app_state = client.app.state
+        app_state.executor.submit.assert_called_once_with(
+            _curate_memories, "folder_delete"
+        )
+
+    @patch("app.utils.memory_curator.memory_curator_prune_empty")
+    @patch("app.routes.folders.db_delete_folders_batch")
+    def test_delete_folders_survives_curation_submission_failure(
+        self, mock_delete_batch: MagicMock, mock_prune: MagicMock, client: TestClient
+    ) -> None:
+        """
+        A broken/shutdown executor must not turn an already-successful
+        delete into a failure response -- the background curation pass is
+        best-effort on top of a delete that already happened.
+        """
+        mock_delete_batch.return_value = 3
+        client.app.state.executor.submit.side_effect = RuntimeError(
+            "cannot schedule new futures after shutdown"
+        )
+
+        response = client.request(
+            "DELETE",
+            "/folders/delete-folders",
+            content='{"folder_ids": ["folder-1", "folder-2", "folder-3"]}',
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["data"]["deleted_count"] == 3
+
+        # The synchronous prune is unaffected by the background submit
+        # failing -- the two are independent try/excepts.
+        mock_prune.assert_called_once_with()
+        client.app.state.executor.submit.assert_called_once()
+
+    @patch("app.utils.memory_curator.memory_curator_prune_empty")
+    @patch("app.routes.folders.db_delete_folders_batch")
+    def test_delete_folders_survives_pruning_failure(
+        self, mock_delete_batch: MagicMock, mock_prune: MagicMock, client: TestClient
+    ) -> None:
+        """Mirror of the submit-failure test -- prune failing doesn't block it either."""
+        mock_delete_batch.return_value = 3
+        mock_prune.side_effect = RuntimeError("prune failed")
+
+        response = client.request(
+            "DELETE",
+            "/folders/delete-folders",
+            content='{"folder_ids": ["folder-1"]}',
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 200
+        client.app.state.executor.submit.assert_called_once_with(
+            _curate_memories, "folder_delete"
+        )
 
     @patch("app.routes.folders.db_delete_folders_batch")
     def test_delete_folders_single_folder(self, mock_delete_batch, client):
@@ -609,6 +791,9 @@ class TestFoldersAPI:
         assert first_folder["parent_folder_id"] is None
         assert first_folder["AI_Tagging"] is True
         assert first_folder["taggingCompleted"] is False
+        # The video-only fixture folder must surface its media counts.
+        assert first_folder["image_count"] == 0
+        assert first_folder["video_count"] == 7
 
         mock_get_all_folders.assert_called_once()
 
@@ -689,9 +874,628 @@ class TestFoldersAPI:
         assert data["data"]["updated_count"] == 0
 
     # ============================================================================
-    # Integration & Workflow Tests
+    # Unit Tests
     # ============================================================================
 
+
+class TestFoldersUnit:
+
+    def test_db_insert_folders_batch(self, test_db):
+
+        db_insert_folders_batch(
+            [
+                ("folder-id-1", "/tmp/photos", None, 1693526400, True, False),
+                ("folder-id-2", "/tmp/docs", None, 1693526500, False, True),
+            ]
+        )
+
+        conn = sqlite3.connect(test_db)
+        rows = conn.execute(
+            "SELECT folder_id FROM folders ORDER BY folder_id"
+        ).fetchall()
+        conn.close()
+
+        assert rows == [("folder-id-1",), ("folder-id-2",)]
+
+    @patch("app.database.folders.sqlite3.connect")
+    def test_db_insert_folders_batch_error(self, mock_connect, test_db):
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+
+        mock_connect.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_cursor.executemany.side_effect = sqlite3.Error(
+            "Database connection failed"
+        )
+
+        with pytest.raises(sqlite3.Error):
+            db_insert_folders_batch(
+                [("folder-id-1", "/tmp/photos", None, 1693526400, True, False)]
+            )
+
+        mock_conn.rollback.assert_called_once()
+        mock_conn.close.assert_called_once()
+
+    def test_db_insert_folder_generates_uuid_when_folder_id_none(
+        self, test_db, tmp_path
+    ):
+        folder = tmp_path / "photos"
+        folder.mkdir()
+        fake_uuid = uuid.UUID("12345678-1234-5678-1234-567812345678")
+        # test_db already patches DATABASE_PATH, so only uuid4 needs stubbing
+        with patch("app.database.folders.uuid.uuid4", return_value=fake_uuid):
+            result = db_insert_folder(str(folder), folder_id=None)
+        assert result == str(fake_uuid)
+
+    def test_db_insert_folder_success(self, test_db, tmp_path):
+
+        folder = tmp_path / "photos"
+        folder.mkdir()
+
+        result = db_insert_folder(str(folder), folder_id="folder-id-1")
+
+        assert result == "folder-id-1"
+        assert db_folder_exists(str(folder)) is True
+
+    def test_db_insert_folder_existing_returns_existing_id(self, test_db, tmp_path):
+
+        folder = tmp_path / "photos"
+        folder.mkdir()
+
+        first_id = db_insert_folder(str(folder), folder_id="folder-id-1")
+        second_id = db_insert_folder(str(folder), folder_id="folder-id-2")
+
+        assert first_id == "folder-id-1"
+        assert second_id == "folder-id-1"
+
+    def test_db_insert_folder_invalid_directory(self, test_db):
+
+        with pytest.raises(ValueError):
+            db_insert_folder("/path/does/not/exist")
+
+    def test_db_get_folder_id_from_path(self, test_db, tmp_path):
+
+        folder = tmp_path / "docs"
+        folder.mkdir()
+
+        db_insert_folder(str(folder), folder_id="folder-id-1")
+
+        result = db_get_folder_id_from_path(str(folder))
+
+        assert result == "folder-id-1"
+
+    def test_db_get_folder_path_from_id(self, test_db, tmp_path):
+
+        folder = tmp_path / "docs"
+        folder.mkdir()
+
+        db_insert_folder(str(folder), folder_id="folder-id-1")
+
+        result = db_get_folder_path_from_id("folder-id-1")
+
+        assert result == os.path.abspath(str(folder))
+
+    def test_db_get_all_folders(self, test_db):
+
+        db_insert_folders_batch(
+            [
+                ("folder-id-1", "/tmp/photos", None, 1693526400, True, False),
+                ("folder-id-2", "/tmp/docs", None, 1693526500, False, True),
+            ]
+        )
+
+        result = db_get_all_folders()
+
+        assert set(result) == {"/tmp/photos", "/tmp/docs"}
+
+    def test_db_get_all_folder_ids(self, test_db):
+
+        db_insert_folders_batch(
+            [
+                ("folder-id-1", "/tmp/photos", None, 1693526400, True, False),
+                ("folder-id-2", "/tmp/docs", None, 1693526500, False, True),
+            ]
+        )
+
+        result = db_get_all_folder_ids()
+
+        assert set(result) == {"folder-id-1", "folder-id-2"}
+
+    @patch("app.database.folders.sqlite3.connect")
+    def test_db_delete_folders_batch_error(self, mock_connect, test_db):
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connect.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_cursor.execute.side_effect = sqlite3.Error("Database connection failed")
+        with pytest.raises(sqlite3.Error):
+            db_delete_folders_batch(["folder-id-1"])
+        mock_conn.rollback.assert_called_once()
+        mock_conn.close.assert_called_once()
+
+    def test_db_delete_folders_batch_empty_list(self, test_db):
+        result = db_delete_folders_batch([])
+        assert result == 0
+
+    def test_db_delete_folders_batch_success(self, test_db):
+
+        db_insert_folders_batch(
+            [
+                ("folder-id-1", "/tmp/photos", None, 1693526400, True, False),
+                ("folder-id-2", "/tmp/docs", None, 1693526500, False, True),
+            ]
+        )
+
+        result = db_delete_folders_batch(["folder-id-1"])
+
+        assert result == 1
+        assert db_get_folder_path_from_id("folder-id-1") is None
+        assert db_get_folder_path_from_id("folder-id-2") == "/tmp/docs"
+
+    @staticmethod
+    def _parent_of(db_path, folder_id):
+        conn = sqlite3.connect(db_path)
+        try:
+            row = conn.execute(
+                "SELECT parent_folder_id FROM folders WHERE folder_id = ?",
+                (folder_id,),
+            ).fetchone()
+            return row[0] if row else "MISSING"
+        finally:
+            conn.close()
+
+    def _insert_tree(self, test_db):
+        # root -> mid -> leaf, plus a sibling under root
+        db_insert_folders_batch(
+            [
+                ("root", "/tmp/root", None, 1, False, False),
+                ("mid", "/tmp/root/mid", None, 1, False, False),
+                ("leaf", "/tmp/root/mid/leaf", None, 1, False, False),
+                ("side", "/tmp/root/side", None, 1, False, False),
+            ]
+        )
+        conn = sqlite3.connect(test_db)
+        conn.executemany(
+            "UPDATE folders SET parent_folder_id = ? WHERE folder_id = ?",
+            [("root", "mid"), ("mid", "leaf"), ("root", "side")],
+        )
+        conn.commit()
+        conn.close()
+
+    def test_db_delete_folders_batch_cascades_by_default(self, test_db):
+        self._insert_tree(test_db)
+
+        # rowcount only counts the directly deleted row, cascaded rows are not included
+        assert db_delete_folders_batch(["root"]) == 1
+        assert self._parent_of(test_db, "mid") == "MISSING"
+        assert self._parent_of(test_db, "leaf") == "MISSING"
+
+    def test_db_delete_folders_batch_keep_subfolders_top_level(self, test_db):
+        self._insert_tree(test_db)
+
+        assert db_delete_folders_batch(["root"], keep_subfolders=True) == 1
+        assert self._parent_of(test_db, "root") == "MISSING"
+        # direct children become top-level, deeper folders stay under them
+        assert self._parent_of(test_db, "mid") is None
+        assert self._parent_of(test_db, "side") is None
+        assert self._parent_of(test_db, "leaf") == "mid"
+
+    def test_db_delete_folders_batch_keep_subfolders_reparents_to_grandparent(
+        self, test_db
+    ):
+        self._insert_tree(test_db)
+
+        assert db_delete_folders_batch(["mid"], keep_subfolders=True) == 1
+        assert self._parent_of(test_db, "leaf") == "root"
+        assert self._parent_of(test_db, "side") == "root"
+
+    def test_db_delete_folders_batch_keep_subfolders_skips_deleted_chain(self, test_db):
+        self._insert_tree(test_db)
+
+        # deleting root and mid together must not take leaf down with them
+        db_delete_folders_batch(["root", "mid"], keep_subfolders=True)
+        assert self._parent_of(test_db, "root") == "MISSING"
+        assert self._parent_of(test_db, "mid") == "MISSING"
+        assert self._parent_of(test_db, "leaf") is None
+        assert self._parent_of(test_db, "side") is None
+
+    def test_db_delete_folders_batch_keep_subfolders_keeps_subfolder_images(
+        self, test_db
+    ):
+        self._insert_tree(test_db)
+        conn = sqlite3.connect(test_db)
+        conn.executemany(
+            "INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged)"
+            " VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                ("img-root", "/tmp/root/a.jpg", "root", "/t/a.jpg", "{}", 0),
+                ("img-mid", "/tmp/root/mid/b.jpg", "mid", "/t/b.jpg", "{}", 0),
+            ],
+        )
+        conn.commit()
+        conn.close()
+
+        db_delete_folders_batch(["root"], keep_subfolders=True)
+
+        conn = sqlite3.connect(test_db)
+        remaining = {r[0] for r in conn.execute("SELECT id FROM images")}
+        conn.close()
+        # the deleted folder's own image goes, the kept subfolder's image stays
+        assert remaining == {"img-mid"}
+
+    def test_db_delete_folders_batch_keep_subfolders_rolls_back_on_delete_failure(
+        self, test_db
+    ):
+        """If the DELETE fails after children were re-parented, nothing sticks."""
+        self._insert_tree(test_db)
+        conn = sqlite3.connect(test_db)
+        conn.executemany(
+            "INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged)"
+            " VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                ("img-root", "/tmp/root/a.jpg", "root", "/t/a.jpg", "{}", 0),
+                ("img-mid", "/tmp/root/mid/b.jpg", "mid", "/t/b.jpg", "{}", 0),
+            ],
+        )
+        # A real failure, raised by SQLite itself on the DELETE only, so the
+        # re-parenting UPDATE before it succeeds first.
+        conn.execute(
+            "CREATE TRIGGER block_folder_delete BEFORE DELETE ON folders "
+            "BEGIN SELECT RAISE(ABORT, 'delete blocked'); END;"
+        )
+        conn.commit()
+        conn.close()
+
+        statements: list[str] = []
+        real_connect = sqlite3.connect
+
+        def tracing_connect(*args, **kwargs):
+            traced = real_connect(*args, **kwargs)
+            traced.set_trace_callback(statements.append)
+            return traced
+
+        with patch("app.database.folders.sqlite3.connect", side_effect=tracing_connect):
+            with pytest.raises(sqlite3.Error, match="delete blocked"):
+                db_delete_folders_batch(["root"], keep_subfolders=True)
+
+        # the test only means something if the move really ran before the failure
+        assert any(
+            st.lstrip().startswith("UPDATE folders") for st in statements
+        ), "re-parenting never ran"
+        assert any(st.startswith("DELETE FROM folders") for st in statements)
+
+        # ...and it was undone: same folders, same parent links, same images
+        check = sqlite3.connect(test_db)
+        try:
+            folders = dict(
+                check.execute("SELECT folder_id, parent_folder_id FROM folders")
+            )
+            images = {r[0] for r in check.execute("SELECT id FROM images")}
+        finally:
+            check.close()
+        assert folders == {
+            "root": None,
+            "mid": "root",
+            "leaf": "mid",
+            "side": "root",
+        }
+        assert images == {"img-root", "img-mid"}
+
+    def test_db_delete_folder_success(self, test_db, tmp_path):
+
+        folder = tmp_path / "photos"
+        folder.mkdir()
+
+        db_insert_folder(str(folder), folder_id="folder-id-1")
+        db_delete_folder(str(folder))
+
+        assert db_folder_exists(str(folder)) is False
+
+    def test_db_delete_folder_not_exists(self, test_db, tmp_path):
+
+        folder = tmp_path / "missing"
+        folder.mkdir()
+
+        with pytest.raises(ValueError):
+            db_delete_folder(str(folder))
+
+    def test_db_update_parent_ids_for_subtree(self, test_db):
+
+        db_insert_folders_batch(
+            [
+                ("root-id", "/tmp/root", None, 1693526400, True, False),
+                ("child-id", "/tmp/root/child", None, 1693526500, True, False),
+            ]
+        )
+
+        db_update_parent_ids_for_subtree(
+            "/tmp/root",
+            {
+                "/tmp/root": ("root-id", None),
+                "/tmp/root/child": ("child-id", "root-id"),
+            },
+        )
+
+        conn = sqlite3.connect(test_db)
+        parent_id = conn.execute(
+            "SELECT parent_folder_id FROM folders WHERE folder_id = ?",
+            ("child-id",),
+        ).fetchone()[0]
+        conn.close()
+
+        assert parent_id == "root-id"
+
+    def test_db_update_parent_ids_for_subtree_preserves_existing_parent(self, test_db):
+        # The update only rewrites rows whose parent_folder_id is still NULL
+        db_insert_folders_batch(
+            [
+                ("root-id", "/tmp/root", None, 1693526400, True, False),
+                ("child-id", "/tmp/root/child", "old-parent", 1693526500, True, False),
+            ]
+        )
+
+        db_update_parent_ids_for_subtree(
+            "/tmp/root",
+            {"/tmp/root/child": ("child-id", "root-id")},
+        )
+
+        conn = sqlite3.connect(test_db)
+        try:
+            parent_id = conn.execute(
+                "SELECT parent_folder_id FROM folders WHERE folder_id = ?",
+                ("child-id",),
+            ).fetchone()[0]
+        finally:
+            conn.close()
+
+        assert parent_id == "old-parent"
+
+    def test_db_folder_exists_true_false(self, test_db, tmp_path):
+
+        folder = tmp_path / "photos"
+        folder.mkdir()
+
+        db_insert_folder(str(folder), folder_id="folder-id-1")
+
+        assert db_folder_exists(str(folder)) is True
+        assert db_folder_exists(str(tmp_path / "missing")) is False
+
+    def test_db_find_parent_folder_id_root_returns_none(self, test_db):
+        # Takes test_db even though the root check short-circuits, so a future
+        # change can't silently point this at the real user database.
+        result = db_find_parent_folder_id("/")
+        assert result is None
+
+    def test_db_find_parent_folder_id_found(self, test_db):
+        conn = sqlite3.connect(test_db)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO folders (folder_id, folder_path) VALUES (?, ?)",
+            ("parent-id", "/tmp/photos"),
+        )
+        conn.commit()
+        conn.close()
+        result = db_find_parent_folder_id("/tmp/photos/2024")
+        assert result == "parent-id"
+
+    def test_db_find_parent_folder_id_not_found(self, test_db):
+        # The fixture already yields an empty schema; nothing to seed here
+        result = db_find_parent_folder_id("/tmp/photos/2024")
+        assert result is None
+
+    def test_db_update_ai_tagging_batch(self, test_db):
+        conn = sqlite3.connect(test_db)
+        conn.execute(
+            "INSERT INTO folders (folder_id, folder_path, AI_Tagging) VALUES (?, ?, ?)",
+            ("tmp", "/tmp", False),
+        )
+        conn.commit()
+        conn.close()
+
+        assert db_update_ai_tagging_batch(["tmp"], True) == 1
+
+        # rowcount alone can't tell right column/value from wrong: read it back
+        conn = sqlite3.connect(test_db)
+        try:
+            ai_tagging = conn.execute(
+                "SELECT AI_Tagging FROM folders WHERE folder_id = ?", ("tmp",)
+            ).fetchone()[0]
+        finally:
+            conn.close()
+        assert ai_tagging == 1
+
+    def test_db_update_ai_tagging_batch_empty_list(self, test_db):
+        assert db_update_ai_tagging_batch([], True) == 0
+
+    @patch("app.database.folders.sqlite3.connect")
+    def test_db_update_ai_tagging_batch_sqlite_error(self, mock_connect, test_db):
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+
+        mock_connect.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_cursor.execute.side_effect = sqlite3.Error("fake db error")
+
+        with pytest.raises(sqlite3.Error):
+            db_update_ai_tagging_batch(["folder-id-1"], False)
+
+        mock_conn.rollback.assert_called_once()
+        mock_conn.close.assert_called_once()
+
+    @patch("app.database.folders.db_update_ai_tagging_batch")
+    def test_db_enable_ai_tagging_batch(self, mock_update_batch, test_db):
+        mock_update_batch.return_value = 1
+        result = db_enable_ai_tagging_batch(["tmp"])
+        assert result == 1
+        mock_update_batch.assert_called_once_with(["tmp"], True)
+
+    @patch("app.database.folders.db_update_ai_tagging_batch")
+    def test_db_disable_ai_tagging_batch(self, mock_update_batch, test_db):
+        mock_update_batch.return_value = 1
+        result = db_disable_ai_tagging_batch(["tmp"])
+        assert result == 1
+        mock_update_batch.assert_called_once_with(["tmp"], False)
+
+    def test_db_get_folder_ids_by_path_prefix(self, test_db):
+        conn = sqlite3.connect(test_db)
+        cursor = conn.cursor()
+        cursor.executemany(
+            "INSERT INTO folders (folder_id, folder_path) VALUES (?, ?)",
+            [
+                ("folder-id-1", "/tmp/photos"),
+                ("folder-id-2", "/tmp/photos/2024"),
+                ("folder-id-3", "/other/documents"),
+            ],
+        )
+        conn.commit()
+        conn.close()
+        result = db_get_folder_ids_by_path_prefix("/tmp")
+        # The query has no ORDER BY, so row order isn't part of the contract
+        assert set(result) == {
+            ("folder-id-1", "/tmp/photos"),
+            ("folder-id-2", "/tmp/photos/2024"),
+        }
+
+    def test_db_get_folder_ids_by_paths(self, test_db):
+        conn = sqlite3.connect(test_db)
+        folder1 = os.path.abspath("test_folder_1")
+        folder2 = os.path.abspath("test_folder_2")
+        conn.execute(
+            "INSERT INTO folders (folder_id, folder_path) VALUES (?, ?)",
+            ("id_1", folder1),
+        )
+        conn.execute(
+            "INSERT INTO folders (folder_id, folder_path) VALUES (?, ?)",
+            ("id_2", folder2),
+        )
+        conn.commit()
+        conn.close()
+        result = db_get_folder_ids_by_paths(
+            [
+                "test_folder_1",
+                "test_folder_2",
+            ]
+        )
+        assert result == {
+            folder1: "id_1",
+            folder2: "id_2",
+        }
+
+    def test_db_get_folder_ids_by_paths_empty(self, test_db):
+        result = db_get_folder_ids_by_paths([])
+        assert result == {}
+
+    def test_db_get_all_folder_details(self, test_db):
+        conn = sqlite3.connect(test_db)
+        # Name the columns: a positional INSERT binds to the wrong ones, since
+        # parent_folder_id precedes folder_path in the real schema.
+        conn.execute(
+            """
+            INSERT INTO folders (folder_id, folder_path, parent_folder_id,
+                                 last_modified_time, AI_Tagging, taggingCompleted)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            ("folder-id-1", "/home/user/photos", None, 1693526400, True, False),
+        )
+        conn.executemany(
+            "INSERT INTO images (id, path, folder_id) VALUES (?, ?, ?)",
+            [
+                ("img-1", "/home/user/photos/a.jpg", "folder-id-1"),
+                ("img-2", "/home/user/photos/b.jpg", "folder-id-1"),
+            ],
+        )
+        conn.commit()
+        conn.close()
+        result = db_get_all_folder_details()
+        assert result == [
+            (
+                "folder-id-1",
+                "/home/user/photos",
+                None,
+                1693526400,
+                1,  # AI_Tagging
+                0,  # taggingCompleted
+                "not_started",  # indexing_status (schema default)
+                2,  # image_count
+                0,  # video_count
+            )
+        ]
+
+    def test_db_get_all_folder_details_counts_videos(self, test_db):
+        """Distinct image/video counts on both sides of the media join.
+
+        The mixed folder deliberately has >1 of each: the images x videos
+        join fans out to 2*2=4 rows, so counting anything but DISTINCT ids
+        would over-report. A separate video-only folder pins image_count=0.
+        """
+        conn = sqlite3.connect(test_db)
+        conn.executemany(
+            """
+            INSERT INTO folders (folder_id, folder_path, parent_folder_id,
+                                 last_modified_time, AI_Tagging, taggingCompleted)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            [
+                ("mixed", "/home/user/media", None, 1693526400, True, False),
+                ("videos-only", "/home/user/clips", None, 1693526400, True, False),
+            ],
+        )
+        conn.executemany(
+            "INSERT INTO images (id, path, folder_id) VALUES (?, ?, ?)",
+            [
+                ("img-1", "/home/user/media/a.jpg", "mixed"),
+                ("img-2", "/home/user/media/b.jpg", "mixed"),
+            ],
+        )
+        conn.executemany(
+            "INSERT INTO videos (id, path, folder_id) VALUES (?, ?, ?)",
+            [
+                ("vid-1", "/home/user/media/a.mp4", "mixed"),
+                ("vid-2", "/home/user/media/b.mp4", "mixed"),
+                ("vid-3", "/home/user/clips/c.mp4", "videos-only"),
+            ],
+        )
+        conn.commit()
+        conn.close()
+
+        # (image_count, video_count) keyed by folder_id, order-independent.
+        counts = {row[0]: (row[7], row[8]) for row in db_get_all_folder_details()}
+        assert counts["mixed"] == (2, 2)
+        assert counts["videos-only"] == (0, 1)
+
+    def test_db_get_direct_child_folders(self, test_db):
+        conn = sqlite3.connect(test_db)
+        conn.execute(
+            "INSERT INTO folders (folder_id, folder_path, parent_folder_id) VALUES (?, ?, ?)",
+            ("root", "/root", None),
+        )
+        conn.execute(
+            "INSERT INTO folders (folder_id, folder_path, parent_folder_id) VALUES (?, ?, ?)",
+            ("child_1", "/root/child1", "root"),
+        )
+        conn.execute(
+            "INSERT INTO folders (folder_id, folder_path, parent_folder_id) VALUES (?, ?, ?)",
+            ("child_2", "/root/child2", "root"),
+        )
+        conn.execute(
+            "INSERT INTO folders (folder_id, folder_path, parent_folder_id) VALUES (?, ?, ?)",
+            ("grandchild", "/root/child1/grandchild", "child_1"),
+        )
+        conn.commit()
+        conn.close()
+        result = db_get_direct_child_folders("root")
+        assert set(result) == {
+            ("child_1", "/root/child1"),
+            ("child_2", "/root/child2"),
+        }
+
+
+# ============================================================================
+# Integration & Workflow Tests
+# ============================================================================
+class TestFoldersIntegration:
     @patch("app.routes.folders.folder_util_add_folder_tree")
     @patch("app.routes.folders.db_update_parent_ids_for_subtree")
     @patch("app.routes.folders.db_find_parent_folder_id")
@@ -833,7 +1637,7 @@ class TestFoldersAPI:
         assert delete_response.json()["data"]["deleted_count"] == 2
 
         mock_enable_batch.assert_called_once_with(folder_ids)
-        mock_delete_batch.assert_called_once_with(folder_ids)
+        mock_delete_batch.assert_called_once_with(folder_ids, keep_subfolders=False)
 
 
 class TestFolderPathPrefixMatching:

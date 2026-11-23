@@ -18,6 +18,10 @@ else:
 # Microservice URLs
 SYNC_MICROSERVICE_URL = "http://localhost:52124"
 
+# The album share listener. Unlike the two services above this one binds
+# 0.0.0.0, so it is reachable by anything that can route to this machine.
+SHARE_SERVER_PORT = 52125
+
 CONFIDENCE_PERCENT = 0.6
 # Object Detection Models:
 SMALL_OBJ_DETECTION_MODEL = f"{MODEL_EXPORTS_PATH}/YOLOv11_Small.onnx"
@@ -39,6 +43,7 @@ if os.getenv("GITHUB_ACTIONS") == "true":
 else:
     DATABASE_PATH = os.path.join(user_data_dir("PictoPy"), "database", "PictoPy.db")
 THUMBNAIL_IMAGES_PATH = os.path.join(user_data_dir("PictoPy"), "thumbnails")
+VIDEO_FRAMES_PATH = os.path.join(user_data_dir("PictoPy"), "video_frames")
 IMAGES_PATH = "./images"
 
 
@@ -76,6 +81,67 @@ def _get_env_float(
     return value
 
 
+def _get_env_str(name: str, default: str) -> str:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw
+
+
+def _get_env_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    value = raw.strip().lower()
+    if value in ("1", "true", "yes", "on"):
+        return True
+    if value in ("0", "false", "no", "off"):
+        return False
+    logger.warning(
+        "Invalid value %r for %s (expected a boolean); using default %s",
+        raw,
+        name,
+        default,
+    )
+    return default
+
+
+# SigLIP2 Configuration
+SIGLIP2_ACTIVE_CHECKPOINT = _get_env_str("SIGLIP2_ACTIVE_CHECKPOINT", "base")
+SIGLIP2_QUERY_TEMPLATE = _get_env_str(
+    "SIGLIP2_QUERY_TEMPLATE", "This is a photo of {query}."
+)
+SIGLIP2_SCORING_METADATA = {
+    "base": {
+        "logit_scale": 4.724453449249268,
+        "logit_bias": -16.771724700927734,
+        "model_version": "siglip2-base-patch16-224",
+        "input_resolution": 224,
+    },
+    "large": {
+        "logit_scale": 4.6823530197143555,
+        "logit_bias": -16.347614288330078,
+        "model_version": "siglip2-large-patch16-384",
+        "input_resolution": 384,
+    },
+    "so400m": {
+        "logit_scale": 4.699519157409668,
+        "logit_bias": -15.932647705078125,
+        "model_version": "siglip2-so400m-patch14-384",
+        "input_resolution": 384,
+    },
+}
+
+if SIGLIP2_ACTIVE_CHECKPOINT not in SIGLIP2_SCORING_METADATA:
+    logger.warning(
+        "Unknown SIGLIP2_ACTIVE_CHECKPOINT %r (expected one of %s); using default %s",
+        SIGLIP2_ACTIVE_CHECKPOINT,
+        list(SIGLIP2_SCORING_METADATA.keys()),
+        "base",
+    )
+    SIGLIP2_ACTIVE_CHECKPOINT = "base"
+
+
 def _get_env_int(
     name: str,
     default: int,
@@ -110,6 +176,67 @@ def _get_env_int(
     return value
 
 
+SIGLIP2_EMBED_BATCH_SIZE = _get_env_int("SIGLIP2_EMBED_BATCH_SIZE", 8, min_value=1)
+SIGLIP2_TEXT_MAX_LENGTH = 64
+SIGLIP2_TOKENIZER_PAD_ID = 0
+SIGLIP2_TOKENIZER_PAD_TOKEN = "<pad>"
+# bare-noun queries score low in absolute terms; 0.02 measured to cut true positives.
+SIGLIP2_MATCH_THRESHOLD = _get_env_float("SIGLIP2_MATCH_THRESHOLD", 0.01, min_value=0.0)
+
+# Curated-vocabulary pre-scoring. Ensembled label vectors score ~2 orders of
+# magnitude below live queries, so these floors are NOT comparable to
+# SIGLIP2_MATCH_THRESHOLD. Calibrated against a 151-image stratified eval set;
+# see backend/scripts/vocabulary/calibration_report.json.
+SEMANTIC_SCORE_TOP_K = _get_env_int("SEMANTIC_SCORE_TOP_K", 15, min_value=1)
+# stricter cut for tag chips / tag lists; stored rows keep the full top-K
+SEMANTIC_DISPLAY_TOP_K = _get_env_int("SEMANTIC_DISPLAY_TOP_K", 5, min_value=1)
+SEMANTIC_BUCKET_THRESHOLDS = {
+    "scene": 5e-05,
+    "object": 1e-04,
+    "event": 5e-05,
+    "attribute": 1e-04,
+}
+SEMANTIC_DEFAULT_THRESHOLD = 5e-05
+
+# Video keyframe sampling. One frame every N seconds instead of per-frame
+# inference (30fps = 1800 forward passes per minute of video). The interval is
+# stretched when a video would exceed the cap, so cost per video is bounded.
+# The bounds are the single source of truth for both the sampler default here
+# and the user-preferences API schema, so the API can never accept an interval
+# the sampler would reject.
+VIDEO_FRAME_INTERVAL_MIN = 0.5
+VIDEO_FRAME_INTERVAL_MAX = 300.0
+VIDEO_FRAME_INTERVAL_SECONDS = _get_env_float(
+    "VIDEO_FRAME_INTERVAL_SECONDS",
+    5.0,
+    min_value=VIDEO_FRAME_INTERVAL_MIN,
+    max_value=VIDEO_FRAME_INTERVAL_MAX,
+)
+VIDEO_MAX_FRAMES_PER_VIDEO = _get_env_int(
+    "VIDEO_MAX_FRAMES_PER_VIDEO", 200, min_value=1
+)
+# Frames are saved above SigLIP2's largest input (384) so a checkpoint swap
+# doesn't require re-extraction, and large enough for faces to clear
+# PICTO_CLUSTERING_MIN_FACE_SIZE: at 640px, 82% of detected faces fell below it.
+VIDEO_FRAME_MAX_DIMENSION = _get_env_int(
+    "VIDEO_FRAME_MAX_DIMENSION", 1280, min_value=64
+)
+# A tag must appear in this many frames to describe the video; drops one-off
+# detections from a single unlucky keyframe.
+VIDEO_TAG_MIN_FRAME_SUPPORT = _get_env_int(
+    "VIDEO_TAG_MIN_FRAME_SUPPORT", 2, min_value=1
+)
+VIDEO_TAG_TOP_K = _get_env_int("VIDEO_TAG_TOP_K", 15, min_value=1)
+# Off by default: keyframe faces are sound, but a full DBSCAN recluster chains
+# through them -- on a real library it fused 7 people's photo clusters into one.
+VIDEO_FACE_DETECTION = _get_env_bool("VIDEO_FACE_DETECTION", False)
+# Keyframes seconds apart rarely repeat a pose, so the dedupe is loose insurance
+# against near-identical frames; the per-video cap is what bounds crowd videos.
+VIDEO_FACE_DEDUPE_THRESHOLD = _get_env_float(
+    "VIDEO_FACE_DEDUPE_THRESHOLD", 0.92, min_value=0.0, max_value=1.0
+)
+VIDEO_MAX_FACES_PER_VIDEO = _get_env_int("VIDEO_MAX_FACES_PER_VIDEO", 40, min_value=1)
+
 # Clustering Configuration
 PICTO_CLUSTERING_EPS = _get_env_float("PICTO_CLUSTERING_EPS", 0.75, min_value=0.0)
 PICTO_CLUSTERING_MIN_SAMPLES = _get_env_int(
@@ -122,7 +249,7 @@ if PICTO_CLUSTERING_MIN_SAMPLES < 2:
     )
     PICTO_CLUSTERING_MIN_SAMPLES = 2
 PICTO_CLUSTERING_SIMILARITY_THRESHOLD = _get_env_float(
-    "PICTO_CLUSTERING_SIMILARITY_THRESHOLD", 0.85, min_value=0.0, max_value=1.0
+    "PICTO_CLUSTERING_SIMILARITY_THRESHOLD", 0.65, min_value=0.0, max_value=1.0
 )
 PICTO_CLUSTERING_MERGE_THRESHOLD = _get_env_float(
     "PICTO_CLUSTERING_MERGE_THRESHOLD", 0.7, min_value=0.0, max_value=1.0
@@ -130,9 +257,33 @@ PICTO_CLUSTERING_MERGE_THRESHOLD = _get_env_float(
 PICTO_CLUSTERING_CONF_THRESHOLD = _get_env_float(
     "PICTO_CLUSTERING_CONF_THRESHOLD", 0.45, min_value=0.0, max_value=1.0
 )
+# Laplacian variance is low (~40-75) on clean studio portraits, so keep this permissive.
 PICTO_CLUSTERING_BLUR_THRESHOLD = _get_env_float(
-    "PICTO_CLUSTERING_BLUR_THRESHOLD", 80.0, min_value=0.0
+    "PICTO_CLUSTERING_BLUR_THRESHOLD", 20.0, min_value=0.0
 )
 PICTO_CLUSTERING_MIN_FACE_SIZE = _get_env_int(
-    "PICTO_CLUSTERING_MIN_FACE_SIZE", 1600, min_value=1
+    "PICTO_CLUSTERING_MIN_FACE_SIZE", 1000, min_value=1
 )
+
+
+# Separate pool for folder indexing so it never queues behind AI tagging.
+INDEXING_MAX_WORKERS = _get_env_int("INDEXING_MAX_WORKERS", 2, min_value=1, max_value=8)
+# Supported media formats. Single source of truth for backend validation
+# (image_util_is_valid_image) and the /config/supported-extensions endpoint
+# consumed by the Tauri frontend's "Open Original File" command.
+SUPPORTED_IMAGE_EXTENSIONS = {
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".webp",
+    ".bmp",
+    ".tiff",
+    ".tif",
+    ".gif",
+}
+SUPPORTED_VIDEO_EXTENSIONS = {
+    ".mp4",
+    ".mov",
+    ".webm",
+    ".m4v",
+}

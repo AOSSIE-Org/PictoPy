@@ -10,7 +10,6 @@ import { setImages } from '@/features/imageSlice';
 import { selectImages } from '@/features/imageSelectors';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
-import { RootState } from '@/app/store';
 import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 
@@ -19,13 +18,10 @@ export const Home = () => {
   const images = useSelector(selectImages);
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
-  const searchState = useSelector((state: RootState) => state.search);
-  const isSearchActive = searchState.active;
 
   const { data, isLoading, isSuccess, isError, error } = usePictoQuery({
     queryKey: ['images'],
     queryFn: () => fetchAllImages(),
-    enabled: !isSearchActive,
   });
 
   useMutationFeedback(
@@ -39,16 +35,11 @@ export const Home = () => {
   );
 
   useEffect(() => {
-    if (!isSearchActive && isSuccess) {
+    if (isSuccess) {
       const images = (data?.data ?? []) as Image[];
       dispatch(setImages(images));
     }
-  }, [data, isSuccess, dispatch, isSearchActive]);
-
-  const title =
-    isSearchActive && images.length > 0
-      ? `Face Search Results (${images.length} found)`
-      : 'Image Gallery';
+  }, [data, isSuccess, dispatch]);
 
   return (
     <div className="relative flex h-full flex-col pr-6">
@@ -61,7 +52,7 @@ export const Home = () => {
           <ChronologicalGallery
             images={images}
             showTitle={true}
-            title={title}
+            title="Image Gallery"
             onMonthOffsetsChange={setMonthMarkers}
             scrollContainerRef={scrollableRef}
           />
