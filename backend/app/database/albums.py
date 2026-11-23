@@ -385,9 +385,11 @@ def db_add_images_to_album(album_id: str, image_ids: list[str]):
         # Every id may already be in the album, in which case OR IGNORE writes
         # nothing and the album has not actually changed. Read before touching:
         # the touch overwrites rowcount.
-        if cursor.rowcount:
+        inserted = cursor.rowcount
+        if inserted:
             _touch_album(cursor, album_id)
         conn.commit()
+        return inserted
 
 
 def db_remove_image_from_album(album_id: str, image_id: str):
