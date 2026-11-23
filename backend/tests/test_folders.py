@@ -973,13 +973,15 @@ class TestFoldersAPI:
         assert data["detail"]["success"] is False
         assert data["detail"]["error"] == "Folder not found"
 
+    @patch("app.routes.folders.folder_util_add_multiple_folder_trees")
     @patch("app.routes.folders.post_sync_folder_sequence")
     def test_sync_folder_success(
-        self, mock_post_sync: MagicMock, client: TestClient
+        self, mock_post_sync: MagicMock, mock_add_trees: MagicMock, client: TestClient
     ) -> None:
         """Test successfully syncing an existing folder."""
         with tempfile.TemporaryDirectory() as tmpdir:
             subfolder = os.path.join(tmpdir, "subfolder1")
+            mock_add_trees.return_value = (1, [("mock-subfolder-id", subfolder)])
             os.makedirs(subfolder)
 
             request_data = {
