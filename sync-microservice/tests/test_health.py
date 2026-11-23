@@ -1,8 +1,11 @@
 import asyncio
 import sqlite3
+import threading
 import time
+from pathlib import Path
 from unittest.mock import patch
 
+import httpx
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -38,7 +41,7 @@ from app.routes import health
     ],
 )
 def test_health_reports_database_and_watcher_state(
-    client: TestClient, db_ok: bool, watcher_running: bool, expected: dict
+    client: TestClient, db_ok: bool, watcher_running: bool, expected: dict[str, str]
 ) -> None:
     """Verify health endpoint formats database connectivity and watcher process states."""
     with patch(
@@ -54,7 +57,7 @@ def test_health_reports_database_and_watcher_state(
 
 
 def test_db_check_database_connection_real_sqlite(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Verify db_check_database_connection against real SQLite files with and without tables."""
     db_path = str(tmp_path / "sync_health_test.sqlite3")
@@ -83,8 +86,8 @@ async def test_health_check_does_not_block_event_loop_during_slow_db() -> None:
     endpoint does not block concurrent asynchronous requests on the main event loop.
 
     Because health_check() is defined as a standard def route, FastAPI executes
-    it inside an external threadpool (run_in_threadpool), leaving the asyncio
-    event loop unblocked to handle concurrent requests immediately.
+    it inside a worker thread (run_in_threadpool), leaving the asyncio event
+    loop free to service concurrent requests without blocking.
     """
     app = FastAPI()
     app.include_router(health.router)
@@ -94,10 +97,16 @@ async def test_health_check_does_not_block_event_loop_during_slow_db() -> None:
     async def async_probe() -> dict[str, str]:
         return {"status": "probe_ok"}
 
-    delay_seconds = 0.30
+    db_started = threading.Event()
+    probe_completed = threading.Event()
 
     def slow_db_check() -> bool:
-        time.sleep(delay_seconds)
+        db_started.set()
+        # Hold the database check until the async probe completes
+        if not probe_completed.wait(timeout=5.0):
+            raise TimeoutError(
+                "probe_completed was not set before database check timed out"
+            )
         return True
 
     transport = ASGITransport(app=app)
@@ -110,32 +119,49 @@ async def test_health_check_does_not_block_event_loop_during_slow_db() -> None:
         ):
             t_start = time.perf_counter()
 
-            async def call_health():
+            async def call_health() -> tuple[httpx.Response, float]:
                 res = await ac.get("/health")
                 t_end = time.perf_counter()
                 return res, t_end - t_start
 
-            async def call_probe():
-                # Allow call_health to be scheduled and entered first
-                await asyncio.sleep(0.04)
-                res = await ac.get("/async-probe")
+            async def call_probe() -> tuple[httpx.Response, float]:
+                # Wait until slow_db_check has started executing
+                loop = asyncio.get_running_loop()
+                deadline = loop.time() + 5.0
+                while not db_started.is_set():
+                    if health_task.done() and health_task.exception() is not None:
+                        raise RuntimeError(
+                            "Health check task failed before database check started"
+                        ) from health_task.exception()
+                    if loop.time() > deadline:
+                        raise TimeoutError(
+                            "Database check did not start within timeout"
+                        )
+                    await asyncio.sleep(0.005)
+
+                try:
+                    res = await ac.get("/async-probe")
+                finally:
+                    probe_completed.set()
                 t_end = time.perf_counter()
                 return res, t_end - t_start
 
-            (health_res, health_duration), (probe_res, probe_duration) = (
-                await asyncio.gather(call_health(), call_probe())
-            )
+            health_task = asyncio.create_task(call_health())
+            probe_task = asyncio.create_task(call_probe())
+
+            try:
+                (health_res, health_duration), (probe_res, probe_duration) = (
+                    await asyncio.gather(health_task, probe_task)
+                )
+            finally:
+                # Ensure the worker thread is always released even if the test fails
+                probe_completed.set()
 
     assert health_res.status_code == 200
     assert health_res.json()["status"] == "healthy"
     assert probe_res.status_code == 200
     assert probe_res.json() == {"status": "probe_ok"}
 
-    # Slow DB took at least delay_seconds (0.30s)
-    assert health_duration >= delay_seconds
-    # The async probe was launched after 0.04s and must finish well before
-    # the 0.30s database check completes, proving the event loop was never blocked.
-    assert probe_duration < delay_seconds * 0.65, (
-        f"Event loop was blocked: probe took {probe_duration:.3f}s, "
-        f"which was delayed by slow db ({health_duration:.3f}s)"
-    )
+    # Confirm that probe completed while slow_db_check was active
+    assert probe_completed.is_set()
+    assert probe_duration < health_duration

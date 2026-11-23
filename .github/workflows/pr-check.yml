@@ -157,3 +157,13 @@ jobs:
         run: |
           cd backend
           pytest
+
+      - name: Install Sync Microservice Test Dependencies
+        run: |
+          cd sync-microservice
+          pip install -r requirements-dev.txt
+
+      - name: Run Tests (Sync Microservice)
+        run: |
+          cd sync-microservice
+          pytest
