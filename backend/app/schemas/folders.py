@@ -14,6 +14,8 @@ class UpdateAITaggingRequest(BaseModel):
 
 class DeleteFoldersRequest(BaseModel):
     folder_ids: List[str]
+    # False (default) keeps the old behaviour: subfolders are deleted with the parent.
+    keep_subfolders: bool = False
 
 
 class SyncFolderRequest(BaseModel):

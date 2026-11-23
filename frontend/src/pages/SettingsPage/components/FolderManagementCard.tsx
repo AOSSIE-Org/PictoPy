@@ -16,12 +16,23 @@ import { Progress } from '@/components/ui/progress';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/app/store';
 import FolderPicker from '@/components/FolderPicker/FolderPicker';
+import { DeleteFolderDialog } from '@/components/Dialog/DeleteFolderDialog';
+import {
+  getDeleteSubfoldersPreference,
+  setDeleteSubfoldersPreference,
+  getSkipFolderDeleteConfirmationPreference,
+  setSkipFolderDeleteConfirmationPreference,
+} from '@/hooks/useDeleteSubfoldersPreference';
 
 import { Badge } from '@/components/ui/badge';
 
 import { useFolderOperations } from '@/hooks/useFolderOperations';
 import { useLibraryProcessingStatus } from '@/hooks/useLibraryProcessingStatus';
-import { FolderDetails, isIndexingPending } from '@/types/Folder';
+import {
+  FolderDetails,
+  countSubfolders,
+  isIndexingPending,
+} from '@/types/Folder';
 import SettingsCard from './SettingsCard';
 
 type TaggingStatus = RootState['folders']['taggingStatus'];
@@ -143,6 +154,9 @@ const FolderManagementCard: React.FC = () => {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
     new Set(),
   );
+  const [folderToDelete, setFolderToDelete] = useState<FolderDetails | null>(
+    null,
+  );
 
   // Refresh when the window regains focus or becomes visible again.
   useEffect(() => {
@@ -170,6 +184,40 @@ const FolderManagementCard: React.FC = () => {
 
   const handleViewMore = () => {
     setVisibleFoldersCount((prevCount) => prevCount + 5);
+  };
+
+  // Ask only when the list shows subfolders and the user hasn't opted out of
+  // the dialog. Otherwise the saved "Delete Subfolders" setting decides, also
+  // for a folder the cached list shows as a leaf: a subfolder may have been
+  // added since the list loaded, and it must not be cascaded away against the
+  // setting.
+  const handleDeleteClick = (folder: FolderDetails) => {
+    const hasSubfolders = countSubfolders(folders, folder.folder_id) > 0;
+    if (hasSubfolders && !getSkipFolderDeleteConfirmationPreference()) {
+      setFolderToDelete(folder);
+    } else {
+      deleteFolder(folder.folder_id, !getDeleteSubfoldersPreference());
+    }
+  };
+
+  const handleConfirmDelete = (
+    folder: FolderDetails,
+    deleteSubfolders: boolean,
+    dontShowAgain: boolean,
+  ) => {
+    // What was chosen in the dialog becomes the default for next time.
+    const defaultSaved = setDeleteSubfoldersPreference(deleteSubfolders);
+    // "Don't show again" lets later deletions run under the saved default, so
+    // grant it only if that default is the one chosen here. If the write failed
+    // the old default would silently apply to folders with subfolders.
+    if (dontShowAgain && defaultSaved) {
+      setSkipFolderDeleteConfirmationPreference(true);
+    }
+    // Fire-and-forget on purpose, like the photo-delete dialog: the hook owns
+    // the loading and error UI (useMutationFeedback), so the dialog doesn't
+    // need the promise and closes right away. This deletion uses the choice
+    // made in the dialog, whether or not it could be saved as the default.
+    deleteFolder(folder.folder_id, !deleteSubfolders);
   };
 
   const toggleFolderExpanded = (folderId: string) => {
@@ -225,7 +273,8 @@ const FolderManagementCard: React.FC = () => {
                     </div>
 
                     <Button
-                      onClick={() => deleteFolder(folder.folder_id)}
+                      onClick={() => handleDeleteClick(folder)}
+                      aria-label={`Delete folder ${folder.folder_path}`}
                       variant="outline"
                       size="sm"
                       className="h-8 w-8 cursor-pointer text-gray-500 hover:border-red-300 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
@@ -299,6 +348,19 @@ const FolderManagementCard: React.FC = () => {
       <div className="border-border mt-6 border-t pt-6">
         <FolderPicker />
       </div>
+
+      {folderToDelete && (
+        <DeleteFolderDialog
+          open
+          onOpenChange={(open) => !open && setFolderToDelete(null)}
+          folderPath={folderToDelete.folder_path}
+          subfolderCount={countSubfolders(folders, folderToDelete.folder_id)}
+          defaultDeleteSubfolders={getDeleteSubfoldersPreference()}
+          onConfirm={(deleteSubfolders, dontShowAgain) =>
+            handleConfirmDelete(folderToDelete, deleteSubfolders, dontShowAgain)
+          }
+        />
+      )}
     </SettingsCard>
   );
 };

@@ -1,0 +1,40 @@
+name: Duplicate Detection Report
+
+on:
+  schedule:
+    # 06:00 UTC on the first day of each month.
+    - cron: "0 6 1 * *"
+  workflow_dispatch:
+    inputs:
+      since:
+        description: "Report on issues opened on or after this date (YYYY-MM-DD). Defaults to 90 days ago."
+        required: false
+
+permissions: {}
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # The report goes to the run's summary page; it uses only the standard library.
+      - name: Write feedback report
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SINCE: ${{ inputs.since }}
+        run: |
+          python .github/scripts/duplicate_detection/duplicate_feedback.py "$GITHUB_REPOSITORY" \
+            ${SINCE:+--since "$SINCE"} >> "$GITHUB_STEP_SUMMARY"

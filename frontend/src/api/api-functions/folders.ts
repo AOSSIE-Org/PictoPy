@@ -15,6 +15,8 @@ export interface UpdateAITaggingRequest {
 
 export interface DeleteFoldersRequest {
   folder_ids: string[];
+  /** Keep (re-parent) subfolders instead of deleting them with the folder. */
+  keep_subfolders?: boolean;
 }
 
 export interface SyncFolderRequest {

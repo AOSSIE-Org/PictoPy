@@ -108,3 +108,54 @@ describe('useFolderOperations - delete folder cache invalidation', () => {
     expect(memoriesKeyCalls(invalidateSpy)).toHaveLength(0);
   });
 });
+
+describe('useFolderOperations - delete folder request', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('keeps subfolders by default, following the saved setting', async () => {
+    localStorage.clear();
+    deleteFolders.mockResolvedValueOnce({ success: true, data: {} });
+    const { result } = renderUseFolderOperations();
+
+    result.current.deleteFolder('folder-1');
+
+    await waitFor(() => {
+      expect(deleteFolders).toHaveBeenCalledWith({
+        folder_ids: ['folder-1'],
+        keep_subfolders: true,
+      });
+    });
+  });
+
+  it('deletes subfolders by default when the setting is on', async () => {
+    localStorage.setItem('pictopy:deleteSubfolders', 'true');
+    deleteFolders.mockResolvedValueOnce({ success: true, data: {} });
+    const { result } = renderUseFolderOperations();
+
+    result.current.deleteFolder('folder-1');
+
+    await waitFor(() => {
+      expect(deleteFolders).toHaveBeenCalledWith({
+        folder_ids: ['folder-1'],
+        keep_subfolders: false,
+      });
+    });
+    localStorage.clear();
+  });
+
+  it('asks the backend to keep subfolders when told to', async () => {
+    deleteFolders.mockResolvedValueOnce({ success: true, data: {} });
+    const { result } = renderUseFolderOperations();
+
+    result.current.deleteFolder('folder-1', true);
+
+    await waitFor(() => {
+      expect(deleteFolders).toHaveBeenCalledWith({
+        folder_ids: ['folder-1'],
+        keep_subfolders: true,
+      });
+    });
+  });
+});

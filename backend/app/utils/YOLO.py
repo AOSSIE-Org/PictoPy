@@ -162,7 +162,7 @@ def YOLO_util_draw_detections(
     det_img = YOLO_util_draw_masks(det_img, boxes, class_ids, mask_alpha)
 
     for class_id, box, score in zip(class_ids, boxes, scores):
-        if score < confidence_threshold or class_id >= len(class_names) - 1:
+        if score < confidence_threshold or class_id >= len(class_names):
             color = colors[-1]
             label = "unknown"
         else:

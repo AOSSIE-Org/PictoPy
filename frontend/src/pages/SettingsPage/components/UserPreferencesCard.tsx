@@ -4,6 +4,7 @@ import {
   ChevronDown,
   Zap,
   Trash2,
+  FolderTree,
   Video,
   HardDrive,
   Sparkles,
@@ -35,6 +36,7 @@ import {
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { useDeleteFromComputerPreference } from '@/hooks/useDeleteUserPreference';
+import { useDeleteSubfoldersPreference } from '@/hooks/useDeleteSubfoldersPreference';
 import type { UpdateUserPreferencesRequest } from '@/api/api-functions/user_preferences';
 
 import {
@@ -73,6 +75,8 @@ const UserPreferencesCard: React.FC = () => {
   } = useUserPreferences();
   const { deleteFromComputer, setDeleteFromComputer } =
     useDeleteFromComputerPreference();
+  const { deleteSubfolders, setDeleteSubfolders } =
+    useDeleteSubfoldersPreference();
   const [installedTiers, setInstalledTiers] = useState<ModelTier[]>([]);
   const [loadingTiers, setLoadingTiers] = useState(true);
   const [tierFetchError, setTierFetchError] = useState<string | null>(null);
@@ -352,6 +356,32 @@ const UserPreferencesCard: React.FC = () => {
               id="delete-from-computer"
               checked={deleteFromComputer}
               onCheckedChange={setDeleteFromComputer}
+            />
+          </div>
+        </div>
+
+        {/* Delete Subfolders Setting */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <Label
+              htmlFor="delete-subfolders"
+              className="text-foreground text-sm font-medium"
+            >
+              Delete Subfolders
+            </Label>
+            <p className="text-muted-foreground text-xs">
+              When on, deleting a folder also removes its subfolders from
+              PictoPy by default. When off, subfolders are kept. You can still
+              choose each time when deleting.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <FolderTree className="h-4 w-4 text-gray-500" />
+            <Switch
+              className="cursor-pointer"
+              id="delete-subfolders"
+              checked={deleteSubfolders}
+              onCheckedChange={setDeleteSubfolders}
             />
           </div>
         </div>

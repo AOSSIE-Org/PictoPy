@@ -176,10 +176,14 @@ def db_get_all_folder_ids() -> List[FolderId]:
         conn.close()
 
 
-def db_delete_folders_batch(folder_ids: List[FolderId]) -> int:
+def db_delete_folders_batch(
+    folder_ids: List[FolderId], keep_subfolders: bool = False
+) -> int:
     """
     Delete multiple folders in a single database transaction.
     folder_ids: list of folder IDs to delete
+    keep_subfolders: if True, surviving subfolders are re-attached to the nearest
+        surviving ancestor (or become top-level) instead of cascading away.
     Returns the number of folders deleted
     """
     if not folder_ids:
@@ -195,6 +199,25 @@ def db_delete_folders_batch(folder_ids: List[FolderId]) -> int:
 
         # Create placeholders for the IN clause
         placeholders = ",".join("?" * len(folder_ids))
+
+        if keep_subfolders:
+            # Hop children up one level per pass so they skip every deleted
+            # ancestor; a chain can't be longer than the ids being deleted.
+            for _ in range(len(folder_ids)):
+                cursor.execute(
+                    f"""
+                    UPDATE folders
+                    SET parent_folder_id = (
+                        SELECT p.parent_folder_id FROM folders p
+                        WHERE p.folder_id = folders.parent_folder_id
+                    )
+                    WHERE parent_folder_id IN ({placeholders})
+                      AND folder_id NOT IN ({placeholders})
+                    """,
+                    folder_ids + folder_ids,
+                )
+                if cursor.rowcount == 0:
+                    break
 
         cursor.execute(
             f"DELETE FROM folders WHERE folder_id IN ({placeholders})",
@@ -328,7 +351,7 @@ def db_update_ai_tagging_batch(
 
         cursor.execute(
             f"UPDATE folders SET AI_Tagging = ? WHERE folder_id IN ({placeholders})",
-            [ai_tagging_enabled] + folder_ids,
+            [ai_tagging_enabled, *folder_ids],
         )
 
         updated_count = cursor.rowcount
@@ -433,8 +456,10 @@ def db_get_all_folder_details() -> (
     cursor = conn.cursor()
 
     try:
-        # COUNT(DISTINCT ...) because joining both media tables multiplies the
-        # rows: a folder with 3 images and 4 videos yields 12 join rows.
+        # Count each media table in its own pre-aggregated subquery instead of
+        # joining both onto folders at once. Joining both multiplies the rows
+        # (a folder with 3 images and 4 videos yields 12 join rows), so the old
+        # COUNT(DISTINCT ...) query scanned images x videos rows per folder.
         cursor.execute(
             """
             SELECT
@@ -445,12 +470,17 @@ def db_get_all_folder_details() -> (
                 f.AI_Tagging,
                 f.taggingCompleted,
                 f.indexing_status,
-                COUNT(DISTINCT i.id) as image_count,
-                COUNT(DISTINCT v.id) as video_count
+                COALESCE(i.image_count, 0) as image_count,
+                COALESCE(v.video_count, 0) as video_count
             FROM folders f
-            LEFT JOIN images i ON f.folder_id = i.folder_id
-            LEFT JOIN videos v ON f.folder_id = v.folder_id
-            GROUP BY f.folder_id
+            LEFT JOIN (
+                SELECT folder_id, COUNT(id) as image_count
+                FROM images GROUP BY folder_id
+            ) i ON i.folder_id = f.folder_id
+            LEFT JOIN (
+                SELECT folder_id, COUNT(id) as video_count
+                FROM videos GROUP BY folder_id
+            ) v ON v.folder_id = f.folder_id
             ORDER BY f.folder_path
             """
         )
