@@ -1,7 +1,7 @@
 import os
 from concurrent.futures import Future, ProcessPoolExecutor
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from starlette.datastructures import State
 
 from app.database.folders import (
@@ -447,7 +447,9 @@ def disable_ai_tagging(request: UpdateAITaggingRequest):
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
 def delete_folders(
-    request: DeleteFoldersRequest, app_state: State = Depends(get_state)
+    request: DeleteFoldersRequest,
+    background_tasks: BackgroundTasks,
+    app_state: State = Depends(get_state),
 ):
     """Delete multiple folders by their IDs."""
     try:
@@ -456,7 +458,7 @@ def delete_folders(
 
         deleted_count = db_delete_folders_batch(request.folder_ids)
         if deleted_count > 0:
-            API_util_restart_sync_microservice_watcher()
+            background_tasks.add_task(API_util_restart_sync_microservice_watcher)
 
         # Synchronous so the response can't race the frontend's next
         # Memories fetch; imported late, like _curate_memories below.
