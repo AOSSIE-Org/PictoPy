@@ -1,9 +1,17 @@
 import { render, screen, waitFor } from '@/test-utils';
 import userEvent from '@testing-library/user-event';
+import { act } from '@testing-library/react';
 
 import UserPreferencesCard from '../UserPreferencesCard';
 import type { MemoriesPreferences } from '@/api/api-functions/user_preferences';
 import type { FaceScanStatus } from '@/api/api-functions/videos';
+import {
+  isPermissionGranted,
+  requestPermission,
+} from '@tauri-apps/plugin-notification';
+
+const mockIsPermissionGranted = jest.mocked(isPermissionGranted);
+const mockRequestPermission = jest.mocked(requestPermission);
 
 const mockUpdateMemoriesPreferences = jest.fn().mockResolvedValue(undefined);
 const mockToggleVideoFaceDetection = jest.fn().mockResolvedValue(undefined);
@@ -90,6 +98,8 @@ const choose = async (
 
 beforeEach(() => {
   mockUpdateMemoriesPreferences.mockClear();
+  mockIsPermissionGranted.mockReset().mockResolvedValue(true);
+  mockRequestPermission.mockReset().mockResolvedValue('granted');
   mockMemories = memoriesWith();
   mockIsUpdating = false;
   mockVideoFaceDetection = false;
@@ -125,6 +135,91 @@ describe('UserPreferencesCard memories panel', () => {
     expect(
       screen.getByRole('switch', { name: /Desktop Notifications/i }),
     ).toBeDisabled();
+  });
+
+  it('asks the OS for permission when notifications are turned on', async () => {
+    mockIsPermissionGranted.mockResolvedValue(false);
+    const user = userEvent.setup();
+    render(<UserPreferencesCard />);
+    await openPanel(user);
+
+    await user.click(
+      screen.getByRole('switch', { name: /Desktop Notifications/i }),
+    );
+
+    expect(mockUpdateMemoriesPreferences).toHaveBeenCalledWith({
+      notifications_enabled: true,
+    });
+    expect(mockRequestPermission).toHaveBeenCalled();
+  });
+
+  it('does not ask again once permission is held', async () => {
+    const user = userEvent.setup();
+    render(<UserPreferencesCard />);
+    await openPanel(user);
+
+    await user.click(
+      screen.getByRole('switch', { name: /Desktop Notifications/i }),
+    );
+
+    expect(mockIsPermissionGranted).toHaveBeenCalled();
+    expect(mockRequestPermission).not.toHaveBeenCalled();
+  });
+
+  it('turns notifications off without touching the OS', async () => {
+    mockMemories = memoriesWith({ notifications_enabled: true });
+    const user = userEvent.setup();
+    render(<UserPreferencesCard />);
+    await openPanel(user);
+
+    await user.click(
+      screen.getByRole('switch', { name: /Desktop Notifications/i }),
+    );
+
+    expect(mockUpdateMemoriesPreferences).toHaveBeenCalledWith({
+      notifications_enabled: false,
+    });
+    expect(mockIsPermissionGranted).not.toHaveBeenCalled();
+  });
+
+  // A refused or unavailable prompt is the OS having the last word, not a
+  // reason to lose the preference the user just set.
+  it('keeps the preference when the permission call fails', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    mockIsPermissionGranted.mockRejectedValue(new Error('unavailable'));
+    const user = userEvent.setup();
+    render(<UserPreferencesCard />);
+    await openPanel(user);
+
+    await user.click(
+      screen.getByRole('switch', { name: /Desktop Notifications/i }),
+    );
+
+    expect(mockUpdateMemoriesPreferences).toHaveBeenCalledWith({
+      notifications_enabled: true,
+    });
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('keeps the preference when the prompt itself is refused', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    mockIsPermissionGranted.mockResolvedValue(false);
+    mockRequestPermission.mockRejectedValue(new Error('refused'));
+    const user = userEvent.setup();
+    render(<UserPreferencesCard />);
+    await openPanel(user);
+
+    await user.click(
+      screen.getByRole('switch', { name: /Desktop Notifications/i }),
+    );
+
+    expect(mockRequestPermission).toHaveBeenCalled();
+    expect(mockUpdateMemoriesPreferences).toHaveBeenCalledWith({
+      notifications_enabled: true,
+    });
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 
   it('raises the maximum when a larger minimum is chosen', async () => {
@@ -330,5 +425,54 @@ describe('UserPreferencesCard video face detection', () => {
     expect(
       await screen.findByRole('button', { name: /All scanned/i }),
     ).toBeDisabled();
+  });
+});
+
+describe('UserPreferencesCard delete subfolders', () => {
+  beforeEach(() => localStorage.clear());
+
+  // The card fetches model status on mount; settle it inside act.
+  const renderCard = () =>
+    act(async () => {
+      render(<UserPreferencesCard />);
+    });
+
+  it('is off by default and sits below Delete From Computer', async () => {
+    await renderCard();
+
+    const toggle = screen.getByRole('switch', { name: 'Delete Subfolders' });
+    expect(toggle).not.toBeChecked();
+
+    const labels = screen.getAllByText(
+      /^(Delete From Computer|Delete Subfolders)$/,
+    );
+    expect(labels.map((l) => l.textContent)).toEqual([
+      'Delete From Computer',
+      'Delete Subfolders',
+    ]);
+  });
+
+  it('reflects and saves the setting', async () => {
+    const user = userEvent.setup();
+    await renderCard();
+
+    await user.click(screen.getByRole('switch', { name: 'Delete Subfolders' }));
+
+    expect(
+      screen.getByRole('switch', { name: 'Delete Subfolders' }),
+    ).toBeChecked();
+    expect(localStorage.getItem('pictopy:deleteSubfolders')).toBe('true');
+  });
+
+  it('restores the folder-delete dialog after "Don\'t show again"', async () => {
+    localStorage.setItem('pictopy:skipFolderDeleteConfirmation', 'false');
+    const user = userEvent.setup();
+    await renderCard();
+
+    await user.click(screen.getByRole('switch', { name: 'Delete Subfolders' }));
+
+    expect(
+      localStorage.getItem('pictopy:skipFolderDeleteConfirmation'),
+    ).toBeNull();
   });
 });

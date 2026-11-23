@@ -14,6 +14,7 @@ import { FolderDetails, isIndexingPending } from '@/types/Folder';
 import { useMutationFeedback } from './useMutationFeedback';
 import { getFoldersTaggingStatus } from '@/api/api-functions/folders';
 import { MEMORIES_QUERY_KEY } from '@/hooks/useMemories';
+import { getDeleteSubfoldersPreference } from '@/hooks/useDeleteSubfoldersPreference';
 
 /**
  * Custom hook for folder operations
@@ -134,8 +135,17 @@ export const useFolderOperations = () => {
 
   // Delete folder mutation
   const deleteFolderMutation = usePictoMutation({
-    mutationFn: async (folder_id: string) =>
-      deleteFolders({ folder_ids: [folder_id] }),
+    mutationFn: async ({
+      folderId,
+      keepSubfolders,
+    }: {
+      folderId: string;
+      keepSubfolders: boolean;
+    }) =>
+      deleteFolders({
+        folder_ids: [folderId],
+        keep_subfolders: keepSubfolders,
+      }),
     autoInvalidateTags: ['folders'],
     // Clusters and memories become stale on folder deletion. They require separate invalidation calls
     // because autoInvalidateTags uses prefix matching, meaning a combined queryKey wouldn't match either.
@@ -168,10 +178,15 @@ export const useFolderOperations = () => {
   };
 
   /**
-   * Delete a folder
+   * Delete a folder. With keepSubfolders, its subfolders stay in the library.
+   * When omitted, the saved "Delete Subfolders" setting decides, so a caller
+   * can't cascade by accident (e.g. over a child added since the list loaded).
    */
-  const deleteFolder = (folderId: string) => {
-    deleteFolderMutation.mutate(folderId);
+  const deleteFolder = (
+    folderId: string,
+    keepSubfolders = !getDeleteSubfoldersPreference(),
+  ) => {
+    deleteFolderMutation.mutate({ folderId, keepSubfolders });
   };
 
   return {

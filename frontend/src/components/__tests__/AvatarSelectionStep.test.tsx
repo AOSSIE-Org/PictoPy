@@ -1,6 +1,7 @@
 import { render, screen } from '@/test-utils';
 import userEvent from '@testing-library/user-event';
 import { AvatarSelectionStep } from '@/components/OnboardingSteps/AvatarSelectionStep';
+import { avatars } from '@/constants/avatars';
 
 const VALID_30 = 'a'.repeat(30);
 const INVALID_31 = 'a'.repeat(31);
@@ -48,5 +49,14 @@ describe('Name validation - AvatarSelectionStep', () => {
     await user.clear(input);
     await user.type(input, 'John');
     expect(screen.queryByText(ERROR_MSG)).not.toBeInTheDocument();
+  });
+
+  test('first avatar is selected by default on first launch', () => {
+    setup();
+    expect(screen.getByAltText('Current avatar')).toHaveAttribute(
+      'src',
+      avatars[0],
+    );
+    expect(screen.queryByText('Preview')).not.toBeInTheDocument();
   });
 });

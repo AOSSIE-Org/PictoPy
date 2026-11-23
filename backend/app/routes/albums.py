@@ -377,6 +377,13 @@ def add_images_to_album(
         return SuccessResponse(
             success=True, msg=f"Added {len(body.image_ids)} images to album"
         )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ErrorResponse(
+                success=False, error="Image Not Found", message=str(e)
+            ).model_dump(),
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

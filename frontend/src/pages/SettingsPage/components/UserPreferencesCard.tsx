@@ -4,6 +4,7 @@ import {
   ChevronDown,
   Zap,
   Trash2,
+  FolderTree,
   Video,
   HardDrive,
   Sparkles,
@@ -27,10 +28,15 @@ import { Button } from '@/components/ui/button';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import {
+  isPermissionGranted,
+  requestPermission,
+} from '@tauri-apps/plugin-notification';
 
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { useDeleteFromComputerPreference } from '@/hooks/useDeleteUserPreference';
+import { useDeleteSubfoldersPreference } from '@/hooks/useDeleteSubfoldersPreference';
 import type { UpdateUserPreferencesRequest } from '@/api/api-functions/user_preferences';
 
 import {
@@ -72,6 +78,8 @@ const UserPreferencesCard: React.FC = () => {
   } = useUserPreferences();
   const { deleteFromComputer, setDeleteFromComputer } =
     useDeleteFromComputerPreference();
+  const { deleteSubfolders, setDeleteSubfolders } =
+    useDeleteSubfoldersPreference();
   const [installedTiers, setInstalledTiers] = useState<ModelTier[]>([]);
   const [loadingTiers, setLoadingTiers] = useState(true);
   const [tierFetchError, setTierFetchError] = useState<string | null>(null);
@@ -89,6 +97,24 @@ const UserPreferencesCard: React.FC = () => {
       void updateMemoriesPreferences(update).catch(console.warn);
     },
     [updateMemoriesPreferences],
+  );
+
+  // macOS and Linux gate notifications behind an OS prompt, and switching this
+  // on is the only moment a user expects one. The OS stays the final say: the
+  // desktop task re-checks the permission before every notification.
+  const toggleMemoryNotifications = useCallback(
+    async (checked: boolean) => {
+      patchMemories({ notifications_enabled: checked });
+      if (!checked) return;
+      try {
+        if (!(await isPermissionGranted())) {
+          await requestPermission();
+        }
+      } catch (err) {
+        console.warn('Could not request notification permission', err);
+      }
+    },
+    [patchMemories],
   );
 
   const handlePurgeFrameCache = useCallback(async () => {
@@ -336,6 +362,32 @@ const UserPreferencesCard: React.FC = () => {
               id="delete-from-computer"
               checked={deleteFromComputer}
               onCheckedChange={setDeleteFromComputer}
+            />
+          </div>
+        </div>
+
+        {/* Delete Subfolders Setting */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <Label
+              htmlFor="delete-subfolders"
+              className="text-foreground text-sm font-medium"
+            >
+              Delete Subfolders
+            </Label>
+            <p className="text-muted-foreground text-xs">
+              When on, deleting a folder also removes its subfolders from
+              PictoPy by default. When off, subfolders are kept. You can still
+              choose each time when deleting.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <FolderTree className="h-4 w-4 text-gray-500" />
+            <Switch
+              className="cursor-pointer"
+              id="delete-subfolders"
+              checked={deleteSubfolders}
+              onCheckedChange={setDeleteSubfolders}
             />
           </div>
         </div>
@@ -592,9 +644,7 @@ const UserPreferencesCard: React.FC = () => {
                     id="memories-notifications"
                     checked={memoriesPreferences.notifications_enabled}
                     disabled={isUpdating || !memoriesPreferences.enabled}
-                    onCheckedChange={(checked) =>
-                      patchMemories({ notifications_enabled: checked })
-                    }
+                    onCheckedChange={toggleMemoryNotifications}
                   />
                 </div>
               </div>

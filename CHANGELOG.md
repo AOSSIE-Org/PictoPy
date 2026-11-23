@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0-beta] - 2026-10-22
+
+### Added
+
+- Find people in videos: faces in video keyframes are matched to the people already in your library, so videos show up in face search. Turn it on in Settings, which can also scan videos you already have (#1559)
+- Save PictoPy's AI tags, faces, favourites, and album membership into your PNG files as XMP metadata, automatically or on demand from Settings (#1604)
+- Delete a photo from the Image Viewer, either from PictoPy only or from your computer as well (#1547)
+- Support for WebP, BMP, TIFF, and GIF images (#1532)
+- Get a native desktop notification when a new memory is ready (#1440)
+
+### Fixed
+
+- Face search now checks every face in a photo, not just the first, and results scroll back to the top on a new search (#1472, #1590)
+- Open original files through a safer opener limited to your library folders, replacing the deprecated shell plugin (#1507)
+- Memory cards no longer linger after all folders are removed (#1501)
+- Albums return clear errors when renamed to an existing name or when removing a photo that isn't in the album (#1561, #1613)
+
+### Other
+
+- Development now happens on the `dev` branch; `main` only moves with releases (#1546)
+- Faster PR build checks with Rust dependency caching, and MyPy type checks on changed Python files (#1551, #1620, #1621)
+
+**Contributors:** @JIturiDashami, @Prakhar1808, @Takitxt, @nishtha-agarwal-211, @rohan-pandeyy, @sanskar-singh-2403, @vjkumar2756
+
+---
+
 ## [1.3.0-alpha] - 2026-09-16
 
 ### Added

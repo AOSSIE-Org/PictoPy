@@ -11,62 +11,24 @@ import {
 } from '@/components/ui/dialog';
 import { useDispatch } from 'react-redux';
 import { useFile } from '@/hooks/selectFile';
-import { startSearch, clearSearch } from '@/features/searchSlice';
-import { setVideos } from '@/features/videoSlice';
-import { hideLoader, showLoader } from '@/features/loaderSlice';
-import { usePictoMutation } from '@/hooks/useQueryExtension';
-import { fetchSearchedFaces } from '@/api/api-functions';
+import { startSearch } from '@/features/searchSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
-import { useNavigate } from 'react-router';
-import { ROUTES } from '@/constants/routes';
+import { useLocation, useNavigate } from 'react-router';
+import { FACE_SEARCH_PATH, isFaceSearchLocation } from '@/utils/faceSearch';
 import WebcamComponent from '../WebCam/WebCamComponent';
 
-import { setImages } from '@/features/imageSlice';
 export function FaceSearchDialog() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const { pickSingleFile } = useFile({ title: 'Select File' });
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
 
-  const { mutate: getSearchImages } = usePictoMutation({
-    mutationFn: async (path: string) => fetchSearchedFaces({ path }),
-    onSuccess: (data) => {
-      const result = data?.data;
-      const videos = data?.videos ?? [];
-      dispatch(hideLoader());
-      setIsDialogOpen(false);
-      if ((result && result.length > 0) || videos.length > 0) {
-        dispatch(setImages(result ?? []));
-        dispatch(setVideos(videos));
-      } else {
-        dispatch(clearSearch());
-        dispatch(
-          showInfoDialog({
-            title: 'No Matches Found',
-            message:
-              'We couldn’t find any matching faces in your gallery for this photo.',
-            variant: 'info',
-          }),
-        );
-      }
-    },
-    onError: () => {
-      dispatch(hideLoader());
-      dispatch(
-        showInfoDialog({
-          title: 'Search Failed',
-          message: 'There was an error while searching for faces.',
-          variant: 'error',
-        }),
-      );
-    },
-  });
   const handleWebCam = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       stream.getTracks().forEach((track) => track.stop());
-      navigate(`/${ROUTES.HOME}`);
       setIsDialogOpen(false);
       setShowCamera(true);
     } catch (error) {
@@ -81,13 +43,14 @@ export function FaceSearchDialog() {
     }
   };
   const handlePickFile = async () => {
-    navigate(`/${ROUTES.HOME}`);
     const filePath = await pickSingleFile();
     if (filePath) {
       setIsDialogOpen(false);
+      // The results page runs the search for the photo stored here.
       dispatch(startSearch(filePath));
-      dispatch(showLoader('Searching faces...'));
-      getSearchImages(filePath);
+      navigate(FACE_SEARCH_PATH, {
+        replace: isFaceSearchLocation(location),
+      });
     }
   };
   return (

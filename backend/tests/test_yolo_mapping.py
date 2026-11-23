@@ -2,7 +2,7 @@ import os
 import sqlite3
 import tempfile
 from typing import Iterator, List, Tuple
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -96,3 +96,34 @@ class TestCreateYOLOClassesTable:
         ):
             with pytest.raises(sqlite3.Error):
                 db_create_YOLO_classes_table()
+
+    def test_creation_prints_nothing(
+        self,
+        test_db: str,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        set_class_names(monkeypatch, ["person"])
+
+        db_create_YOLO_classes_table()
+
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert captured.err == ""
+
+    def test_rolls_back_logs_and_reraises_when_a_query_fails(self) -> None:
+        conn = MagicMock()
+        conn.cursor.return_value.execute.side_effect = sqlite3.Error("query failed")
+
+        with patch(
+            "app.database.yolo_mapping.sqlite3.connect", return_value=conn
+        ), patch("app.database.yolo_mapping.logger") as mock_logger:
+            with pytest.raises(sqlite3.Error, match="query failed"):
+                db_create_YOLO_classes_table()
+
+        conn.rollback.assert_called_once()
+        conn.close.assert_called_once()
+        mock_logger.error.assert_called_once()
+        args, kwargs = mock_logger.error.call_args
+        assert "query failed" in str(args[1])
+        assert kwargs == {"exc_info": True}

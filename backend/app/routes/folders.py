@@ -456,7 +456,9 @@ def delete_folders(
         if not request.folder_ids:
             raise ValueError("No folder IDs provided")
 
-        deleted_count = db_delete_folders_batch(request.folder_ids)
+        deleted_count = db_delete_folders_batch(
+            request.folder_ids, keep_subfolders=request.keep_subfolders
+        )
         if deleted_count > 0:
             background_tasks.add_task(API_util_restart_sync_microservice_watcher)
 

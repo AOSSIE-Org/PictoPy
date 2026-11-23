@@ -623,8 +623,28 @@ class TestFoldersAPI:
         assert data["data"]["deleted_count"] == 3
         assert data["data"]["folder_ids"] == ["folder-1", "folder-2", "folder-3"]
 
-        mock_delete_batch.assert_called_once_with(["folder-1", "folder-2", "folder-3"])
+        mock_delete_batch.assert_called_once_with(
+            ["folder-1", "folder-2", "folder-3"], keep_subfolders=False
+        )
         mock_restart_watcher.assert_called_once()
+
+    @patch("app.routes.folders.API_util_restart_sync_microservice_watcher")
+    @patch("app.routes.folders.db_delete_folders_batch")
+    def test_delete_folders_keep_subfolders_flag_forwarded(
+        self, mock_delete_batch, mock_restart_watcher, client
+    ):
+        """keep_subfolders from the request body reaches the DB layer."""
+        mock_delete_batch.return_value = 1
+
+        response = client.request(
+            "DELETE",
+            "/folders/delete-folders",
+            content='{"folder_ids": ["folder-1"], "keep_subfolders": true}',
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 200
+        mock_delete_batch.assert_called_once_with(["folder-1"], keep_subfolders=True)
 
     @patch("app.routes.folders.API_util_restart_sync_microservice_watcher")
     @patch("app.utils.memory_curator.memory_curator_prune_empty")
@@ -1157,6 +1177,155 @@ class TestFoldersUnit:
         assert db_get_folder_path_from_id("folder-id-1") is None
         assert db_get_folder_path_from_id("folder-id-2") == "/tmp/docs"
 
+    @staticmethod
+    def _parent_of(db_path, folder_id):
+        conn = sqlite3.connect(db_path)
+        try:
+            row = conn.execute(
+                "SELECT parent_folder_id FROM folders WHERE folder_id = ?",
+                (folder_id,),
+            ).fetchone()
+            return row[0] if row else "MISSING"
+        finally:
+            conn.close()
+
+    def _insert_tree(self, test_db):
+        # root -> mid -> leaf, plus a sibling under root
+        db_insert_folders_batch(
+            [
+                ("root", "/tmp/root", None, 1, False, False),
+                ("mid", "/tmp/root/mid", None, 1, False, False),
+                ("leaf", "/tmp/root/mid/leaf", None, 1, False, False),
+                ("side", "/tmp/root/side", None, 1, False, False),
+            ]
+        )
+        conn = sqlite3.connect(test_db)
+        conn.executemany(
+            "UPDATE folders SET parent_folder_id = ? WHERE folder_id = ?",
+            [("root", "mid"), ("mid", "leaf"), ("root", "side")],
+        )
+        conn.commit()
+        conn.close()
+
+    def test_db_delete_folders_batch_cascades_by_default(self, test_db):
+        self._insert_tree(test_db)
+
+        # rowcount only counts the directly deleted row, cascaded rows are not included
+        assert db_delete_folders_batch(["root"]) == 1
+        assert self._parent_of(test_db, "mid") == "MISSING"
+        assert self._parent_of(test_db, "leaf") == "MISSING"
+
+    def test_db_delete_folders_batch_keep_subfolders_top_level(self, test_db):
+        self._insert_tree(test_db)
+
+        assert db_delete_folders_batch(["root"], keep_subfolders=True) == 1
+        assert self._parent_of(test_db, "root") == "MISSING"
+        # direct children become top-level, deeper folders stay under them
+        assert self._parent_of(test_db, "mid") is None
+        assert self._parent_of(test_db, "side") is None
+        assert self._parent_of(test_db, "leaf") == "mid"
+
+    def test_db_delete_folders_batch_keep_subfolders_reparents_to_grandparent(
+        self, test_db
+    ):
+        self._insert_tree(test_db)
+
+        assert db_delete_folders_batch(["mid"], keep_subfolders=True) == 1
+        assert self._parent_of(test_db, "leaf") == "root"
+        assert self._parent_of(test_db, "side") == "root"
+
+    def test_db_delete_folders_batch_keep_subfolders_skips_deleted_chain(self, test_db):
+        self._insert_tree(test_db)
+
+        # deleting root and mid together must not take leaf down with them
+        db_delete_folders_batch(["root", "mid"], keep_subfolders=True)
+        assert self._parent_of(test_db, "root") == "MISSING"
+        assert self._parent_of(test_db, "mid") == "MISSING"
+        assert self._parent_of(test_db, "leaf") is None
+        assert self._parent_of(test_db, "side") is None
+
+    def test_db_delete_folders_batch_keep_subfolders_keeps_subfolder_images(
+        self, test_db
+    ):
+        self._insert_tree(test_db)
+        conn = sqlite3.connect(test_db)
+        conn.executemany(
+            "INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged)"
+            " VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                ("img-root", "/tmp/root/a.jpg", "root", "/t/a.jpg", "{}", 0),
+                ("img-mid", "/tmp/root/mid/b.jpg", "mid", "/t/b.jpg", "{}", 0),
+            ],
+        )
+        conn.commit()
+        conn.close()
+
+        db_delete_folders_batch(["root"], keep_subfolders=True)
+
+        conn = sqlite3.connect(test_db)
+        remaining = {r[0] for r in conn.execute("SELECT id FROM images")}
+        conn.close()
+        # the deleted folder's own image goes, the kept subfolder's image stays
+        assert remaining == {"img-mid"}
+
+    def test_db_delete_folders_batch_keep_subfolders_rolls_back_on_delete_failure(
+        self, test_db
+    ):
+        """If the DELETE fails after children were re-parented, nothing sticks."""
+        self._insert_tree(test_db)
+        conn = sqlite3.connect(test_db)
+        conn.executemany(
+            "INSERT INTO images (id, path, folder_id, thumbnailPath, metadata, isTagged)"
+            " VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                ("img-root", "/tmp/root/a.jpg", "root", "/t/a.jpg", "{}", 0),
+                ("img-mid", "/tmp/root/mid/b.jpg", "mid", "/t/b.jpg", "{}", 0),
+            ],
+        )
+        # A real failure, raised by SQLite itself on the DELETE only, so the
+        # re-parenting UPDATE before it succeeds first.
+        conn.execute(
+            "CREATE TRIGGER block_folder_delete BEFORE DELETE ON folders "
+            "BEGIN SELECT RAISE(ABORT, 'delete blocked'); END;"
+        )
+        conn.commit()
+        conn.close()
+
+        statements: list[str] = []
+        real_connect = sqlite3.connect
+
+        def tracing_connect(*args, **kwargs):
+            traced = real_connect(*args, **kwargs)
+            traced.set_trace_callback(statements.append)
+            return traced
+
+        with patch("app.database.folders.sqlite3.connect", side_effect=tracing_connect):
+            with pytest.raises(sqlite3.Error, match="delete blocked"):
+                db_delete_folders_batch(["root"], keep_subfolders=True)
+
+        # the test only means something if the move really ran before the failure
+        assert any(
+            st.lstrip().startswith("UPDATE folders") for st in statements
+        ), "re-parenting never ran"
+        assert any(st.startswith("DELETE FROM folders") for st in statements)
+
+        # ...and it was undone: same folders, same parent links, same images
+        check = sqlite3.connect(test_db)
+        try:
+            folders = dict(
+                check.execute("SELECT folder_id, parent_folder_id FROM folders")
+            )
+            images = {r[0] for r in check.execute("SELECT id FROM images")}
+        finally:
+            check.close()
+        assert folders == {
+            "root": None,
+            "mid": "root",
+            "leaf": "mid",
+            "side": "root",
+        }
+        assert images == {"img-root", "img-mid"}
+
     def test_db_delete_folder_success(self, test_db, tmp_path):
 
         folder = tmp_path / "photos"
@@ -1617,5 +1786,5 @@ class TestFoldersIntegration:
         assert delete_response.json()["data"]["deleted_count"] == 2
 
         mock_enable_batch.assert_called_once_with(folder_ids)
-        mock_delete_batch.assert_called_once_with(folder_ids)
+        mock_delete_batch.assert_called_once_with(folder_ids, keep_subfolders=False)
         mock_restart_watcher.assert_called_once()
