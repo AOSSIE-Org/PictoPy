@@ -373,7 +373,8 @@ def add_images_to_album(
 
     try:
         inserted = db_add_images_to_album(album_id, body.image_ids)
-        request_metadata_export(app_state)
+        if inserted > 0:
+            request_metadata_export(app_state)
         return SuccessResponse(
             success=True, msg=f"Added {inserted} images to album"
         )
