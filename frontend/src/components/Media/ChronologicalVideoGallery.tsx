@@ -1,14 +1,14 @@
 import { useMemo, useRef, useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { VideoCard } from '@/components/Media/VideoCard';
-import { MEDIA_GRID_CLASS } from '@/constants/layout';
-import { cn } from '@/lib/utils';
+import { GalleryGrid } from '@/components/GalleryGrid';
 import { Video } from '@/types/Media';
 import { groupImagesByYearMonthFromMetadata } from '@/utils/dateUtils';
 import { MonthMarker } from './ChronologicalGallery';
 import { VideoPlayerOverlay } from '@/components/VideoPlayer/VideoPlayerOverlay';
 import { setCurrentViewIndex } from '@/features/videoSlice';
 import { selectIsVideoViewOpen } from '@/features/videoSelectors';
+import { GalleryViewSelector } from '@/components/GalleryViewSelector';
 
 type ChronologicalVideoGalleryProps = {
   videos: Video[];
@@ -115,9 +115,12 @@ export const ChronologicalVideoGallery = ({
     <div ref={galleryRef} className={`space-y-0 ${className}`}>
       {/* Title */}
       {showTitle && (
-        <div className="mt-6 mb-6 flex items-center justify-between">
+        <div className="mt-6 mb-6 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold">{title}</h1>
-          {titleRight && <div>{titleRight}</div>}
+          <div className="flex flex-wrap items-center gap-3">
+            <GalleryViewSelector />
+            {titleRight && <div>{titleRight}</div>}
+          </div>
         </div>
       )}
 
@@ -157,7 +160,7 @@ export const ChronologicalVideoGallery = ({
                 </div>
 
                 {/* Videos Grid */}
-                <div className={cn(MEDIA_GRID_CLASS, 'p-2')}>
+                <GalleryGrid className="p-2">
                   {vids.map((video) => {
                     const chronologicalIndex =
                       videoIndexMap.get(video.id) ?? -1;
@@ -174,7 +177,7 @@ export const ChronologicalVideoGallery = ({
                       </div>
                     );
                   })}
-                </div>
+                </GalleryGrid>
               </div>
             );
           })}

@@ -11,6 +11,8 @@ import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { selectImages } from '@/features/imageSelectors';
 import { selectIsVideoViewOpen, selectVideos } from '@/features/videoSelectors';
 import { VideoCard } from '@/components/Media/VideoCard';
+import { GalleryGrid } from '@/components/GalleryGrid';
+import { GalleryViewSelector } from '@/components/GalleryViewSelector';
 import { VideoPlayerOverlay } from '@/components/VideoPlayer/VideoPlayerOverlay';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
@@ -184,8 +186,11 @@ export const AITagging = () => {
           {/* Videos the selected people appear in */}
           {matchedVideos.length > 0 && (
             <>
-              <h2 className="mt-6 mb-4 text-xl font-semibold">Videos</h2>
-              <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              <div className="mt-6 mb-4 flex items-center justify-between gap-3">
+                <h2 className="text-xl font-semibold">Videos</h2>
+                {taggedImages.length === 0 && <GalleryViewSelector />}
+              </div>
+              <GalleryGrid className="pb-6">
                 {matchedVideos.map((video, index) => (
                   <div key={video.id} className="group relative">
                     <VideoCard
@@ -195,7 +200,7 @@ export const AITagging = () => {
                     />
                   </div>
                 ))}
-              </div>
+              </GalleryGrid>
             </>
           )}
         </div>

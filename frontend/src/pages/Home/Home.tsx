@@ -8,8 +8,15 @@ import TimelineScrollbar from '@/components/Timeline/TimelineScrollbar';
 import { Image } from '@/types/Media';
 import { setImages } from '@/features/imageSlice';
 import { selectImages } from '@/features/imageSelectors';
+import { setCurrentViewIndex as setCurrentVideoViewIndex } from '@/features/videoSlice';
+import { selectIsVideoViewOpen, selectVideos } from '@/features/videoSelectors';
+import { VideoCard } from '@/components/Media/VideoCard';
+import { GalleryGrid } from '@/components/GalleryGrid';
+import { GalleryViewSelector } from '@/components/GalleryViewSelector';
+import { VideoPlayerOverlay } from '@/components/VideoPlayer/VideoPlayerOverlay';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
 import { fetchAllImages } from '@/api/api-functions';
+import { RootState } from '@/app/store';
 import { EmptyGalleryState } from '@/components/EmptyStates/EmptyGalleryState';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 
@@ -18,10 +25,18 @@ export const Home = () => {
   const images = useSelector(selectImages);
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [monthMarkers, setMonthMarkers] = useState<MonthMarker[]>([]);
+  const searchState = useSelector((state: RootState) => state.search);
+  const isSearchActive = Boolean(searchState.queryImage);
+  // Face search can match videos too. Only while searching: otherwise the
+  // slice still holds whatever the videos page last loaded.
+  const allVideos = useSelector(selectVideos);
+  const isVideoViewOpen = useSelector(selectIsVideoViewOpen);
+  const matchedVideos = isSearchActive ? allVideos : [];
 
   const { data, isLoading, isSuccess, isError, error } = usePictoQuery({
     queryKey: ['images'],
     queryFn: () => fetchAllImages(),
+    enabled: !isSearchActive,
   });
 
   useMutationFeedback(
@@ -35,11 +50,16 @@ export const Home = () => {
   );
 
   useEffect(() => {
-    if (isSuccess) {
+    if (!isSearchActive && isSuccess) {
       const images = (data?.data ?? []) as Image[];
       dispatch(setImages(images));
     }
-  }, [data, isSuccess, dispatch]);
+  }, [data, isSuccess, dispatch, isSearchActive]);
+
+  const title =
+    isSearchActive && images.length > 0
+      ? `Face Search Results (${images.length + matchedVideos.length} found)`
+      : 'Image Gallery';
 
   return (
     <div className="relative flex h-full flex-col pr-6">
@@ -52,14 +72,39 @@ export const Home = () => {
           <ChronologicalGallery
             images={images}
             showTitle={true}
-            title="Image Gallery"
+            title={title}
             onMonthOffsetsChange={setMonthMarkers}
             scrollContainerRef={scrollableRef}
           />
         ) : (
-          <EmptyGalleryState />
+          matchedVideos.length === 0 && <EmptyGalleryState />
+        )}
+
+        {/* Videos the searched face was found in */}
+        {matchedVideos.length > 0 && (
+          <>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="text-xl font-semibold">Videos</h2>
+              {images.length === 0 && <GalleryViewSelector />}
+            </div>
+            <GalleryGrid className="pb-6">
+              {matchedVideos.map((video, index) => (
+                <div key={video.id} className="group relative">
+                  <VideoCard
+                    video={video}
+                    className="w-full transition-transform duration-200 group-hover:scale-105"
+                    onClick={() => dispatch(setCurrentVideoViewIndex(index))}
+                  />
+                </div>
+              ))}
+            </GalleryGrid>
+          </>
         )}
       </div>
+
+      {isVideoViewOpen && matchedVideos.length > 0 && (
+        <VideoPlayerOverlay videos={matchedVideos} />
+      )}
 
       {/* Timeline Scrollbar */}
       {monthMarkers.length > 0 && (

@@ -8,7 +8,8 @@ import { MemoryStoryViewer } from '@/components/Memories/MemoryStoryViewer';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
-import { MEDIA_GRID_CLASS } from '@/constants/layout';
+import { GalleryGrid } from '@/components/GalleryGrid';
+import { GalleryViewSelector } from '@/components/GalleryViewSelector';
 import { useMemories, useRefreshMemories } from '@/hooks/useMemories';
 import type { MemoryCard as MemoryCardType } from '@/api/api-functions/memories';
 import {
@@ -17,9 +18,14 @@ import {
   setSlideDuration,
 } from '@/features/memoriesSlice';
 
-const MemoryCardSkeleton: React.FC = () => (
-  <div className="bg-muted aspect-4/5 w-full animate-pulse rounded-xl" />
-);
+const MemoryCardSkeleton: React.FC = () => {
+  return (
+    <div
+      className="bg-muted w-full animate-pulse rounded-xl"
+      style={{ aspectRatio: '1 / 1' }}
+    />
+  );
+};
 
 const EmptyState: React.FC<{ isGenerating: boolean }> = ({ isGenerating }) => (
   <div className="border-border bg-muted/40 rounded-xl border-2 border-dashed p-12 text-center">
@@ -98,6 +104,7 @@ export const Memories: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <GalleryViewSelector />
             <Button
               variant="outline"
               size="sm"
@@ -113,15 +120,15 @@ export const Memories: React.FC = () => {
         </div>
 
         {memoriesQuery.isLoading ? (
-          <div className={MEDIA_GRID_CLASS}>
+          <GalleryGrid>
             {Array.from({ length: 10 }).map((_, index) => (
               <MemoryCardSkeleton key={index} />
             ))}
-          </div>
+          </GalleryGrid>
         ) : memories.length === 0 ? (
           <EmptyState isGenerating={Boolean(isGenerating)} />
         ) : (
-          <div className={MEDIA_GRID_CLASS}>
+          <GalleryGrid>
             {memories.map((memory) => (
               <MemoryCard
                 key={memory.memory_id}
@@ -130,7 +137,7 @@ export const Memories: React.FC = () => {
                 onConvertToAlbum={() => setMemoryToConvert(memory)}
               />
             ))}
-          </div>
+          </GalleryGrid>
         )}
       </div>
 
