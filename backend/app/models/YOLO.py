@@ -1,22 +1,27 @@
 from __future__ import annotations
 
-import onnxruntime
 import time
+
 import cv2
 import numpy as np
+import onnxruntime
+
+from app.logging.setup_logging import get_logger
 from app.models.model_registry import MODEL_REGISTRY, get_model_key_from_path
 from app.models.session_registry import (
     mark_model_session_active,
     mark_model_session_inactive,
 )
+from app.utils.memory_monitor import log_memory_usage
+from app.utils.ONNX import (
+    ONNX_util_get_execution_providers,
+    ONNX_util_get_session_options,
+)
 from app.utils.YOLO import (
-    YOLO_util_xywh2xyxy,
     YOLO_util_draw_detections,
     YOLO_util_multiclass_nms,
+    YOLO_util_xywh2xyxy,
 )
-from app.utils.memory_monitor import log_memory_usage
-from app.utils.ONNX import ONNX_util_get_execution_providers
-from app.logging.setup_logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -57,7 +62,9 @@ class YOLO:
                     )
 
                 self._session = onnxruntime.InferenceSession(
-                    self.model_path, providers=ONNX_util_get_execution_providers()
+                    self.model_path,
+                    sess_options=ONNX_util_get_session_options(),
+                    providers=ONNX_util_get_execution_providers(),
                 )
                 if self._model_key is not None and not self._session_registered:
                     try:
