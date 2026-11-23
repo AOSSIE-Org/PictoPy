@@ -35,3 +35,35 @@ def ONNX_util_get_execution_providers(exclude: tuple[str, ...] = ()) -> list:
         return providers or ["CPUExecutionProvider"]
     else:
         return ["CPUExecutionProvider"]
+
+
+def ONNX_util_get_session_options(
+    intra_op_num_threads: int | None = None,
+) -> onnxruntime.SessionOptions:
+    """
+    Get configured ONNX SessionOptions to prevent CPU thread oversubscription.
+
+    Args:
+        intra_op_num_threads: Number of threads for intra-operator parallelism.
+                              Defaults to ONNX_INTRA_OP_NUM_THREADS setting (default 1).
+
+    Returns:
+        onnxruntime.SessionOptions configured with sequential execution mode
+        and thread limits.
+    """
+    if intra_op_num_threads is not None and intra_op_num_threads < 1:
+        raise ValueError(
+            f"intra_op_num_threads must be >= 1, got {intra_op_num_threads}"
+        )
+
+    from app.config.settings import ONNX_INTRA_OP_NUM_THREADS
+
+    sess_options = onnxruntime.SessionOptions()
+    sess_options.intra_op_num_threads = (
+        intra_op_num_threads
+        if intra_op_num_threads is not None
+        else ONNX_INTRA_OP_NUM_THREADS
+    )
+    sess_options.inter_op_num_threads = 1
+    sess_options.execution_mode = onnxruntime.ExecutionMode.ORT_SEQUENTIAL
+    return sess_options

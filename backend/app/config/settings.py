@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+
 from platformdirs import user_data_dir
 
 logger = logging.getLogger(__name__)
@@ -268,6 +269,9 @@ PICTO_CLUSTERING_MIN_FACE_SIZE = _get_env_int(
 
 # Separate pool for folder indexing so it never queues behind AI tagging.
 INDEXING_MAX_WORKERS = _get_env_int("INDEXING_MAX_WORKERS", 2, min_value=1, max_value=8)
+
+# Thread limit for ONNX Runtime sessions to prevent CPU thrashing during multiprocessing.
+ONNX_INTRA_OP_NUM_THREADS = _get_env_int("ONNX_INTRA_OP_NUM_THREADS", 1, min_value=1)
 # Supported media formats. Single source of truth for backend validation
 # (image_util_is_valid_image) and the /config/supported-extensions endpoint
 # consumed by the Tauri frontend's "Open Original File" command.

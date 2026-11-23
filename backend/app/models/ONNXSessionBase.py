@@ -2,15 +2,19 @@ from __future__ import annotations
 
 import os
 import threading
+
 import onnxruntime
 
+from app.logging.setup_logging import get_logger
 from app.models.model_registry import get_model_key_from_path
 from app.models.session_registry import (
     mark_model_session_active,
     mark_model_session_inactive,
 )
-from app.utils.ONNX import ONNX_util_get_execution_providers
-from app.logging.setup_logging import get_logger
+from app.utils.ONNX import (
+    ONNX_util_get_execution_providers,
+    ONNX_util_get_session_options,
+)
 
 logger = get_logger(__name__)
 
@@ -56,6 +60,7 @@ class ONNXSessionBase:
         # fail at inference on Apple Silicon; run these sessions without it.
         session = onnxruntime.InferenceSession(
             self.model_path,
+            sess_options=ONNX_util_get_session_options(),
             providers=ONNX_util_get_execution_providers(
                 exclude=("CoreMLExecutionProvider",)
             ),
