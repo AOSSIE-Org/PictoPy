@@ -27,8 +27,20 @@ def _mock_ort_session() -> MagicMock:
     return session
 
 
+@pytest.fixture
+def isolated_default_env(monkeypatch):
+    """Isolate the environment for tests that depend on default ONNX_INTRA_OP_NUM_THREADS."""
+    monkeypatch.delenv("ONNX_INTRA_OP_NUM_THREADS", raising=False)
+    importlib.reload(settings)
+    try:
+        yield
+    finally:
+        monkeypatch.undo()
+        importlib.reload(settings)
+
+
 class TestONNXSessionOptionsHelper:
-    def test_default_session_options(self):
+    def test_default_session_options(self, isolated_default_env):
         """Verify default configuration: single intra-op thread, sequential execution, fixed inter-op=1."""
         opts = ONNX_util_get_session_options()
         assert isinstance(opts, onnxruntime.SessionOptions)
@@ -98,6 +110,7 @@ class TestONNXSessionOptionsHelper:
             ONNX_util_get_session_options(intra_op_num_threads=-2)
 
 
+@pytest.mark.usefixtures("isolated_default_env")
 class TestONNXConstructorsPassSessionOptions:
     @patch("onnxruntime.InferenceSession")
     @patch("os.path.exists", return_value=True)
