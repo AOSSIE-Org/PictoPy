@@ -81,6 +81,40 @@ describe('FacePicker', () => {
     expect(onSearch).toHaveBeenCalledWith([0], 'match_any');
   });
 
+  test('numbers a grid of photos row by row', () => {
+    // Two rows of three, handed over in a scrambled detector order.
+    const at = (index: number, x: number, y: number) => ({
+      index,
+      bbox: { x, y, width: 80, height: 80 },
+      confidence: 0.9,
+    });
+    const faces = [
+      at(0, 100, 300), // bottom left
+      at(1, 100, 50), // top left
+      at(2, 450, 300), // bottom middle
+      at(3, 450, 50), // top middle
+      at(4, 800, 300), // bottom right
+      at(5, 800, 50), // top right
+    ];
+    render(
+      <FacePicker
+        imageSrc="/photo.jpg"
+        faces={faces}
+        imageWidth={1000}
+        imageHeight={500}
+        facesSkipped={0}
+        onSearch={jest.fn()}
+      />,
+    );
+
+    const left = (n: number) => ({ top: '10%', left: `${n}%` });
+    expect(face(1)).toHaveStyle(left(10));
+    expect(face(2)).toHaveStyle(left(45));
+    expect(face(3)).toHaveStyle(left(80));
+    expect(face(4)).toHaveStyle({ top: '60%', left: '10%' });
+    expect(face(6)).toHaveStyle({ top: '60%', left: '80%' });
+  });
+
   test('Search is disabled until a face is picked', () => {
     setup();
     expect(searchButton()).toBeDisabled();

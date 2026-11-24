@@ -19,6 +19,27 @@ interface FacePickerProps {
 
 const toPercent = (value: number, total: number) => `${(value / total) * 100}%`;
 
+const centreX = (face: DetectedFace) => face.bbox.x + face.bbox.width / 2;
+const centreY = (face: DetectedFace) => face.bbox.y + face.bbox.height / 2;
+
+/** Rows top to bottom, each row left to right, as a person would read it. */
+function inReadingOrder(faces: DetectedFace[]): DetectedFace[] {
+  const rows: DetectedFace[][] = [];
+  for (const face of [...faces].sort((a, b) => centreY(a) - centreY(b))) {
+    const row = rows[rows.length - 1];
+    // Same row while the face sits within half a face height of the row's first.
+    if (
+      row &&
+      Math.abs(centreY(face) - centreY(row[0])) < row[0].bbox.height / 2
+    ) {
+      row.push(face);
+    } else {
+      rows.push([face]);
+    }
+  }
+  return rows.flatMap((row) => row.sort((a, b) => centreX(a) - centreX(b)));
+}
+
 /** Lets the user pick which of the faces in a photo to search with. */
 export function FacePicker({
   imageSrc,
@@ -38,11 +59,7 @@ export function FacePicker({
   // the numbers on the boxes follow reading order. The backend still gets the
   // detector's own index.
   const labelByIndex = new Map(
-    [...faces]
-      .sort(
-        (a, b) => a.bbox.x + a.bbox.width / 2 - (b.bbox.x + b.bbox.width / 2),
-      )
-      .map((face, position) => [face.index, position + 1]),
+    inReadingOrder(faces).map((face, position) => [face.index, position + 1]),
   );
 
   const toggle = (index: number) =>
