@@ -1,7 +1,10 @@
+from concurrent.futures import ProcessPoolExecutor
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from starlette.datastructures import State
-from app.routes.dependencies import get_state, request_metadata_export
 from typing import List, Optional
+
+from app.routes.dependencies import get_state, request_metadata_export
 from app.database.images import db_get_all_images
 from app.schemas.images import ErrorResponse
 from app.utils.images import image_util_parse_metadata, image_util_delete_images
@@ -387,7 +390,7 @@ class DeleteImagesResponse(BaseModel):
     response_model=DeleteImagesResponse,
     responses={code: {"model": ErrorResponse} for code in [400, 500]},
 )
-def delete_images(request: DeleteImagesRequest):
+def delete_images(request: DeleteImagesRequest, app_state: State = Depends(get_state)):
     """Delete images from the gallery, optionally from the device as well."""
     try:
         if not request.image_ids:
@@ -403,6 +406,22 @@ def delete_images(request: DeleteImagesRequest):
         # request (via the 500 handler below) rather than report success.
         if not request.delete_from_device and result["failed_paths"]:
             raise RuntimeError("Gallery-only delete rolled back; no images removed")
+
+        if result["deleted_ids"]:
+            try:
+                from app.utils.memory_curator import memory_curator_prune_empty
+
+                memory_curator_prune_empty()
+            except Exception:
+                logger.exception("Failed to prune empty memories after image delete")
+
+            try:
+                from app.utils.memory_curator import memory_curator_run
+
+                executor: ProcessPoolExecutor = app_state.executor
+                executor.submit(memory_curator_run, trigger="image_delete")
+            except Exception:
+                logger.exception("Failed to queue memory curation after image delete")
 
         return DeleteImagesResponse(
             success=True,
