@@ -6,6 +6,8 @@ import { ImageCard } from '@/components/Media/ImageCard';
 import { MediaView } from '@/components/Media/MediaView';
 import { VideoCard } from '@/components/Media/VideoCard';
 import { VideoPlayerOverlay } from '@/components/VideoPlayer/VideoPlayerOverlay';
+import { FacePicker } from '@/components/FacePicker/FacePicker';
+import { FaceCrop } from '@/components/FacePicker/FaceCrop';
 import { Cluster, Image, ScoredImage, ScoredVideo, Video } from '@/types/Media';
 import { setCurrentViewIndex, setImages } from '@/features/imageSlice';
 import {
@@ -14,6 +16,7 @@ import {
 } from '@/features/videoSlice';
 import { showLoader, hideLoader } from '@/features/loaderSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
+import { clearFaceSelection, setFaceSelection } from '@/features/searchSlice';
 import { selectImages, selectIsImageViewOpen } from '@/features/imageSelectors';
 import { selectIsVideoViewOpen, selectVideos } from '@/features/videoSelectors';
 import { usePictoQuery } from '@/hooks/useQueryExtension';
@@ -25,13 +28,17 @@ import {
   fetchModelStatus,
   fetchAllClusters,
   fetchMultiPersonSearch,
+  fetchDetectedFaces,
+  fetchDetectedFacesBase64,
   fetchSearchedFaces,
   fetchSearchedFacesBase64,
+  DetectedFacesData,
   FaceSearchResponse,
   SemanticSearchAPIResponse,
   SemanticSearchVideosAPIResponse,
 } from '@/api/api-functions';
 import { APIResponse } from '@/types/API';
+import { BackendRes } from '@/hooks/useQueryExtension';
 import { getErrorMessage } from '@/lib/utils';
 import { isSemanticSearchAvailable } from '@/types/models';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
@@ -84,6 +91,9 @@ export const SearchResults = () => {
   const isFaceMode = mode === FACE_SEARCH_MODE;
   const faceQueryImage = useSelector(
     (state: RootState) => state.search.queryImage,
+  );
+  const faceSelection = useSelector(
+    (state: RootState) => state.search.faceSelection,
   );
   const [failedThumbnail, setFailedThumbnail] = useState<string | null>(null);
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
@@ -292,6 +302,42 @@ export const SearchResults = () => {
 
   const effectiveMode = data?.resultType || mode;
 
+  // Which faces the photo holds comes first: one face is searched straight
+  // away, several wait for the user to pick.
+  const {
+    data: detectData,
+    isLoading: isDetectLoading,
+    isSuccess: isDetectSuccess,
+    isError: isDetectError,
+    error: detectError,
+    errorMessage: detectErrorMessage,
+  } = usePictoQuery({
+    queryKey: ['face-detect', faceQueryImage],
+    queryFn: async (): Promise<BackendRes<DetectedFacesData | null>> => {
+      if (faceQueryImage!.startsWith('data:')) {
+        return fetchDetectedFacesBase64({ base64_data: faceQueryImage! });
+      }
+      return fetchDetectedFaces({ path: faceQueryImage! });
+    },
+    enabled: isFaceMode && !!faceQueryImage,
+    retry: false,
+    gcTime: 0,
+  });
+
+  const detectedData = detectData?.data ?? null;
+  const detectedFaces = detectedData?.faces ?? [];
+  const detectFailure =
+    isDetectSuccess && detectData && !detectData.success
+      ? detectData.message || 'Failed to detect faces.'
+      : null;
+  const hasNoFaces =
+    isDetectSuccess && !detectFailure && detectedFaces.length === 0;
+  const needsFacePicker =
+    isDetectSuccess &&
+    !detectFailure &&
+    detectedFaces.length > 1 &&
+    !faceSelection;
+
   const {
     data: faceData,
     isLoading: isFaceLoading,
@@ -300,15 +346,30 @@ export const SearchResults = () => {
     error: faceError,
     errorMessage: faceErrorMessage,
   } = usePictoQuery({
-    queryKey: ['face-search', faceQueryImage],
+    queryKey: ['face-search', faceQueryImage, faceSelection],
     queryFn: async (): Promise<FaceSearchResponse> => {
+      const selection = faceSelection
+        ? {
+            face_indices: faceSelection.indices,
+            match_mode: faceSelection.matchMode,
+          }
+        : {};
       // Webcam captures arrive as a data URL, uploaded files as a path.
       if (faceQueryImage!.startsWith('data:')) {
-        return fetchSearchedFacesBase64({ base64_data: faceQueryImage! });
+        return fetchSearchedFacesBase64({
+          base64_data: faceQueryImage!,
+          ...selection,
+        });
       }
-      return fetchSearchedFaces({ path: faceQueryImage! });
+      return fetchSearchedFaces({ path: faceQueryImage!, ...selection });
     },
-    enabled: isFaceMode && !!faceQueryImage,
+    enabled:
+      isFaceMode &&
+      !!faceQueryImage &&
+      isDetectSuccess &&
+      !detectFailure &&
+      !hasNoFaces &&
+      !needsFacePicker,
     retry: false,
     gcTime: 0,
   });
@@ -324,13 +385,14 @@ export const SearchResults = () => {
   useEffect(() => {
     if (!isFaceMode) return;
 
-    if (isFaceLoading) {
+    if (isDetectLoading || isFaceLoading) {
       dispatch(showLoader('Searching faces...'));
     } else if (isFaceSuccess && faceData) {
       dispatch(setImages(faceData.data ?? []));
       dispatch(setVideos(faceData.videos ?? []));
       dispatch(hideLoader());
-    } else if (isFaceError) {
+    } else {
+      // Errors, and the moments before a search starts (the picker is up).
       dispatch(hideLoader());
     }
 
@@ -340,16 +402,19 @@ export const SearchResults = () => {
   }, [
     isFaceMode,
     faceData,
+    isDetectLoading,
     isFaceLoading,
     isFaceSuccess,
-    isFaceError,
     dispatch,
   ]);
 
   const faceSearchError = isFaceError
     ? getErrorMessage(faceError, faceErrorMessage) ||
       'There was an error while searching for faces.'
-    : null;
+    : isDetectError
+      ? getErrorMessage(detectError, detectErrorMessage) ||
+        'There was an error while detecting faces.'
+      : detectFailure;
 
   const thumbnailSrc = faceQueryImage
     ? faceQueryImage.startsWith('data:')
@@ -447,6 +512,28 @@ export const SearchResults = () => {
     dispatch,
   ]);
 
+  // Says which faces the results are for, and lets the user pick again even
+  // when nothing matched.
+  const faceSelectionBar = faceSelection && detectedFaces.length > 1 && (
+    <div className="mb-4 flex flex-wrap items-center gap-3">
+      <span className="text-muted-foreground text-sm">
+        {faceSelection.indices.length === 1
+          ? 'Searching for the 1 face you picked.'
+          : faceSelection.matchMode === 'match_any'
+            ? `Photos and videos with any of the ${faceSelection.indices.length} faces you picked.`
+            : `Photos and videos with all of the ${faceSelection.indices.length} faces you picked.`}
+      </span>
+      <Button
+        variant="outline"
+        size="sm"
+        className="cursor-pointer rounded-full text-xs"
+        onClick={() => dispatch(clearFaceSelection())}
+      >
+        Choose different faces
+      </Button>
+    </div>
+  );
+
   // Shared by people search and tag/semantic search, which both return videos
   const videoSection = displayVideos.length > 0 && (
     <>
@@ -478,17 +565,43 @@ export const SearchResults = () => {
         </Button>
       </div>
       {isFaceMode ? (
-        <h1 className="mb-6 flex items-center gap-3 text-2xl font-bold">
-          Results for
-          {thumbnailSrc && failedThumbnail !== thumbnailSrc && (
-            <img
-              src={thumbnailSrc}
-              alt="Searched face"
-              onError={() => setFailedThumbnail(thumbnailSrc)}
-              className="h-10 w-10 rounded-full object-cover"
-            />
-          )}
-        </h1>
+        !needsFacePicker && (
+          <h1 className="mb-6 flex items-center gap-3 text-2xl font-bold">
+            Results for
+            {thumbnailSrc &&
+            failedThumbnail !== thumbnailSrc &&
+            faceSelection &&
+            detectedData &&
+            detectedFaces.length > 1 ? (
+              // A group photo is not the face searched for, so show the picks.
+              <span className="flex -space-x-2">
+                {detectedFaces
+                  .filter((face) => faceSelection.indices.includes(face.index))
+                  .map((face) => (
+                    <FaceCrop
+                      key={face.index}
+                      src={thumbnailSrc}
+                      face={face}
+                      imageWidth={detectedData.image_width}
+                      imageHeight={detectedData.image_height}
+                      className="ring-background ring-2"
+                      onError={() => setFailedThumbnail(thumbnailSrc)}
+                    />
+                  ))}
+              </span>
+            ) : (
+              thumbnailSrc &&
+              failedThumbnail !== thumbnailSrc && (
+                <img
+                  src={thumbnailSrc}
+                  alt="Searched face"
+                  onError={() => setFailedThumbnail(thumbnailSrc)}
+                  className="h-10 w-10 rounded-full object-cover"
+                />
+              )
+            )}
+          </h1>
+        )
       ) : (
         <h1 className="mb-6 text-2xl font-bold">Results for "{query}"</h1>
       )}
@@ -568,31 +681,56 @@ export const SearchResults = () => {
             </h3>
             <p>{faceSearchError}</p>
           </div>
+        ) : needsFacePicker && detectedData && thumbnailSrc ? (
+          <FacePicker
+            imageSrc={thumbnailSrc}
+            faces={detectedFaces}
+            imageWidth={detectedData.image_width}
+            imageHeight={detectedData.image_height}
+            facesSkipped={detectedData.faces_skipped}
+            onSearch={(indices, matchMode) =>
+              dispatch(setFaceSelection({ indices, matchMode }))
+            }
+          />
+        ) : hasNoFaces ? (
+          <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
+            <p>No faces were detected in this photo.</p>
+          </div>
         ) : (
-          isFaceSuccess &&
-          (displayImages.length > 0 || displayVideos.length > 0 ? (
+          isFaceSuccess && (
             <>
-              {displayImages.length > 0 && (
-                <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                  {displayImages.map((image, index) => (
-                    <div key={image.id} className="group relative">
-                      <ImageCard
-                        image={image}
-                        imageIndex={index}
-                        className="w-full transition-transform duration-200 group-hover:scale-105"
-                        onClick={() => dispatch(setCurrentViewIndex(index))}
-                      />
+              {faceSelectionBar}
+              {displayImages.length > 0 || displayVideos.length > 0 ? (
+                <>
+                  {displayImages.length > 0 && (
+                    <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                      {displayImages.map((image, index) => (
+                        <div key={image.id} className="group relative">
+                          <ImageCard
+                            image={image}
+                            imageIndex={index}
+                            className="w-full transition-transform duration-200 group-hover:scale-105"
+                            onClick={() => dispatch(setCurrentViewIndex(index))}
+                          />
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
+                  {videoSection}
+                </>
+              ) : (
+                <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
+                  <p>
+                    {faceSelection &&
+                    faceSelection.indices.length > 1 &&
+                    faceSelection.matchMode === 'match_all'
+                      ? `No photo or video has all ${faceSelection.indices.length} of these faces together. Try choosing fewer faces, or search for any of them.`
+                      : 'No matching faces found in your gallery for this photo.'}
+                  </p>
                 </div>
               )}
-              {videoSection}
             </>
-          ) : (
-            <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
-              <p>No matching faces found in your gallery for this photo.</p>
-            </div>
-          ))
+          )
         )
       ) : !query ? (
         <div className="text-muted-foreground flex flex-col items-center justify-center py-12">

@@ -23,6 +23,8 @@ SYNC_MICROSERVICE_URL = "http://localhost:52124"
 SHARE_SERVER_PORT = 52125
 
 CONFIDENCE_PERCENT = 0.6
+# Each selected face is compared with every stored face, so search cost grows with it.
+FACE_SEARCH_MAX_SELECTED_FACES = 5
 # Object Detection Models:
 SMALL_OBJ_DETECTION_MODEL = f"{MODEL_EXPORTS_PATH}/YOLOv11_Small.onnx"
 NANO_OBJ_DETECTION_MODEL = f"{MODEL_EXPORTS_PATH}/YOLOv11_Nano.onnx"

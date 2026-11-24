@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from enum import Enum
 from pydantic import BaseModel
-from typing import Optional, List, Union
+from typing import Literal, Optional, List, Union
 
 
 class InputType(str, Enum):
@@ -13,6 +13,9 @@ class InputType(str, Enum):
 class FaceSearchRequest(BaseModel):
     path: Optional[str] = None
     base64_data: Optional[str] = None
+    # Positions in the detector's face list; omitted means the first face.
+    face_indices: Optional[List[int]] = None
+    match_mode: Literal["match_any", "match_all"] = "match_any"
 
 
 class AddMultipleImagesRequest(BaseModel):

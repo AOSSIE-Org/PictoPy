@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { cn } from '@/lib/utils';
 import { RootState } from '@/app/store';
+import type { FaceMatchMode } from '@/types/Media';
 import {
   Dialog,
   DialogContent,
@@ -18,7 +19,7 @@ import {
   getPersonName,
   getPhotoCountText,
 } from '@/utils/personUtils';
-import { Switch } from '@/components/ui/switch';
+import { MatchModeToggle } from '@/components/MatchModeToggle';
 import { usePictoMutation } from '@/hooks/useQueryExtension';
 import {
   fetchMultiPersonSearch,
@@ -32,10 +33,7 @@ import { showInfoDialog } from '@/features/infoDialogSlice';
 interface MultiPersonSearchDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSearchActivated?: (
-    peopleNames: string[],
-    matchMode: 'match_any' | 'match_all',
-  ) => void;
+  onSearchActivated?: (peopleNames: string[], matchMode: FaceMatchMode) => void;
 }
 
 export function MultiPersonSearchDialog({
@@ -45,9 +43,7 @@ export function MultiPersonSearchDialog({
 }: MultiPersonSearchDialogProps) {
   const dispatch = useDispatch();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [matchMode, setMatchMode] = useState<'match_any' | 'match_all'>(
-    'match_any',
-  );
+  const [matchMode, setMatchMode] = useState<FaceMatchMode>('match_any');
 
   const { clusters } = useSelector((state: RootState) => state.faceClusters);
 
@@ -112,45 +108,7 @@ export function MultiPersonSearchDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="bg-muted/30 rounded-lg border px-4 py-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Match exact combination</span>
-            <div className="flex items-center gap-2">
-              <span
-                className={cn(
-                  'text-xs transition-colors',
-                  matchMode === 'match_any'
-                    ? 'text-foreground font-medium'
-                    : 'text-muted-foreground',
-                )}
-              >
-                Any
-              </span>
-              <Switch
-                checked={matchMode === 'match_all'}
-                onCheckedChange={(checked) =>
-                  setMatchMode(checked ? 'match_all' : 'match_any')
-                }
-                aria-label="Toggle match mode between any and all"
-              />
-              <span
-                className={cn(
-                  'text-xs transition-colors',
-                  matchMode === 'match_all'
-                    ? 'text-foreground font-medium'
-                    : 'text-muted-foreground',
-                )}
-              >
-                All
-              </span>
-            </div>
-          </div>
-          <p className="text-muted-foreground mt-1.5 text-xs">
-            {matchMode === 'match_any'
-              ? 'Photos and videos containing ANY of the selected people'
-              : 'Photos and videos containing ALL of the selected people'}
-          </p>
-        </div>
+        <MatchModeToggle value={matchMode} onChange={setMatchMode} />
 
         {selectedIds.size > 0 && (
           <div className="flex flex-wrap gap-2">

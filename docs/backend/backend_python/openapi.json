@@ -2889,6 +2889,86 @@
           }
         }
       }
+    },
+    "/face-clusters/detect-faces": {
+      "post": {
+        "tags": [
+          "Face Clusters"
+        ],
+        "summary": "Detect Query Faces",
+        "description": "List the faces in a photo, so the caller can choose which to search with.",
+        "operationId": "detect_query_faces_face_clusters_detect_faces_post",
+        "parameters": [
+          {
+            "name": "input_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/InputType"
+                }
+              ],
+              "description": "Choose input type: 'path' or 'base64'",
+              "default": "path",
+              "title": "Input Type"
+            },
+            "description": "Choose input type: 'path' or 'base64'"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FaceSearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetectFacesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__face_clusters__ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3524,6 +3604,29 @@
               }
             ],
             "title": "Base64 Data"
+          },
+          "face_indices": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Face Indices"
+          },
+          "match_mode": {
+            "type": "string",
+            "enum": [
+              "match_any",
+              "match_all"
+            ],
+            "title": "Match Mode",
+            "default": "match_any"
           }
         },
         "type": "object",
@@ -7249,6 +7352,115 @@
           "error"
         ],
         "title": "ErrorResponse"
+      },
+      "BoundingBox": {
+        "properties": {
+          "x": {
+            "type": "number",
+            "title": "X"
+          },
+          "y": {
+            "type": "number",
+            "title": "Y"
+          },
+          "width": {
+            "type": "number",
+            "title": "Width"
+          },
+          "height": {
+            "type": "number",
+            "title": "Height"
+          }
+        },
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "width",
+          "height"
+        ],
+        "title": "BoundingBox"
+      },
+      "DetectFacesData": {
+        "properties": {
+          "image_width": {
+            "type": "integer",
+            "title": "Image Width"
+          },
+          "image_height": {
+            "type": "integer",
+            "title": "Image Height"
+          },
+          "faces": {
+            "items": {
+              "$ref": "#/components/schemas/DetectedFace"
+            },
+            "type": "array",
+            "title": "Faces"
+          },
+          "faces_skipped": {
+            "type": "integer",
+            "title": "Faces Skipped"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image_width",
+          "image_height",
+          "faces",
+          "faces_skipped"
+        ],
+        "title": "DetectFacesData"
+      },
+      "DetectFacesResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DetectFacesData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "DetectFacesResponse"
+      },
+      "DetectedFace": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "bbox": {
+            "$ref": "#/components/schemas/BoundingBox"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "index",
+          "bbox",
+          "confidence"
+        ],
+        "title": "DetectedFace"
       }
     }
   }

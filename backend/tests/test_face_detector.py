@@ -58,6 +58,11 @@ class TestDetectFaces:
         assert [e[0] for e in result["embeddings"]] == [1.0, 2.0]
         assert result["faces_skipped"] == 1
 
+    def test_reports_the_size_the_boxes_are_measured_in(self, models, photo):
+        result = models.detector.detect_faces(photo)
+
+        assert (result["image_width"], result["image_height"]) == (200, 200)
+
     def test_rejected_faces_are_never_embedded(self, models, photo):
         models.detector.detect_faces(photo)
         assert models.facenet.get_embedding.call_count == 2

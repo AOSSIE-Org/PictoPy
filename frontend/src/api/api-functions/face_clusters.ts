@@ -2,7 +2,7 @@ import { faceClustersEndpoints } from '../apiEndpoints';
 import { apiClient } from '../axiosConfig';
 import { APIResponse } from '@/types/API';
 import { BackendRes } from '@/hooks/useQueryExtension';
-import type { Image, ImageMetadata, Video } from '@/types/Media';
+import type { FaceMatchMode, Image, ImageMetadata, Video } from '@/types/Media';
 
 //Request Types
 export interface RenameClusterRequest {
@@ -13,13 +13,26 @@ export interface FetchClusterImagesRequest {
   clusterId: string;
 }
 
-export interface FetchSearchedFacesRequest {
+/** Which faces of the query photo to search with; omitted means the first. */
+export interface FaceSelectionParams {
+  face_indices?: number[];
+  match_mode?: FaceMatchMode;
+}
+
+export interface FetchSearchedFacesRequest extends FaceSelectionParams {
   path: string;
 }
 
-export interface FetchSearchedFacesBase64Request {
+export interface FetchSearchedFacesBase64Request extends FaceSelectionParams {
   base64_data: string;
 }
+
+export type FetchDetectedFacesRequest = Pick<FetchSearchedFacesRequest, 'path'>;
+
+export type FetchDetectedFacesBase64Request = Pick<
+  FetchSearchedFacesBase64Request,
+  'base64_data'
+>;
 
 //Response Types
 /** A photo as the face routes return it: less than a full `Image`. */
@@ -43,6 +56,20 @@ export interface ClusterImagesData {
   total_images: number;
   videos: Video[];
   total_videos: number;
+}
+
+/** A face found in the query photo; `bbox` is in source-image pixels. */
+export interface DetectedFace {
+  index: number;
+  bbox: { x: number; y: number; width: number; height: number };
+  confidence: number;
+}
+
+export interface DetectedFacesData {
+  image_width: number;
+  image_height: number;
+  faces: DetectedFace[];
+  faces_skipped: number;
 }
 
 /** Face search puts its videos beside `data`, not inside it. */
@@ -104,6 +131,26 @@ export const fetchSearchedFacesBase64 = async (
   return response.data;
 };
 
+export const fetchDetectedFaces = async (
+  request: FetchDetectedFacesRequest,
+): Promise<BackendRes<DetectedFacesData | null>> => {
+  const response = await apiClient.post<BackendRes<DetectedFacesData | null>>(
+    faceClustersEndpoints.detectFaces,
+    request,
+  );
+  return response.data;
+};
+
+export const fetchDetectedFacesBase64 = async (
+  request: FetchDetectedFacesBase64Request,
+): Promise<BackendRes<DetectedFacesData | null>> => {
+  const response = await apiClient.post<BackendRes<DetectedFacesData | null>>(
+    faceClustersEndpoints.detectFacesBase64,
+    request,
+  );
+  return response.data;
+};
+
 export interface GlobalReclusterData {
   clusters_created: number | null;
   faces_skipped: number | null;
@@ -120,7 +167,7 @@ export const triggerGlobalReclustering = async (): Promise<
 
 export interface MultiPersonSearchRequest {
   cluster_ids: string[];
-  match_mode: 'match_any' | 'match_all';
+  match_mode: FaceMatchMode;
 }
 
 export const fetchMultiPersonSearch = async (

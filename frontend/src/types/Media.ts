@@ -92,3 +92,6 @@ export interface Cluster {
   video_count: number;
   face_image_base64?: string;
 }
+
+/** How a search with several faces or people combines them. */
+export type FaceMatchMode = 'match_any' | 'match_all';

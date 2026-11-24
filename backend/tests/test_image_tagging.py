@@ -21,6 +21,8 @@ def _faces(count: int, skipped: int = 0) -> FaceDetectionResult:
         bboxes=[{"x": i, "y": i, "width": 40, "height": 40} for i in range(count)],
         confidences=[0.9] * count,
         faces_skipped=skipped,
+        image_width=640,
+        image_height=480,
     )
 
 
