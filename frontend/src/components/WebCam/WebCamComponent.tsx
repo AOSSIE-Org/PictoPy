@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useDispatch } from 'react-redux';
 import { startSearch } from '@/features/searchSlice';
+import { closeVideoView } from '@/features/videoSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useLocation, useNavigate } from 'react-router';
 import { FACE_SEARCH_PATH, isFaceSearchLocation } from '@/utils/faceSearch';
@@ -120,6 +121,7 @@ function WebcamComponent({ isOpen, onClose }: WebcamComponentProps) {
   const handleSearchCapturedImage = () => {
     if (capturedImageUrl) {
       // The results page runs the search for the captured photo (a data URL).
+      dispatch(closeVideoView());
       dispatch(startSearch(capturedImageUrl));
       navigate(FACE_SEARCH_PATH, {
         replace: isFaceSearchLocation(location),

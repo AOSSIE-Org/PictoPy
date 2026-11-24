@@ -9,6 +9,7 @@ import { VideoPlayerOverlay } from '@/components/VideoPlayer/VideoPlayerOverlay'
 import { setCurrentViewIndex } from '@/features/videoSlice';
 import { selectIsVideoViewOpen } from '@/features/videoSelectors';
 import { GalleryViewSelector } from '@/components/GalleryViewSelector';
+import { useGalleryView } from '@/hooks/useGalleryView';
 
 type ChronologicalVideoGalleryProps = {
   videos: Video[];
@@ -33,6 +34,7 @@ export const ChronologicalVideoGallery = ({
   const monthHeaderRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
   const galleryRef = useRef<HTMLDivElement>(null);
   const isVideoViewOpen = useSelector(selectIsVideoViewOpen);
+  const [gallerySize] = useGalleryView();
 
   const grouped = useMemo(
     () => groupImagesByYearMonthFromMetadata(videos),
@@ -96,7 +98,7 @@ export const ChronologicalVideoGallery = ({
 
   useEffect(() => {
     recomputeMarkers();
-  }, [videos, recomputeMarkers]);
+  }, [videos, recomputeMarkers, gallerySize]);
 
   useEffect(() => {
     const elementToObserve = scrollContainerRef?.current ?? galleryRef.current;

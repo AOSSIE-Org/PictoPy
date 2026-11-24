@@ -25,6 +25,7 @@ function createGalleryViewHook() {
 
 describe('useGalleryView', () => {
   beforeEach(() => localStorage.clear());
+  afterEach(() => jest.restoreAllMocks());
 
   it('defaults to Medium and safely handles old or invalid saved values', () => {
     expect(createGalleryViewHook().result.current[0]).toBe('medium');
@@ -52,6 +53,17 @@ describe('useGalleryView', () => {
     expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')).toEqual({
       size: 'large',
     });
+  });
+
+  it('updates the selected size when storage writes fail', () => {
+    const { result } = createGalleryViewHook();
+    jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('Storage unavailable');
+    });
+
+    act(() => result.current[1]('large'));
+
+    expect(result.current[0]).toBe('large');
   });
 
   it.each(SECTIONS)(

@@ -12,6 +12,7 @@ import {
 import { useDispatch } from 'react-redux';
 import { useFile } from '@/hooks/selectFile';
 import { startSearch } from '@/features/searchSlice';
+import { closeVideoView } from '@/features/videoSlice';
 import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useLocation, useNavigate } from 'react-router';
 import { FACE_SEARCH_PATH, isFaceSearchLocation } from '@/utils/faceSearch';
@@ -47,6 +48,7 @@ export function FaceSearchDialog() {
     if (filePath) {
       setIsDialogOpen(false);
       // The results page runs the search for the photo stored here.
+      dispatch(closeVideoView());
       dispatch(startSearch(filePath));
       navigate(FACE_SEARCH_PATH, {
         replace: isFaceSearchLocation(location),

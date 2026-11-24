@@ -25,6 +25,7 @@ import {
 import { MediaView } from './MediaView';
 import { VideoPlayerOverlay } from '@/components/VideoPlayer/VideoPlayerOverlay';
 import { GalleryViewSelector } from '@/components/GalleryViewSelector';
+import { useGalleryView } from '@/hooks/useGalleryView';
 
 type FavoriteMediaItem =
   | ({ mediaType: 'image' } & Image)
@@ -58,6 +59,7 @@ export const ChronologicalFavoritesGallery = ({
   const dispatch = useDispatch();
   const monthHeaderRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
   const galleryRef = useRef<HTMLDivElement>(null);
+  const [gallerySize] = useGalleryView();
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
   const isVideoViewOpen = useSelector(selectIsVideoViewOpen);
   const currentImageIndex = useSelector(selectCurrentViewIndex);
@@ -235,7 +237,7 @@ export const ChronologicalFavoritesGallery = ({
 
   useEffect(() => {
     recomputeMarkers();
-  }, [merged, sortBy, recomputeMarkers]);
+  }, [merged, sortBy, recomputeMarkers, gallerySize]);
 
   useEffect(() => {
     const elementToObserve = scrollContainerRef?.current ?? galleryRef.current;

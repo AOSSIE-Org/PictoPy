@@ -66,7 +66,7 @@ const newestFirst = (a: string | null, b: string | null): number =>
 // count bars, so the grid does not jump when the real cards arrive.
 const AlbumCardSkeleton: React.FC = () => (
   <div className="animate-pulse" data-testid="album-card-skeleton">
-    <div className="bg-muted aspect-4/5 w-full rounded-xl" />
+    <div className="bg-muted aspect-square w-full rounded-xl" />
     <div className="space-y-1.5 p-3">
       <div className="bg-muted h-3.5 w-2/3 rounded" />
       <div className="bg-muted h-3 w-1/3 rounded" />

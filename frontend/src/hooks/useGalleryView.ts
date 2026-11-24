@@ -12,10 +12,14 @@ export function useGalleryView(): [GallerySize, (size: GallerySize) => void] {
 
   const updateSize = useCallback(
     (nextSize: GallerySize) => {
-      localStorage.setItem(
-        GALLERY_VIEW_STORAGE_KEY,
-        JSON.stringify({ size: nextSize }),
-      );
+      try {
+        localStorage.setItem(
+          GALLERY_VIEW_STORAGE_KEY,
+          JSON.stringify({ size: nextSize }),
+        );
+      } catch {
+        // Keep the preference usable for this session when storage is unavailable.
+      }
       dispatch(setGallerySize(nextSize));
     },
     [dispatch],

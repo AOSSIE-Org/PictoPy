@@ -8,6 +8,7 @@ import { setCurrentViewIndex } from '@/features/imageSlice';
 import { MediaView } from './MediaView';
 import { selectIsImageViewOpen } from '@/features/imageSelectors';
 import { GalleryViewSelector } from '@/components/GalleryViewSelector';
+import { useGalleryView } from '@/hooks/useGalleryView';
 
 export type MonthMarker = {
   offset: number;
@@ -38,6 +39,7 @@ export const ChronologicalGallery = ({
   const monthHeaderRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
   const galleryRef = useRef<HTMLDivElement>(null);
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
+  const [gallerySize] = useGalleryView();
 
   // Optimized grouping with proper date handling
   const grouped = useMemo(
@@ -100,7 +102,7 @@ export const ChronologicalGallery = ({
 
   useEffect(() => {
     recomputeMarkers();
-  }, [images, recomputeMarkers]);
+  }, [images, recomputeMarkers, gallerySize]);
 
   useEffect(() => {
     const elementToObserve = scrollContainerRef?.current ?? galleryRef.current;
