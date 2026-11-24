@@ -8,6 +8,8 @@ from app.models.FaceDetector import FaceDetectionResult
 from app.config.settings import FACE_SEARCH_MAX_SELECTED_FACES
 from app.utils.faceSearch import (
     InvalidFaceSelection,
+    _DETECTION_CACHE_SIZE,
+    _DETECTION_CACHE_TTL_SECONDS,
     detect_faces_for_preview,
     perform_face_search,
 )
@@ -431,6 +433,49 @@ class TestSelectedFaces:
 
         assert [image.id for image in response.data] == ["two-faces"]
 
+    def test_match_all_finds_the_pairing_a_greedy_pick_would_miss(self, detector):
+        """
+        The closest pair (query 0 with stored face 0) would leave query 1 with
+        only stored face 1, which it does not match. Pairing query 0 with stored
+        face 1 and query 1 with stored face 0 serves both.
+        """
+        query_0, query_1 = [1, 1, 1], [1, 1, 0]
+        stored_0, stored_1 = [1, 1, 1], [1, 0, 1]
+        pad = [0.0] * 125
+        detected = _detected(query_0 + pad, query_1 + pad)
+        stored = [
+            _image_face("pairs-up", stored_0 + pad),
+            _image_face("pairs-up", stored_1 + pad),
+        ]
+
+        response = self._search(
+            detector,
+            detected,
+            stored,
+            face_indices=[0, 1],
+            match_mode="match_all",
+        )
+
+        assert [image.id for image in response.data] == ["pairs-up"]
+        assert response.data[0].match_count == 2
+
+    def test_match_all_still_rejects_when_no_pairing_serves_every_face(self, detector):
+        detected = _detected(SAME_PERSON, SOMEONE_ELSE)
+        stored = [
+            _image_face("only-first", SAME_PERSON),
+            _image_face("only-first", THIRD_PERSON),
+        ]
+
+        response = self._search(
+            detector,
+            detected,
+            stored,
+            face_indices=[0, 1],
+            match_mode="match_all",
+        )
+
+        assert response.data == []
+
     def test_match_all_ranks_by_the_mean_similarity_of_the_matches(self, detector):
         response = self._search(
             detector,
@@ -623,3 +668,122 @@ class TestDetectFacesForPreview:
 def _looks_like(similarity: float) -> list:
     """An embedding at the given cosine similarity to QUERY."""
     return (similarity * QUERY + np.sqrt(1 - similarity**2) * np.eye(128)[5]).tolist()
+
+
+@pytest.fixture
+def detector_cls() -> Iterator[MagicMock]:
+    with patch("app.utils.faceSearch.FaceDetector") as detector_cls:
+        detector_cls.return_value.detect_faces.return_value = _detected(
+            SAME_PERSON, SOMEONE_ELSE
+        )
+        yield detector_cls
+
+
+@pytest.fixture
+def photo(tmp_path):
+    path = tmp_path / "group.jpg"
+    path.write_bytes(b"photo-bytes")
+    return path
+
+
+class TestDetectionIsReusedBetweenRequests:
+    @staticmethod
+    def _search(path, face_indices=None):
+        with (
+            patch(
+                "app.utils.faceSearch.db_get_all_image_face_embeddings",
+                return_value=[],
+            ),
+            patch(
+                "app.utils.faceSearch.db_get_all_video_face_embeddings",
+                return_value=[],
+            ),
+        ):
+            return perform_face_search(str(path), face_indices)
+
+    def test_the_search_after_a_preview_does_not_detect_again(
+        self, detector_cls, photo
+    ):
+        preview = detect_faces_for_preview(str(photo))
+        self._search(photo, [1])
+
+        assert preview.success
+        assert detector_cls.call_count == 1
+        detector_cls.return_value.detect_faces.assert_called_once()
+
+    def test_the_detector_is_closed_after_it_runs(self, detector_cls, photo):
+        detect_faces_for_preview(str(photo))
+
+        detector_cls.return_value.close.assert_called_once()
+
+    def test_a_changed_photo_is_detected_again(self, detector_cls, photo):
+        detect_faces_for_preview(str(photo))
+        photo.write_bytes(b"edited-photo-bytes")
+        detect_faces_for_preview(str(photo))
+
+        assert detector_cls.return_value.detect_faces.call_count == 2
+
+    def test_the_same_bytes_under_another_name_share_a_detection(
+        self, detector_cls, photo, tmp_path
+    ):
+        """A webcam upload gets a new temp file name on every request."""
+        copy = tmp_path / "other-name.jpg"
+        copy.write_bytes(photo.read_bytes())
+
+        detect_faces_for_preview(str(photo))
+        detect_faces_for_preview(str(copy))
+
+        detector_cls.return_value.detect_faces.assert_called_once()
+
+    def test_a_failed_detection_is_not_kept(self, detector_cls, photo):
+        detect = detector_cls.return_value.detect_faces
+        detect.side_effect = RuntimeError("model missing")
+        assert not detect_faces_for_preview(str(photo)).success
+
+        detect.side_effect = None
+        detect.return_value = _detected(SAME_PERSON)
+        retry = detect_faces_for_preview(str(photo))
+
+        assert retry.success
+        assert retry.data is not None
+        assert len(retry.data.faces) == 1
+
+    def test_a_photo_with_no_result_is_looked_at_again(self, detector_cls, photo):
+        detect = detector_cls.return_value.detect_faces
+        detect.return_value = None
+        detect_faces_for_preview(str(photo))
+        detect_faces_for_preview(str(photo))
+
+        assert detect.call_count == 2
+
+    def test_an_old_detection_expires(self, detector_cls, photo):
+        with patch("app.utils.faceSearch.time.monotonic") as clock:
+            clock.return_value = 1000.0
+            detect_faces_for_preview(str(photo))
+            clock.return_value = 1000.0 + _DETECTION_CACHE_TTL_SECONDS + 1
+            detect_faces_for_preview(str(photo))
+
+        assert detector_cls.return_value.detect_faces.call_count == 2
+
+    def test_the_oldest_photo_is_dropped_when_the_cache_is_full(
+        self, detector_cls, tmp_path
+    ):
+        photos = []
+        for number in range(_DETECTION_CACHE_SIZE + 1):
+            path = tmp_path / f"{number}.jpg"
+            path.write_bytes(f"photo-{number}".encode())
+            photos.append(path)
+            detect_faces_for_preview(str(path))
+        detect = detector_cls.return_value.detect_faces
+        calls_so_far = detect.call_count
+
+        detect_faces_for_preview(str(photos[-1]))
+        assert detect.call_count == calls_so_far
+
+        detect_faces_for_preview(str(photos[0]))
+        assert detect.call_count == calls_so_far + 1
+
+    def test_an_unreadable_path_still_reaches_the_detector(self, detector_cls):
+        detect_faces_for_preview("/not/a/real/file.jpg")
+
+        detector_cls.return_value.detect_faces.assert_called_once()
