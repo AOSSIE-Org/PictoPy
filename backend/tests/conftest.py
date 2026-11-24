@@ -67,3 +67,13 @@ def setup_before_all_tests():
     # Cleanup code here
     if "TEST_MODE" in os.environ:
         del os.environ["TEST_MODE"]
+
+
+@pytest.fixture(autouse=True)
+def clear_face_detection_cache():
+    """A cached detection must never leak from one test into the next."""
+    from app.utils.faceSearch import clear_detection_cache
+
+    clear_detection_cache()
+    yield
+    clear_detection_cache()
