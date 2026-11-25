@@ -62,7 +62,7 @@ const ALBUM_SORT_VALUES = ALBUM_SORT_OPTIONS.map((option) => option.value);
 const newestFirst = (a: string | null, b: string | null): number =>
   (b ?? '').localeCompare(a ?? '');
 
-// Mirrors an AlbumCard: the same 4/5 cover as a memory tile, plus the name and
+// Mirrors an AlbumCard: the same square cover, plus the name and
 // count bars, so the grid does not jump when the real cards arrive.
 const AlbumCardSkeleton: React.FC = () => (
   <div className="animate-pulse" data-testid="album-card-skeleton">
