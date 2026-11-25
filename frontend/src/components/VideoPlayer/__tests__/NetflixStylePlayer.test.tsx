@@ -3,7 +3,6 @@ import fs from 'fs';
 import path from 'path';
 import NetflixStylePlayer from '../NetflixStylePlayer';
 
-// Mock Tauri convertFileSrc API
 jest.mock('@tauri-apps/api/core', () => ({
   convertFileSrc: (path: string) => `tauri-converted://${path}`,
 }));
@@ -89,7 +88,7 @@ describe('NetflixStylePlayer', () => {
   let exitFullscreenMock: jest.Mock;
 
   beforeEach(() => {
-    // Mock HTMLMediaElement play and pause
+    // jsdom implements neither play nor pause.
     window.HTMLMediaElement.prototype.play = jest
       .fn()
       .mockImplementation(function (this: HTMLVideoElement) {

@@ -40,7 +40,6 @@ class DeleteThumbnailsRequest(BaseModel):
     folder_path: str
 
 
-# Response Model
 class FaceTaggingResponse(BaseModel):
     success: bool
     message: str

@@ -8,12 +8,8 @@ const EXTENSION_TO_MIME: Record<string, string> = {
   jpeg: 'image/jpeg',
 };
 
-/**
- * Opens the native OS file picker restricted to image files, reads the
- * chosen file from disk, and resolves it as a base64 data URL that can be
- * fed straight into <img>, <canvas>, or react-easy-crop.
- * Resolves to null if the user cancels the dialog.
- */
+// A data URL, not a path: the crop step reads the canvas with toDataURL and an
+// asset:// source would taint it. Null means the user cancelled.
 export async function pickImageFile(): Promise<string | null> {
   const selected = await open({
     multiple: false,

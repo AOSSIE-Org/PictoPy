@@ -39,7 +39,6 @@ export const ChronologicalGallery = ({
   const galleryRef = useRef<HTMLDivElement>(null);
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
 
-  // Optimized grouping with proper date handling
   const grouped = useMemo(
     () => groupImagesByYearMonthFromMetadata(images),
     [images],
@@ -118,7 +117,6 @@ export const ChronologicalGallery = ({
   return (
     <>
       <div ref={galleryRef} className={`space-y-0 ${className}`}>
-        {/* Title */}
         {showTitle && (
           <div className="mt-6 mb-6 flex items-center justify-between">
             <h1 className="text-2xl font-bold">{title}</h1>
@@ -126,7 +124,6 @@ export const ChronologicalGallery = ({
           </div>
         )}
 
-        {/* Gallery Content */}
         {sortedGrouped.map(({ year, months }) => (
           <div key={year} data-year={year}>
             {months.map(([month, imgs]) => {
@@ -150,7 +147,6 @@ export const ChronologicalGallery = ({
                     }
                   }}
                 >
-                  {/* Sticky Month/Year Header */}
                   <div className="bg-background sticky top-0 z-10 py-3 backdrop-blur-sm">
                     <h3 className="flex items-center text-xl font-semibold text-gray-800 dark:text-gray-200">
                       <div className="bg-primary mr-2 h-6 w-1"></div>
@@ -161,7 +157,6 @@ export const ChronologicalGallery = ({
                     </h3>
                   </div>
 
-                  {/* Images Grid */}
                   <div className={cn(MEDIA_GRID_CLASS, 'p-2')}>
                     {imgs.map((img) => {
                       const chronologicalIndex =

@@ -2,8 +2,6 @@ import { userPreferencesEndpoints } from '../apiEndpoints';
 import { apiClient } from '../axiosConfig';
 import { APIResponse } from '@/types/API';
 
-// User Preferences Types
-
 /** Relative importance of each memory scoring signal. Normalized server-side. */
 export interface MemoryScoringWeights {
   favourite: number;
@@ -59,7 +57,6 @@ export interface UpdateUserPreferencesResponse extends APIResponse {
   user_preferences: UserPreferencesData;
 }
 
-// API Functions
 export const getUserPreferences =
   async (): Promise<GetUserPreferencesResponse> => {
     const response = await apiClient.get<GetUserPreferencesResponse>(

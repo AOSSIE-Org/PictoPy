@@ -206,7 +206,6 @@ export const AIModelSetupStep: React.FC<AIModelSetupStepProps> = ({
   return (
     <>
       <Card className="flex max-h-full w-1/2 flex-col gap-2 border p-4">
-        {/* Header */}
         <CardHeader className="p-3">
           <div className="text-muted-foreground mb-1 flex justify-between text-xs">
             <span>
@@ -225,10 +224,8 @@ export const AIModelSetupStep: React.FC<AIModelSetupStepProps> = ({
         </CardHeader>
 
         <CardContent className="flex-1 space-y-4 p-1 px-2">
-          {/* Recommendation view */}
           {viewMode === 'recommendation' && (
             <>
-              {/* Hardware summary pill */}
               {hardwareSpecs && (
                 <div className="flex flex-wrap justify-between">
                   <span className="bg-muted/60 text-muted-foreground inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium">
@@ -246,7 +243,6 @@ export const AIModelSetupStep: React.FC<AIModelSetupStepProps> = ({
                 </div>
               )}
 
-              {/* Recommended tier card */}
               <div className="bg-primary/5 flex items-start justify-between gap-4 rounded-xl border p-4">
                 <div>
                   <p className="text-primary mb-1 text-xs font-semibold tracking-wide uppercase">
@@ -262,7 +258,6 @@ export const AIModelSetupStep: React.FC<AIModelSetupStepProps> = ({
                 <CheckCircle2 className="text-primary mt-0.5 h-5 w-5 shrink-0" />
               </div>
 
-              {/* Tier selector */}
               <div className="space-y-1.5 px-1">
                 <p className="text-sm font-medium">Select model tier</p>
                 <DropdownMenu>
@@ -308,7 +303,6 @@ export const AIModelSetupStep: React.FC<AIModelSetupStepProps> = ({
             </>
           )}
 
-          {/* Downloading view */}
           {viewMode === 'downloading' && (
             <div className="flex flex-col items-center justify-center space-y-4 py-6">
               <div className="w-full space-y-2 px-1">
@@ -329,7 +323,6 @@ export const AIModelSetupStep: React.FC<AIModelSetupStepProps> = ({
             </div>
           )}
 
-          {/* Error view */}
           {viewMode === 'error' && (
             <div className="flex flex-col items-center justify-center space-y-3 py-6 text-center">
               <div className="bg-destructive/10 rounded-full p-4">
@@ -351,7 +344,6 @@ export const AIModelSetupStep: React.FC<AIModelSetupStepProps> = ({
             </div>
           )}
 
-          {/* Complete view */}
           {viewMode === 'complete' && (
             <div className="flex flex-col items-center justify-center space-y-3 py-6 text-center">
               <div className="rounded-full bg-green-500/10 p-4">
@@ -367,7 +359,6 @@ export const AIModelSetupStep: React.FC<AIModelSetupStepProps> = ({
           )}
         </CardContent>
 
-        {/* Footer */}
         <CardFooter className="flex justify-between p-3">
           <Button
             variant="outline"

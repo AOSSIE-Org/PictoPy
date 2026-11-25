@@ -34,10 +34,8 @@ class ONNXSessionBase:
         self._session_registered = False
         self._session: onnxruntime.InferenceSession | None = None
         self._lock = threading.Lock()
-        # Serializes session.run() on the shared session. The DirectML EP
-        # faults (0xC0000005) if two threads run the same session at once,
-        # which the parallel image+video semantic searches do. Separate from
-        # _lock so inference never blocks on session creation/close.
+        # DirectML faults (0xC0000005) when parallel image+video search runs one session twice.
+        # Separate from _lock so inference never waits on session creation or close.
         self._inference_lock = threading.Lock()
 
     def _create_session(self) -> onnxruntime.InferenceSession:
@@ -71,13 +69,8 @@ class ONNXSessionBase:
 
     def close(self) -> None:
         with self._lock:
-            # Registration cleanup must not be gated on self._session being
-            # non-None: get_session() can null self._session on a validation
-            # failure (e.g. missing expected tensor names) while
-            # _session_registered stays True from the earlier
-            # mark_model_session_active() call. If cleanup were gated on
-            # self._session, that registration would never be released,
-            # permanently blocking this model from being uninstalled.
+            # Also checks _session_registered: a failed get_session() validation nulls the session
+            # but leaves the registration, and an unreleased one blocks uninstall.
             was_active = self._session is not None or self._session_registered
             self._session = None
             self._clear_tensor_names()

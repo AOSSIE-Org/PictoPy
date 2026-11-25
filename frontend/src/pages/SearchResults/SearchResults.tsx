@@ -96,12 +96,8 @@ export const SearchResults = () => {
     null,
   );
 
-  // react-query only aborts a superseded query's signal from inside a
-  // useEffect (post-commit), so there's a brief window right after a new
-  // search starts where an older, still-running queryFn can reach its
-  // manual dispatch below with signal.aborted still false. This ref is
-  // updated synchronously during render -- no such window -- so it always
-  // reflects the truly current search, even before that effect runs.
+  // react-query aborts a superseded query after commit, so an older queryFn can still
+  // dispatch below with signal.aborted false. This ref updates during render, closing the gap.
   const searchKey = `${query}::${mode}`;
   const searchKeyRef = useRef<string | null>(null);
   const searchGenerationRef = useRef(0);
@@ -671,8 +667,7 @@ export const SearchResults = () => {
             )
           )}
 
-          {/* Videos: symmetric — a video-search error is inline and never
-              hides successfully-fetched photos. */}
+          {/* Videos: likewise inline, so a video-search error never hides the photos. */}
           {videoSearchError ? (
             <div className="text-muted-foreground mb-6 flex items-center gap-2 text-sm">
               <AlertCircle className="text-destructive h-4 w-4 shrink-0" />
@@ -700,7 +695,6 @@ export const SearchResults = () => {
         </>
       )}
 
-      {/* Media Viewer Modals */}
       {isImageViewOpen && <MediaView images={displayImages} />}
       {isVideoViewOpen && <VideoPlayerOverlay videos={displayVideos} />}
     </div>

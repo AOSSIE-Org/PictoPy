@@ -2,7 +2,6 @@ from pydantic import BaseModel
 from typing import Optional, List
 
 
-# Request Models
 class AddFolderRequest(BaseModel):
     folder_path: str
     parent_folder_id: Optional[str] = None  # UUID as string
@@ -10,17 +9,17 @@ class AddFolderRequest(BaseModel):
 
 
 class UpdateAITaggingRequest(BaseModel):
-    folder_ids: List[str]  # List of folder UUIDs
+    folder_ids: List[str]
 
 
 class DeleteFoldersRequest(BaseModel):
-    folder_ids: List[str]  # List of folder UUIDs to delete
+    folder_ids: List[str]
     # False (default) keeps the old behaviour: subfolders are deleted with the parent.
     keep_subfolders: bool = False
 
 
 class SyncFolderRequest(BaseModel):
-    folder_path: str  # Path of the folder to sync
+    folder_path: str
     folder_id: str  # UUID of the folder to sync
 
 
@@ -34,9 +33,7 @@ class FolderDetails(BaseModel):
     taggingCompleted: Optional[bool] = None
     image_count: int = 0
     video_count: int = 0
-    indexing_status: Optional[str] = (
-        "completed"  # Default to "completed" if not provided
-    )
+    indexing_status: Optional[str] = "completed"
 
 
 class GetAllFoldersData(BaseModel):
@@ -61,14 +58,13 @@ class DeleteFoldersData(BaseModel):
 
 class SyncFolderData(BaseModel):
     deleted_count: int
-    deleted_folders: List[str]  # List of folder paths that were deleted
+    deleted_folders: List[str]
     added_count: int
-    added_folders: List[str]  # List of folder paths that were added
+    added_folders: List[str]
     folder_id: str
     folder_path: str
 
 
-# Response Models
 class GetAllFoldersResponse(BaseModel):
     success: bool
     message: Optional[str] = None

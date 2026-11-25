@@ -73,7 +73,7 @@ export default function TimelineScrollbar({
     const resizeObserver = new ResizeObserver(measure);
     resizeObserver.observe(scrollable);
 
-    measure(); // Initial measurement
+    measure();
 
     return () => resizeObserver.disconnect();
   }, [scrollableRef]);
@@ -318,7 +318,6 @@ export default function TimelineScrollbar({
       className={`absolute top-0 right-0 z-40 flex items-start justify-center ${className}`}
       style={{ height: trackHeight }}
     >
-      {/* Timeline Track */}
       <div
         ref={trackRef}
         onMouseDown={handleMouseDown}
@@ -327,7 +326,6 @@ export default function TimelineScrollbar({
         className="relative w-3 cursor-row-resize rounded-full bg-gray-200 shadow-sm transition-shadow hover:shadow-md"
         style={{ height: trackHeight }}
       >
-        {/* Progress Fill */}
         <div
           className="bg-primary absolute top-0 left-1/2 w-full rounded-full"
           style={{
@@ -336,7 +334,6 @@ export default function TimelineScrollbar({
           }}
         />
 
-        {/* Month Markers */}
         <TooltipProvider>
           {markerPositions.map((marker, index) => {
             return (
@@ -359,7 +356,6 @@ export default function TimelineScrollbar({
           })}
         </TooltipProvider>
 
-        {/* Track Hover Tooltip */}
         {trackTooltip && (
           <div
             className={`${tooltipBaseClass} transition-opacity duration-200 ${
@@ -375,7 +371,6 @@ export default function TimelineScrollbar({
           </div>
         )}
 
-        {/* Scroll Tooltip */}
         {scrollTooltip && !isTrackTooltipVisible && (
           <div
             className={`${tooltipBaseClass} transition-opacity duration-500 ${
@@ -391,7 +386,6 @@ export default function TimelineScrollbar({
           </div>
         )}
 
-        {/* Drag Tooltip */}
         {isDragging && dragTooltip && dragTooltip.visible && (
           <div
             className={tooltipBaseClass}

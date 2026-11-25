@@ -14,7 +14,6 @@ describe('GlobalLoader', () => {
     );
 
     expect(screen.queryByText('Loading images...')).not.toBeInTheDocument();
-    // renders an empty div
     expect(container.firstChild).toBeEmptyDOMElement();
   });
 

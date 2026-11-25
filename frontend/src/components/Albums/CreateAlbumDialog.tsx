@@ -105,7 +105,6 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
-            {/* Album Name */}
             <div className="grid gap-2">
               <Label htmlFor="name">
                 Album Name <span className="text-destructive">*</span>
@@ -124,7 +123,6 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
               )}
             </div>
 
-            {/* Album Description */}
             <div className="grid gap-2">
               <Label htmlFor="description">Description</Label>
               <Textarea
@@ -142,7 +140,6 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
               )}
             </div>
 
-            {/* Lock Album Toggle */}
             <div className="flex items-center justify-between space-x-2">
               <div className="space-y-0.5">
                 <Label htmlFor="locked">Lock Album</Label>
@@ -159,7 +156,6 @@ export const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
               />
             </div>
 
-            {/* Password Field (shown only if locked) */}
             {formData.is_locked && (
               <div className="grid gap-2">
                 <Label htmlFor="password">

@@ -8,7 +8,6 @@ from app.config.settings import DATABASE_PATH
 
 
 def delete_db_files():
-    # 1. Target the configured database path and its SQLite helper files
     db_files = [
         DATABASE_PATH,
         DATABASE_PATH + "-journal",
@@ -16,7 +15,6 @@ def delete_db_files():
         DATABASE_PATH + "-shm",
     ]
 
-    # 2. Target explicitly supported test database files and their helper files
     test_db_files = [
         "test_db.sqlite3",
         "test_db.sqlite3-journal",
@@ -25,7 +23,6 @@ def delete_db_files():
     ]
     db_files.extend(test_db_files)
 
-    # Normalize paths and remove duplicates
     unique_db_files = sorted({os.path.abspath(f) for f in db_files})
 
     deleted_any = False

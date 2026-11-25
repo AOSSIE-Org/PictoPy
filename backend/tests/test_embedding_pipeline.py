@@ -107,10 +107,8 @@ class TestProcessUnembeddedImages:
         assert {row[0] for row in upserted_rows} == {"img0", "img2"}
         assert all(row[1] == "siglip2-base-patch16-224" for row in upserted_rows)
 
-        # Only the successfully-preprocessed images are marked embedded. The
-        # corrupt one stays isEmbedded=False so it's retried on a later pass
-        # instead of being permanently excluded from semantic search if the
-        # underlying issue (a transient lock, a restored backup) resolves.
+        # The corrupt one stays isEmbedded=False so a later pass retries it rather
+        # than excluding it from search for good.
         mock_mark_embedded.assert_called_once()
         assert set(mock_mark_embedded.call_args[0][0]) == {"img0", "img2"}
 

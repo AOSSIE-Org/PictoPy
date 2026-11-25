@@ -236,10 +236,8 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
     // Shares can expire while nothing is looking, so the list handed in may
     // still hold one that is gone.
     onChanged();
-    // A share made earlier is still served by whatever tunnel is up, so ask
-    // rather than assume it was a local one. The mode follows the answer:
-    // showing an internet link while the help button explains local sharing
-    // would describe the wrong thing.
+    // An earlier share is served by whatever tunnel is up, so ask instead of
+    // assuming local.
     tunnel.refresh().then((current) => {
       if (current) {
         setMode('internet');

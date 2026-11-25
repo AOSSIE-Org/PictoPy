@@ -355,7 +355,6 @@ const AccountSettingsCard = forwardRef<AccountSettingsCardHandle>(
               </div>
             </div>
 
-            {/* FOOTER */}
             <div className="border-border bg-muted/30 flex flex-col items-stretch gap-4 border-t px-6 py-[calc(1rem*var(--k))] @xl:flex-row @xl:items-center @xl:justify-between @xl:px-8">
               <p
                 role="status"

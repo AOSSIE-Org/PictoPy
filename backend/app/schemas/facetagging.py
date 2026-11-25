@@ -2,7 +2,6 @@ from pydantic import BaseModel
 from typing import List, Dict
 
 
-# Response Model
 class SimilarPair(BaseModel):
     image1: str
     image2: str

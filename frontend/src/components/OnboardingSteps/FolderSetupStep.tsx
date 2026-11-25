@@ -29,7 +29,6 @@ export function FolderSetupStep({
 }: FolderSetupStepProps) {
   const dispatch = useDispatch<AppDispatch>();
 
-  // Local state for folders
   const [folder, setFolder] = useState<string>('');
   const isEditing = useSelector(
     (state: RootState) => state.onboarding.isEditing,

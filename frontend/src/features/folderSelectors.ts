@@ -2,12 +2,10 @@ import { RootState } from '@/app/store';
 import { createSelector } from '@reduxjs/toolkit';
 import { FolderDetails } from '@/types/Folder';
 
-// Basic selectors
 export const selectFolderState = (state: RootState) => state.folders;
 
 export const selectAllFolders = (state: RootState) => state.folders.folders;
 
-// Memoized selectors using createSelector
 export const selectFolderById = createSelector(
   [selectAllFolders, (_: RootState, folderId: string) => folderId],
   (folders, folderId) =>
@@ -20,24 +18,20 @@ export const selectFoldersByParentId = createSelector(
     folders.filter((folder) => folder.parent_folder_id === parentId),
 );
 
-// Get root folders (folders with no parent)
 export const selectRootFolders = createSelector([selectAllFolders], (folders) =>
   folders.filter((folder) => !folder.parent_folder_id),
 );
 
-// Get folders with AI tagging enabled
 export const selectAITaggingEnabledFolders = createSelector(
   [selectAllFolders],
   (folders) => folders.filter((folder) => folder.AI_Tagging),
 );
 
-// Get folders with tagging completed
 export const selectTaggingCompletedFolders = createSelector(
   [selectAllFolders],
   (folders) => folders.filter((folder) => folder.taggingCompleted),
 );
 
-// Get folders by path pattern (case-insensitive search)
 export const selectFoldersByPathPattern = createSelector(
   [selectAllFolders, (_: RootState, pattern: string) => pattern.toLowerCase()],
   (folders, pattern) =>
@@ -46,7 +40,6 @@ export const selectFoldersByPathPattern = createSelector(
     ),
 );
 
-// Folder hierarchy selectors
 export const selectFolderHierarchy = createSelector(
   [selectAllFolders],
   (folders) => {
@@ -65,7 +58,6 @@ export const selectFolderHierarchy = createSelector(
   },
 );
 
-// Statistics selectors
 export const selectFolderStats = createSelector(
   [selectAllFolders],
   (folders) => ({
@@ -85,7 +77,6 @@ export const selectRecentFolders = createSelector(
       .slice(0, limit),
 );
 
-// Folders grouped by parent
 export const selectFoldersGroupedByParent = createSelector(
   [selectAllFolders],
   (folders) => {

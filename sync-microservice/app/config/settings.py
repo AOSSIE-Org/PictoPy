@@ -1,7 +1,6 @@
 from platformdirs import user_data_dir
 import os
 
-# Model Exports Path
 MODEL_EXPORTS_PATH = "app/models/ONNX_Exports"
 PRIMARY_BACKEND_URL = "http://localhost:52123"
 SYNC_MICROSERVICE_URL = "http://localhost:52124"

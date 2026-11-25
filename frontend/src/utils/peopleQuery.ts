@@ -23,10 +23,7 @@ const CONNECTOR_PATTERN = /\s*(,|\+|&|\band\b|\bor\b)\s*/i;
 
 const normalize = (value: string) => value.trim().replace(/\s+/g, ' ');
 
-/**
- * Split a free-text query into person-name fragments.
- * Returns null for anything that isn't a multi-name query.
- */
+/** Null for anything that is not a multi-name query. */
 export function parsePeopleQuery(query: string): ParsedPeopleQuery | null {
   const normalized = normalize(query);
   if (!normalized) return null;
@@ -64,11 +61,8 @@ function findClusterByName(
   });
 }
 
-/**
- * Resolve a multi-name query against the known face clusters.
- * Returns null unless at least two distinct people resolve, so single-name and
- * ordinary text queries fall through to tag/semantic search untouched.
- */
+// Null unless at least two distinct people resolve, so single-name and ordinary
+// text queries fall through to tag/semantic search untouched.
 export function resolvePeopleQuery(
   query: string,
   clusters: Cluster[],

@@ -96,10 +96,8 @@ def network_util_list_candidates() -> List[InterfaceCandidate]:
             if addr.family != socket.AF_INET:
                 continue
             ip = addr.address
-            # Loopback is the only address no other device can ever reach.
-            # A 169.254 address usually means DHCP never answered, but two
-            # devices on the same link can still reach each other that way, so
-            # it is ranked last rather than dropped.
+            # No other device can reach loopback. 169.254 means DHCP never answered
+            # but still works link-local, so it ranks last instead of being dropped.
             if ip.startswith("127."):
                 continue
             candidates.append(

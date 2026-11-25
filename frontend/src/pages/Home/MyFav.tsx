@@ -103,7 +103,6 @@ export const MyFav = () => {
     },
   );
 
-  // Handle fetching lifecycle
   useEffect(() => {
     if (isImagesSuccess) {
       dispatch(setImages(imageData?.data ?? []));
@@ -133,12 +132,10 @@ export const MyFav = () => {
       <div className="p-6">
         <h1 className="mb-6 text-2xl font-bold">Favorites</h1>
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          {/* Heart Icon/Sticker */}
           <div className="bg-muted/50 mb-6 flex h-32 w-32 items-center justify-center rounded-full">
             <Heart />
           </div>
 
-          {/* Text Content */}
           <h2 className="text-foreground mb-3 text-xl font-semibold">
             No Favorites Yet
           </h2>
@@ -153,7 +150,6 @@ export const MyFav = () => {
 
   return (
     <div className="relative flex h-full flex-col pr-6">
-      {/* Gallery Section */}
       <div
         ref={scrollableRef}
         className="hide-scrollbar flex-1 overflow-x-hidden overflow-y-auto"
@@ -180,7 +176,6 @@ export const MyFav = () => {
         )}
       </div>
 
-      {/* Timeline Scrollbar */}
       {monthMarkers.length > 0 && (
         <TimelineScrollbar
           scrollableRef={scrollableRef}
@@ -188,8 +183,6 @@ export const MyFav = () => {
           className="absolute top-0 right-0 h-full w-4"
         />
       )}
-
-      {/* Media viewer modal */}
     </div>
   );
 };
