@@ -10,6 +10,7 @@ import globalAlertReducer from '@/features/globalAlertSlice';
 import folderReducer from '@/features/folderSlice';
 import albumsReducer from '@/features/albumsSlice';
 import memoriesReducer from '@/features/memoriesSlice';
+import galleryViewReducer from '@/features/galleryViewSlice';
 
 export const rootReducer = combineReducers({
   loader: loaderReducer,
@@ -23,6 +24,7 @@ export const rootReducer = combineReducers({
   search: searchReducer,
   albums: albumsReducer,
   memories: memoriesReducer,
+  galleryView: galleryViewReducer,
 });
 
 export const store = configureStore({

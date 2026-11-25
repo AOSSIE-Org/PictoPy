@@ -4,6 +4,8 @@ import { useParams, useNavigate, useLocation } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { ImageCard } from '@/components/Media/ImageCard';
+import { GalleryGrid } from '@/components/GalleryGrid';
+import { GalleryViewSelector } from '@/components/GalleryViewSelector';
 import { DetailPageHeader } from '@/components/DetailPage/DetailPageHeader';
 import { MediaView } from '@/components/Media/MediaView';
 import { AddImagesToAlbumDialog } from '@/components/Albums/AddImagesToAlbumDialog';
@@ -34,13 +36,16 @@ import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { Album } from '@/types/Album';
 import { Image } from '@/types/Media';
 
-// Matches an ImageCard's square tile so the grid does not resize on load.
-const ImageCardSkeleton: React.FC = () => (
-  <div
-    className="bg-muted aspect-square w-full animate-pulse rounded-lg"
-    data-testid="album-image-skeleton"
-  />
-);
+// Matches the active card shape so the grid does not resize on load.
+const ImageCardSkeleton: React.FC = () => {
+  return (
+    <div
+      className="bg-muted w-full animate-pulse rounded-lg"
+      style={{ aspectRatio: '1 / 1' }}
+      data-testid="album-image-skeleton"
+    />
+  );
+};
 
 export const AlbumDetail = () => {
   const dispatch = useDispatch();
@@ -268,6 +273,7 @@ export const AlbumDetail = () => {
             </>
           ) : (
             <>
+              <GalleryViewSelector />
               {images.length > 0 && (
                 <Button
                   variant="outline"
@@ -289,11 +295,11 @@ export const AlbumDetail = () => {
       {/* Images Grid */}
       <div className="flex-1 overflow-y-auto pt-2">
         {isLoadingContent ? (
-          <div className="grid grid-cols-2 gap-4 pb-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <GalleryGrid className="pb-6">
             {Array.from({ length: 12 }).map((_, index) => (
               <ImageCardSkeleton key={index} />
             ))}
-          </div>
+          </GalleryGrid>
         ) : images.length === 0 ? (
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
@@ -307,7 +313,7 @@ export const AlbumDetail = () => {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4 pb-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <GalleryGrid className="pb-6">
             {images.map((image, index) => (
               <div
                 key={image.id}
@@ -329,7 +335,7 @@ export const AlbumDetail = () => {
                 )}
               </div>
             ))}
-          </div>
+          </GalleryGrid>
         )}
       </div>
 

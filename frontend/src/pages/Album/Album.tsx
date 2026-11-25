@@ -29,8 +29,8 @@ import { showInfoDialog } from '@/features/infoDialogSlice';
 import { useMutationFeedback } from '@/hooks/useMutationFeedback';
 import { usePersistedSort } from '@/hooks/usePersistedSort';
 import { stopTunnel } from '@/utils/tunnel';
-import { MEDIA_GRID_CLASS } from '@/constants/layout';
-import { cn } from '@/lib/utils';
+import { GalleryGrid } from '@/components/GalleryGrid';
+import { GalleryViewSelector } from '@/components/GalleryViewSelector';
 import { Album } from '@/types/Album';
 import { Share } from '@/types/Share';
 import {
@@ -62,11 +62,11 @@ const ALBUM_SORT_VALUES = ALBUM_SORT_OPTIONS.map((option) => option.value);
 const newestFirst = (a: string | null, b: string | null): number =>
   (b ?? '').localeCompare(a ?? '');
 
-// Mirrors an AlbumCard: the same 4/5 cover as a memory tile, plus the name and
+// Mirrors an AlbumCard: the same square cover, plus the name and
 // count bars, so the grid does not jump when the real cards arrive.
 const AlbumCardSkeleton: React.FC = () => (
   <div className="animate-pulse" data-testid="album-card-skeleton">
-    <div className="bg-muted aspect-4/5 w-full rounded-xl" />
+    <div className="bg-muted aspect-square w-full rounded-xl" />
     <div className="space-y-1.5 p-3">
       <div className="bg-muted h-3.5 w-2/3 rounded" />
       <div className="bg-muted h-3 w-1/3 rounded" />
@@ -262,7 +262,8 @@ function Albums() {
     <div className="flex h-full flex-col">
       <div className="mt-1 mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Albums</h1>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <GalleryViewSelector />
           <Button
             variant="outline"
             size="sm"
@@ -287,15 +288,15 @@ function Albums() {
       </div>
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
-          <div className={cn(MEDIA_GRID_CLASS, 'pb-6')}>
+          <GalleryGrid className="pb-6">
             {Array.from({ length: 10 }).map((_, index) => (
               <AlbumCardSkeleton key={index} />
             ))}
-          </div>
+          </GalleryGrid>
         ) : albums.length === 0 ? (
           <EmptyAlbumsState />
         ) : (
-          <div className={cn(MEDIA_GRID_CLASS, 'pb-6')}>
+          <GalleryGrid className="pb-6">
             {sortedAlbums.map((album) => (
               <AlbumCard
                 key={album.id}
@@ -307,7 +308,7 @@ function Albums() {
                 isSharing={sharesByAlbum.has(album.id)}
               />
             ))}
-          </div>
+          </GalleryGrid>
         )}
       </div>
       {/* Dialogs */}

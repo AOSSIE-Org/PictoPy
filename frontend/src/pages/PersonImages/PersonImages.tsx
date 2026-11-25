@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { ImageCard } from '@/components/Media/ImageCard';
+import { GalleryGrid } from '@/components/GalleryGrid';
+import { GalleryViewSelector } from '@/components/GalleryViewSelector';
 import { MediaView } from '@/components/Media/MediaView';
 import { VideoCard } from '@/components/Media/VideoCard';
 import { VideoPlayerOverlay } from '@/components/VideoPlayer/VideoPlayerOverlay';
@@ -134,8 +136,11 @@ export const PersonImages = () => {
           </Button>
         )}
       </div>
-      <h1 className="mb-6 text-2xl font-bold">{displayName}</h1>
-      <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">{displayName}</h1>
+        <GalleryViewSelector />
+      </div>
+      <GalleryGrid className="pb-6">
         {personImages.map((image, index) => (
           <div key={image.id} className="group relative">
             <ImageCard
@@ -146,13 +151,13 @@ export const PersonImages = () => {
             />
           </div>
         ))}
-      </div>
+      </GalleryGrid>
 
       {/* Videos the same person was found in, via their keyframes */}
       {personVideos.length > 0 && (
         <>
           <h2 className="mb-4 text-xl font-semibold">Videos</h2>
-          <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <GalleryGrid className="pb-6">
             {personVideos.map((video, index) => (
               <div key={video.id} className="group relative">
                 <VideoCard
@@ -162,7 +167,7 @@ export const PersonImages = () => {
                 />
               </div>
             ))}
-          </div>
+          </GalleryGrid>
         </>
       )}
 

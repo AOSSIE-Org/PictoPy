@@ -1,13 +1,14 @@
 import { useMemo, useRef, useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { ImageCard } from '@/components/Media/ImageCard';
-import { MEDIA_GRID_CLASS } from '@/constants/layout';
-import { cn } from '@/lib/utils';
+import { GalleryGrid } from '@/components/GalleryGrid';
 import { Image } from '@/types/Media';
 import { groupImagesByYearMonthFromMetadata } from '@/utils/dateUtils';
 import { setCurrentViewIndex } from '@/features/imageSlice';
 import { MediaView } from './MediaView';
 import { selectIsImageViewOpen } from '@/features/imageSelectors';
+import { GalleryViewSelector } from '@/components/GalleryViewSelector';
+import { useGalleryView } from '@/hooks/useGalleryView';
 
 export type MonthMarker = {
   offset: number;
@@ -38,6 +39,7 @@ export const ChronologicalGallery = ({
   const monthHeaderRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
   const galleryRef = useRef<HTMLDivElement>(null);
   const isImageViewOpen = useSelector(selectIsImageViewOpen);
+  const [gallerySize] = useGalleryView();
 
   // Optimized grouping with proper date handling
   const grouped = useMemo(
@@ -100,7 +102,7 @@ export const ChronologicalGallery = ({
 
   useEffect(() => {
     recomputeMarkers();
-  }, [images, recomputeMarkers]);
+  }, [images, recomputeMarkers, gallerySize]);
 
   useEffect(() => {
     const elementToObserve = scrollContainerRef?.current ?? galleryRef.current;
@@ -120,9 +122,12 @@ export const ChronologicalGallery = ({
       <div ref={galleryRef} className={`space-y-0 ${className}`}>
         {/* Title */}
         {showTitle && (
-          <div className="mt-6 mb-6 flex items-center justify-between">
+          <div className="mt-6 mb-6 flex flex-wrap items-center justify-between gap-3">
             <h1 className="text-2xl font-bold">{title}</h1>
-            {titleRight && <div>{titleRight}</div>}
+            <div className="flex flex-wrap items-center gap-3">
+              <GalleryViewSelector />
+              {titleRight && <div>{titleRight}</div>}
+            </div>
           </div>
         )}
 
@@ -162,7 +167,7 @@ export const ChronologicalGallery = ({
                   </div>
 
                   {/* Images Grid */}
-                  <div className={cn(MEDIA_GRID_CLASS, 'p-2')}>
+                  <GalleryGrid className="p-2">
                     {imgs.map((img) => {
                       const chronologicalIndex =
                         imageIndexMap.get(img.id) ?? -1;
@@ -179,7 +184,7 @@ export const ChronologicalGallery = ({
                         </div>
                       );
                     })}
-                  </div>
+                  </GalleryGrid>
                 </div>
               );
             })}

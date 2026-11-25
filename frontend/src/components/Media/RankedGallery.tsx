@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { ImageCard } from '@/components/Media/ImageCard';
-import { MEDIA_GRID_CLASS } from '@/constants/layout';
-import { cn } from '@/lib/utils';
+import { GalleryGrid } from '@/components/GalleryGrid';
+import { GalleryViewSelector } from '@/components/GalleryViewSelector';
 import { Image } from '@/types/Media';
 import { setCurrentViewIndex } from '@/features/imageSlice';
 import { MediaView } from './MediaView';
@@ -33,12 +33,20 @@ export function RankedGallery({
     <>
       <div>
         {title && (
-          <div className="mt-6 mb-6 flex items-center justify-between">
+          <div className="mt-6 mb-6 flex flex-wrap items-center justify-between gap-3">
             <h1 className="text-2xl font-bold">{title}</h1>
-            {titleRight && <div>{titleRight}</div>}
+            <div className="flex flex-wrap items-center gap-3">
+              <GalleryViewSelector />
+              {titleRight && <div>{titleRight}</div>}
+            </div>
           </div>
         )}
-        <div className={cn(MEDIA_GRID_CLASS, 'p-2')}>
+        {!title && (
+          <div className="flex justify-end p-2">
+            <GalleryViewSelector />
+          </div>
+        )}
+        <GalleryGrid className="p-2">
           {images.map((img) => (
             <div key={img.id} className="group relative">
               <ImageCard
@@ -50,7 +58,7 @@ export function RankedGallery({
               />
             </div>
           ))}
-        </div>
+        </GalleryGrid>
       </div>
       {isImageViewOpen && <MediaView images={images} />}
     </>

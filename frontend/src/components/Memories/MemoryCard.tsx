@@ -41,7 +41,7 @@ export const MemoryCard: React.FC<MemoryCardProps> = ({
   const isUnviewed = memory.viewed_at === null;
 
   return (
-    <div className="group relative aspect-4/5 w-full">
+    <div className="group relative w-full" style={{ aspectRatio: '1 / 1' }}>
       <button
         type="button"
         onClick={() => onOpen(memory.memory_id)}

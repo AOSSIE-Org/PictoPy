@@ -3,6 +3,8 @@ import { convertFileSrc } from '@tauri-apps/api/core';
 import { useDispatch, useSelector } from 'react-redux';
 import { AxiosError } from 'axios';
 import { ImageCard } from '@/components/Media/ImageCard';
+import { GalleryGrid } from '@/components/GalleryGrid';
+import { GalleryViewSelector } from '@/components/GalleryViewSelector';
 import { MediaView } from '@/components/Media/MediaView';
 import { VideoCard } from '@/components/Media/VideoCard';
 import { VideoPlayerOverlay } from '@/components/VideoPlayer/VideoPlayerOverlay';
@@ -451,7 +453,7 @@ export const SearchResults = () => {
   const videoSection = displayVideos.length > 0 && (
     <>
       <h2 className="mb-4 text-xl font-semibold">Videos</h2>
-      <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      <GalleryGrid className="pb-6">
         {displayVideos.map((video, index) => (
           <div key={video.id} className="group relative">
             <VideoCard
@@ -461,7 +463,7 @@ export const SearchResults = () => {
             />
           </div>
         ))}
-      </div>
+      </GalleryGrid>
     </>
   );
 
@@ -477,21 +479,24 @@ export const SearchResults = () => {
           Back
         </Button>
       </div>
-      {isFaceMode ? (
-        <h1 className="mb-6 flex items-center gap-3 text-2xl font-bold">
-          Results for
-          {thumbnailSrc && failedThumbnail !== thumbnailSrc && (
-            <img
-              src={thumbnailSrc}
-              alt="Searched face"
-              onError={() => setFailedThumbnail(thumbnailSrc)}
-              className="h-10 w-10 rounded-full object-cover"
-            />
-          )}
-        </h1>
-      ) : (
-        <h1 className="mb-6 text-2xl font-bold">Results for "{query}"</h1>
-      )}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        {isFaceMode ? (
+          <h1 className="flex items-center gap-3 text-2xl font-bold">
+            Results for
+            {thumbnailSrc && failedThumbnail !== thumbnailSrc && (
+              <img
+                src={thumbnailSrc}
+                alt="Searched face"
+                onError={() => setFailedThumbnail(thumbnailSrc)}
+                className="h-10 w-10 rounded-full object-cover"
+              />
+            )}
+          </h1>
+        ) : (
+          <h1 className="text-2xl font-bold">Results for "{query}"</h1>
+        )}
+        <GalleryViewSelector />
+      </div>
 
       {peopleQuery && (
         <div className="border-primary/20 bg-primary/5 mb-4 rounded-lg border px-4 py-2.5">
@@ -573,7 +578,7 @@ export const SearchResults = () => {
           (displayImages.length > 0 || displayVideos.length > 0 ? (
             <>
               {displayImages.length > 0 && (
-                <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                <GalleryGrid className="pb-6">
                   {displayImages.map((image, index) => (
                     <div key={image.id} className="group relative">
                       <ImageCard
@@ -584,7 +589,7 @@ export const SearchResults = () => {
                       />
                     </div>
                   ))}
-                </div>
+                </GalleryGrid>
               )}
               {videoSection}
             </>
@@ -610,7 +615,7 @@ export const SearchResults = () => {
         ) : displayImages.length > 0 || displayVideos.length > 0 ? (
           <>
             {displayImages.length > 0 && (
-              <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              <GalleryGrid className="pb-6">
                 {displayImages.map((image, index) => (
                   <div key={image.id} className="group relative">
                     <ImageCard
@@ -621,7 +626,7 @@ export const SearchResults = () => {
                     />
                   </div>
                 ))}
-              </div>
+              </GalleryGrid>
             )}
             {videoSection}
           </>
@@ -656,7 +661,7 @@ export const SearchResults = () => {
             </div>
           ) : (
             displayImages.length > 0 && (
-              <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              <GalleryGrid className="pb-6">
                 {displayImages.map((image, index) => (
                   <div key={image.id} className="group relative">
                     <ImageCard
@@ -667,7 +672,7 @@ export const SearchResults = () => {
                     />
                   </div>
                 ))}
-              </div>
+              </GalleryGrid>
             )
           )}
 

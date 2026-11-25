@@ -48,7 +48,10 @@ export const AlbumCard: React.FC<AlbumCardProps> = ({
     >
       <CardContent className="p-0">
         {/* Album Cover Image */}
-        <div className="bg-muted relative aspect-4/5 overflow-hidden">
+        <div
+          className="bg-muted relative overflow-hidden"
+          style={{ aspectRatio: '1 / 1' }}
+        >
           <img
             src={coverImageSrc}
             alt={album.name}
