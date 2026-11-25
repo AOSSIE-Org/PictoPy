@@ -97,9 +97,8 @@ export const useUserPreferences = () => {
   // value rather than what is actually stored.
   const writeQueue = useRef<Promise<unknown>>(Promise.resolve());
 
-  // `build` runs when the write reaches the front of the queue, not when it was
-  // requested, so it sees whatever actually landed first. Its request carries
-  // only changed keys, leaving a concurrent edit elsewhere in settings intact.
+  // `build` runs when the write reaches the front of the queue, so it sees what landed first.
+  // It sends only changed keys, so a concurrent edit elsewhere in settings survives.
   const writePreferences = (
     build: (current: UserPreferencesData) => {
       next: UserPreferencesData;

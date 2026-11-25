@@ -81,9 +81,8 @@ def db_create_albums_table() -> None:
         if "cover_image_path" not in columns:
             cursor.execute("ALTER TABLE albums ADD COLUMN cover_image_path TEXT")
         if "created_at" not in columns:
-            # No default: SQLite rejects a non-constant one here, and the upgrade
-            # time is a date that never happened. NULL reads as oldest, which
-            # insertion order already reflects.
+            # No default: SQLite rejects a non-constant one and the upgrade time never happened.
+            # NULL reads as oldest, which insertion order already reflects.
             cursor.execute("ALTER TABLE albums ADD COLUMN created_at DATETIME")
         if "updated_at" not in columns:
             cursor.execute("ALTER TABLE albums ADD COLUMN updated_at DATETIME")

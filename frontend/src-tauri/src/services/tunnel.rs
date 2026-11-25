@@ -1,6 +1,5 @@
-//! Exposes the share server beyond the LAN through an SSH reverse tunnel. Uses the
-//! platform's ssh rather than bundling a ~40MB binary served from unversioned URLs.
-//! The child is owned here so it dies with the app: an orphan exposes an album.
+//! Exposes the share server beyond the LAN with the platform's ssh, not a bundled 40MB binary.
+//! The child is owned here so it dies with the app, since an orphan exposes an album.
 
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -322,9 +321,8 @@ pub fn tunnel_status(state: State<'_, TunnelState>) -> Result<Option<String>, St
     Ok(state.current_url())
 }
 
-/// Takes no lifecycle lock: on the exit path, blocking on an in-flight start is
-/// worse than racing it, and the refusal is recorded under the tracking lock, so
-/// a child spawned but not yet tracked dies to whichever arrives second.
+/// Takes no lifecycle lock, since blocking on an in-flight start at exit is worse than racing it.
+/// The refusal is recorded under the tracking lock, so a spawned but untracked child still dies.
 pub fn shutdown(app: &AppHandle) {
     if let Some(state) = app.try_state::<TunnelState>() {
         let _ = state.close_permanently();

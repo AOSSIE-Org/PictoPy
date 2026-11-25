@@ -8,9 +8,8 @@ const EXTENSION_TO_MIME: Record<string, string> = {
   jpeg: 'image/jpeg',
 };
 
-// A data URL rather than a path, because the crop step reads the canvas back
-// with toDataURL and a cross-origin asset:// source would taint it. Null means
-// the user cancelled.
+// A data URL, not a path: the crop step reads the canvas with toDataURL and an
+// asset:// source would taint it. Null means the user cancelled.
 export async function pickImageFile(): Promise<string | null> {
   const selected = await open({
     multiple: false,

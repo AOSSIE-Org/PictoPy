@@ -182,9 +182,8 @@ SIGLIP2_TOKENIZER_PAD_TOKEN = "<pad>"
 # Bare-noun queries score low in absolute terms; 0.02 measurably cut true positives.
 SIGLIP2_MATCH_THRESHOLD = _get_env_float("SIGLIP2_MATCH_THRESHOLD", 0.01, min_value=0.0)
 
-# Ensembled label vectors score ~2 orders of magnitude below live queries, so
-# these floors are NOT comparable to SIGLIP2_MATCH_THRESHOLD. Calibrated against
-# a 151-image eval set; see backend/scripts/vocabulary/calibration_report.json.
+# Label vectors score ~100x below live queries, so these floors don't compare to
+# SIGLIP2_MATCH_THRESHOLD. Calibration: backend/scripts/vocabulary/calibration_report.json.
 SEMANTIC_SCORE_TOP_K = _get_env_int("SEMANTIC_SCORE_TOP_K", 15, min_value=1)
 # stricter cut for tag chips / tag lists; stored rows keep the full top-K
 SEMANTIC_DISPLAY_TOP_K = _get_env_int("SEMANTIC_DISPLAY_TOP_K", 5, min_value=1)
@@ -196,9 +195,8 @@ SEMANTIC_BUCKET_THRESHOLDS = {
 }
 SEMANTIC_DEFAULT_THRESHOLD = 5e-05
 
-# One frame every N seconds instead of per-frame inference (30fps = 1800 passes
-# per video-minute), stretched to keep cost per video bounded. These bounds also
-# back the user-preferences schema, so the API cannot accept what the sampler rejects.
+# One frame every N seconds, not per frame (30fps = 1800 passes a minute), to bound cost.
+# These bounds also back the user-preferences schema, so the API can't accept what the sampler rejects.
 VIDEO_FRAME_INTERVAL_MIN = 0.5
 VIDEO_FRAME_INTERVAL_MAX = 300.0
 VIDEO_FRAME_INTERVAL_SECONDS = _get_env_float(

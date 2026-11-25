@@ -97,9 +97,8 @@ def db_get_tagging_progress() -> List[FolderTaggingInfo]:
     cursor = conn.cursor()
 
     try:
-        # Pre-aggregated per table before joining, so M images and N videos never
-        # fan out to M*N rows. A video is embedded once tagged with no unembedded
-        # frames, so a tagged zero-frame (undecodable) one never stalls the bar.
+        # Aggregated per table before joining so M images and N videos never fan out to M*N rows.
+        # A tagged video with no unembedded frames counts as embedded, so an undecodable one can't stall the bar.
         cursor.execute(
             """
             SELECT

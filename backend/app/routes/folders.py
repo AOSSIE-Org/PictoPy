@@ -300,9 +300,8 @@ def add_folder(request: AddFolderRequest, app_state: State = Depends(get_state))
         index_future = indexing_executor.submit(
             post_folder_add_sequence, request.folder_path, root_folder_id
         )
-        # Indexing and tagging now sit on separate pools, so a sweep on a free
-        # AI pool can finish before this folder's images reach the DB. Queue a
-        # catch-up sweep to run once indexing lands.
+        # Indexing and tagging use separate pools, so a sweep can finish before these images
+        # reach the DB. Queue a catch-up sweep for once indexing lands.
         index_future.add_done_callback(
             lambda future: _queue_post_index_tagging_sweep(future, app_state)
         )

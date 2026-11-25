@@ -401,9 +401,8 @@ describe('SearchResults Page', () => {
   });
 
   test('resets the main scroll container to the top on a new search', async () => {
-    // The real scroll container lives in the layout, which this test does not mount.
-    // Stand one in whose scrollTo updates scrollTop like a browser's, so the test can
-    // assert the visible scroll state rather than a spy call.
+    // The real scroll container is in the unmounted layout, so stand in one whose scrollTo
+    // updates scrollTop like a browser's. The test then asserts scroll state, not a spy call.
     const scrollContainer = document.createElement('div');
     scrollContainer.id = 'main-scroll-container';
     const scrollTo = jest.fn((options?: ScrollToOptions) => {

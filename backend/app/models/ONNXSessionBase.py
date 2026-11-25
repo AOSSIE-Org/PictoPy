@@ -34,9 +34,8 @@ class ONNXSessionBase:
         self._session_registered = False
         self._session: onnxruntime.InferenceSession | None = None
         self._lock = threading.Lock()
-        # DirectML faults (0xC0000005) if two threads run one session at once,
-        # which parallel image+video search does. Separate from _lock so inference
-        # never waits on session creation or close.
+        # DirectML faults (0xC0000005) when parallel image+video search runs one session twice.
+        # Separate from _lock so inference never waits on session creation or close.
         self._inference_lock = threading.Lock()
 
     def _create_session(self) -> onnxruntime.InferenceSession:
@@ -70,9 +69,8 @@ class ONNXSessionBase:
 
     def close(self) -> None:
         with self._lock:
-            # Checks _session_registered too, not just _session: a validation
-            # failure in get_session() nulls the session while leaving the
-            # registration behind, and an unreleased one blocks uninstall.
+            # Also checks _session_registered: a failed get_session() validation nulls the session
+            # but leaves the registration, and an unreleased one blocks uninstall.
             was_active = self._session is not None or self._session_registered
             self._session = None
             self._clear_tensor_names()

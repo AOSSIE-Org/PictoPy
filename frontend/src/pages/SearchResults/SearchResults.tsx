@@ -96,9 +96,8 @@ export const SearchResults = () => {
     null,
   );
 
-  // react-query aborts a superseded query post-commit, so just after a new
-  // search starts an older queryFn can still reach its dispatch below with
-  // signal.aborted false. This ref updates during render, leaving no such gap.
+  // react-query aborts a superseded query after commit, so an older queryFn can still
+  // dispatch below with signal.aborted false. This ref updates during render, closing the gap.
   const searchKey = `${query}::${mode}`;
   const searchKeyRef = useRef<string | null>(null);
   const searchGenerationRef = useRef(0);
