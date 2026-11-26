@@ -534,6 +534,119 @@ class TestAlbumRoutes:
             assert json_response["msg"] == "Album deleted successfully"
             mock_delete_album.assert_called_once_with(album_id)
 
+    def test_delete_locked_album_requires_password(self) -> None:
+        """Deleting a locked album without providing password must return 401."""
+        locked_album = album_row(
+            {
+                "album_id": "locked-123",
+                "album_name": "Secret",
+                "description": "",
+                "is_locked": True,
+                "password_hash": bcrypt.hashpw(
+                    b"secretpass", bcrypt.gensalt()
+                ).decode(),
+            }
+        )
+
+        with patch("app.routes.albums.db_get_album", return_value=locked_album), patch(
+            "app.routes.albums.db_delete_album"
+        ) as mock_delete:
+            # Without body / password
+            response = client.delete("/albums/locked-123")
+            assert response.status_code == 401
+            assert response.json()["detail"]["error"] == "Missing Password"
+            mock_delete.assert_not_called()
+
+            # With empty password
+            response = client.request(
+                "DELETE", "/albums/locked-123", json={"password": ""}
+            )
+            assert response.status_code == 401
+            assert response.json()["detail"]["error"] == "Missing Password"
+            mock_delete.assert_not_called()
+
+    def test_delete_locked_album_invalid_password(self) -> None:
+        """Deleting a locked album with wrong password must return 401."""
+        locked_album = album_row(
+            {
+                "album_id": "locked-123",
+                "album_name": "Secret",
+                "description": "",
+                "is_locked": True,
+                "password_hash": bcrypt.hashpw(
+                    b"secretpass", bcrypt.gensalt()
+                ).decode(),
+            }
+        )
+
+        with patch("app.routes.albums.db_get_album", return_value=locked_album), patch(
+            "app.routes.albums.verify_album_password", return_value=False
+        ) as mock_verify, patch("app.routes.albums.db_delete_album") as mock_delete:
+            response = client.request(
+                "DELETE", "/albums/locked-123", json={"password": "wrongpass"}
+            )
+            assert response.status_code == 401
+            assert response.json()["detail"]["error"] == "Incorrect Password"
+            mock_verify.assert_called_once_with("locked-123", "wrongpass")
+            mock_delete.assert_not_called()
+
+    def test_delete_locked_album_valid_password(self) -> None:
+        """Deleting a locked album with the correct password must succeed."""
+        locked_album = album_row(
+            {
+                "album_id": "locked-123",
+                "album_name": "Secret",
+                "description": "",
+                "is_locked": True,
+                "password_hash": bcrypt.hashpw(
+                    b"secretpass", bcrypt.gensalt()
+                ).decode(),
+            }
+        )
+
+        with patch("app.routes.albums.db_get_album", return_value=locked_album), patch(
+            "app.routes.albums.verify_album_password", return_value=True
+        ) as mock_verify, patch("app.routes.albums.db_delete_album") as mock_delete:
+            response = client.request(
+                "DELETE", "/albums/locked-123", json={"password": "secretpass"}
+            )
+            assert response.status_code == 200
+            assert response.json()["success"] is True
+            mock_verify.assert_called_once_with("locked-123", "secretpass")
+            mock_delete.assert_called_once_with("locked-123")
+
+    def test_delete_album_concurrent_lock_rejected(self) -> None:
+        """If an album becomes locked before deletion, it must not be deleted without password."""
+        unlocked_album = album_row(
+            {
+                "album_id": "album-concurrent",
+                "album_name": "Test",
+                "description": "",
+                "is_locked": False,
+                "password_hash": None,
+            }
+        )
+        locked_album = album_row(
+            {
+                "album_id": "album-concurrent",
+                "album_name": "Test",
+                "description": "",
+                "is_locked": True,
+                "password_hash": bcrypt.hashpw(
+                    b"secretpass", bcrypt.gensalt()
+                ).decode(),
+            }
+        )
+
+        with patch(
+            "app.routes.albums.db_get_album",
+            side_effect=[unlocked_album, locked_album],
+        ), patch("app.routes.albums.db_delete_album") as mock_delete:
+            response = client.delete("/albums/album-concurrent")
+            assert response.status_code == 401
+            assert response.json()["detail"]["error"] == "Missing Password"
+            mock_delete.assert_not_called()
+
 
 class TestAlbumImageManagement:
     """

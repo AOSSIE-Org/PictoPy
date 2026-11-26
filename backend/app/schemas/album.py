@@ -71,6 +71,10 @@ class GetAlbumImagesRequest(BaseModel):
     password: Optional[str] = None
 
 
+class DeleteAlbumRequest(BaseModel):
+    password: Optional[str] = None
+
+
 class ImageIdsRequest(BaseModel):
     image_ids: List[str]
 
