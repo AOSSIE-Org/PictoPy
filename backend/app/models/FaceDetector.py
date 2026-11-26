@@ -2,11 +2,11 @@
 
 from typing import Dict, List, Optional, TypedDict
 
-import cv2
 import numpy as np
 from app.models.FaceNet import FaceNet
 from app.utils.FaceNet import FaceNet_util_preprocess_image, FaceNet_util_get_model_path
 from app.utils.YOLO import YOLO_util_get_model_path
+from app.utils.image_conversion import image_util_read_bgr
 from app.models.YOLO import YOLO
 from app.logging.setup_logging import get_logger
 from app.config.settings import (
@@ -44,7 +44,7 @@ class FaceDetector:
         """Detect and embed the faces in an image file. Pure inference: the caller
         persists them, so photos, face search and video keyframes share this path.
         """
-        img = cv2.imread(image_path)
+        img = image_util_read_bgr(image_path)
         if img is None:
             logger.error(f"Failed to load image: {image_path}")
             return None

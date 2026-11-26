@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import cv2
 from app.models.YOLO import YOLO
 from app.utils.YOLO import YOLO_util_get_model_path
+from app.utils.image_conversion import image_util_read_bgr
 from app.logging.setup_logging import get_logger
 
 logger = get_logger(__name__)
@@ -14,8 +14,8 @@ class ObjectClassifier:
             YOLO_util_get_model_path("object"), conf_threshold=0.4, iou_threshold=0.5
         )
 
-    def get_classes(self, img_path) -> list[int] | None:
-        img = cv2.imread(img_path)
+    def get_classes(self, img_path: str) -> list[int] | None:
+        img = image_util_read_bgr(img_path)
         if img is None:
             logger.error(f"Failed to load image: {img_path}")
             return None
