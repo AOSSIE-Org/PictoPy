@@ -14,7 +14,7 @@ flowchart LR
     E -- "PictoPyMetadata" --> C["codec.py<br/>XMP packet"]
     C --> P["containers/png.py<br/>iTXt chunk"]
     P --> F["📄 PNG file"]
-    F -. "streamed, PictoPy data removed" .-> G["share guest"]
+    F - streamed, PictoPy data removed → share recipient
 ```
 
 ## Where the code lives
@@ -127,7 +127,7 @@ Decoding is tolerant. A section that fails to decode is logged and skipped witho
 5. Refuse with `FileChangedError` if the file's size or nanosecond mtime changed since step 1.
 6. `os.replace` it over the original, then restore the original access and modification times with `os.utime`.
 
-Pixel data is never decoded or re-encoded, and a crash can never leave a half-written file. Because the file is replaced, its creation time on Windows is new; nothing in PictoPy reads creation time.
+Pixel data is never decoded or re-encoded, and a crash can never leave a half-written file. Because the original file is replaced, its creation time on Windows may change. PictoPy does not currently rely on file creation time.
 
 **Reading** (`read_xmp`) walks chunk headers and seeks past bodies, so a large PNG's pixel data is never read. Compressed `iTXt` is supported, with decompression capped at 64 MB.
 
@@ -166,7 +166,7 @@ An image is **pending** while `exported_count IS NULL OR change_count > exported
 
 ### Triggers
 
-`db_create_image_xmp_state_table()` creates the table, backfills a row for every existing image, then drops and recreates its 18 triggers, so their definitions follow releases. It runs in `main.py` (and `tests/conftest.py`) after every table the triggers watch.
+`db_create_image_xmp_state_table()` creates the table, backfills a row for every existing image, then drops and recreates its triggers, so their definitions follow releases. It runs in `main.py` (and `tests/conftest.py`) after every table the triggers watch.
 
 | Table | Fires on | Marks |
 | --- | --- | --- |
