@@ -2,7 +2,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Path, status
 
-from app.database.albums import db_get_album
+from app.database.albums import db_get_album, verify_album_password
 from app.logging.setup_logging import get_logger
 from app.schemas.share import (
     CreateShareRequest,
@@ -26,6 +26,7 @@ router = APIRouter()
 
 _SERVER_ERROR = {500: {"model": ShareErrorResponseEnvelope}}
 _NOT_FOUND = {404: {"model": ShareErrorResponseEnvelope}}
+_UNAUTHORIZED = {401: {"model": ShareErrorResponseEnvelope}}
 
 
 def _internal_error(message: str) -> HTTPException:
@@ -40,6 +41,13 @@ def _internal_error(message: str) -> HTTPException:
 def _not_found(error: str, message: str) -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
+        detail=ErrorResponse(success=False, error=error, message=message).model_dump(),
+    )
+
+
+def _unauthorized(error: str, message: str) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
         detail=ErrorResponse(success=False, error=error, message=message).model_dump(),
     )
 
@@ -82,7 +90,7 @@ def get_shares() -> GetSharesResponse:
 @router.post(
     "/albums/{album_id}",
     response_model=CreateShareResponse,
-    responses={**_NOT_FOUND, **_SERVER_ERROR},
+    responses={**_UNAUTHORIZED, **_NOT_FOUND, **_SERVER_ERROR},
 )
 async def create_share(
     album_id: str = Path(...), body: Optional[CreateShareRequest] = None
@@ -90,12 +98,26 @@ async def create_share(
     """
     Issue a share token and make sure the network listener is up.
 
-    An album's local lock is deliberately not consulted: locking protects the
-    album inside PictoPy, while sharing carries its own authorization — the
-    optional password on this request, which is hashed and never read back.
+    A locked album can only be shared with its own password
+    (`album_password`), verified here so the lock cannot be bypassed by
+    calling the API directly. The optional `password` on this request is
+    separate: it protects the share link itself, is hashed, and is never read
+    back.
     """
-    if not db_get_album(album_id):
+    album = db_get_album(album_id)
+    if not album:
         raise _not_found("Album Not Found", "No album exists with the provided ID.")
+
+    if album["is_locked"]:
+        if not body or not body.album_password:
+            raise _unauthorized(
+                "Password Required",
+                "Password is required to share this locked album.",
+            )
+        if not verify_album_password(album_id, body.album_password):
+            raise _unauthorized(
+                "Invalid Password", "The password provided is incorrect."
+            )
 
     try:
         entry = await share_util_create(
