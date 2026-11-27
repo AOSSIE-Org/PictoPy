@@ -593,6 +593,7 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
                   <Input
                     id="album-password"
                     type="password"
+                    aria-required={true}
                     placeholder="Enter the album's existing password"
                     value={albumPassword}
                     onChange={(event) => {
