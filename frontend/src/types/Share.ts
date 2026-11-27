@@ -27,10 +27,15 @@ export interface Share {
 export type ShareMode = 'lan' | 'internet';
 
 export interface CreateShareRequest {
+  /** Existing album password; required when sharing a locked album. */
+  album_password?: string;
+  /** Optional password required to open the generated share link. */
+  password?: string;
   /** Omitted means the share lasts until it is revoked or PictoPy closes. */
   expires_in_minutes?: number;
-  password?: string;
 }
+
+
 
 /** The view of the tunnel that `useShareTunnel` hands its caller. */
 export interface ShareTunnel {

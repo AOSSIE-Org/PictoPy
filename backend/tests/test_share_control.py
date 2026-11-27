@@ -100,3 +100,11 @@ class TestCreateRequest:
         # Well under 72 characters, comfortably over 72 bytes.
         with pytest.raises(ValidationError):
             CreateShareRequest(password="é" * 40)
+
+
+    def test_album_password_is_optional(self) -> None:
+        assert CreateShareRequest().album_password is None
+
+    def test_album_password_accepts_existing_album_password(self) -> None:
+        request = CreateShareRequest(album_password="my-album-password")
+        assert request.album_password == "my-album-password"
