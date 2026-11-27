@@ -10,9 +10,10 @@ from app.share.registry import PASSWORD_MAX_BYTES
 
 
 class CreateShareRequest(BaseModel):
-    # None means the share lives until it is revoked or PictoPy closes.
-    # Required only when sharing an album that is already locked.
+    # The album's own password. Required only when sharing an album that is
+    # already locked; the route verifies it against the stored hash.
     album_password: Optional[str] = Field(default=None, min_length=1)
+    # None means the share lives until it is revoked or PictoPy closes.
     expires_in_minutes: Optional[int] = Field(default=None, gt=0)
     # None leaves the album readable by anyone holding the link.
     password: Optional[str] = Field(default=None, min_length=4)

@@ -81,6 +81,10 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
   const [mode, setMode] = useState<ShareMode>('lan');
   const [expiry, setExpiry] = useState<string>('1440');
   const [withPassword, setWithPassword] = useState(false);
+  // The locked album's own password, needed to authorize sharing it. Kept
+  // apart from `password`, which only protects the share link.
+  const [albumPassword, setAlbumPassword] = useState('');
+  const [albumPasswordError, setAlbumPasswordError] = useState('');
   const [password, setPassword] = useState('');
   // Kept apart from the password field's own validation message so a failed
   // connection does not put a red border round an unrelated input.
@@ -121,9 +125,16 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
   );
 
   const createShareMutation = usePictoMutation({
-    mutationFn: (variables: { albumId: string; password?: string }) =>
+    mutationFn: (variables: {
+      albumId: string;
+      albumPassword?: string;
+      password?: string;
+    }) =>
       createShare(variables.albumId, {
         ...(expiry !== 'never' && { expires_in_minutes: Number(expiry) }),
+        ...(variables.albumPassword && {
+          album_password: variables.albumPassword,
+        }),
         ...(variables.password && { password: variables.password }),
       }),
     // Handled here rather than through the feedback hook so the new share
@@ -227,6 +238,8 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
     setMode('lan');
     setExpiry('1440');
     setWithPassword(false);
+    setAlbumPassword('');
+    setAlbumPasswordError('');
     setPassword('');
     setError('');
     setTunnelError('');
@@ -261,6 +274,10 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
     if (!album) {
       return;
     }
+    if (album.is_locked && !albumPassword.trim()) {
+      setAlbumPasswordError('Enter the existing album password.');
+      return;
+    }
     if (hasNonAsciiPassword) {
       setError('Password must contain only standard ASCII characters.');
       return;
@@ -271,6 +288,7 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
     }
     createShareMutation.mutate({
       albumId: album.id,
+      ...(album.is_locked && { albumPassword }),
       ...(withPassword && { password: password.trim() }),
     });
   };
@@ -566,6 +584,34 @@ export const ShareAlbumDialog: React.FC<ShareAlbumDialogProps> = ({
                   Sharing always stops when PictoPy closes.
                 </p>
               </div>
+
+              {album?.is_locked && (
+                <div className="grid gap-2">
+                  <Label htmlFor="album-password">
+                    Existing album password
+                  </Label>
+                  <Input
+                    id="album-password"
+                    type="password"
+                    placeholder="Enter the album's existing password"
+                    value={albumPassword}
+                    onChange={(event) => {
+                      setAlbumPassword(event.target.value);
+                      setAlbumPasswordError('');
+                    }}
+                    className={albumPasswordError ? 'border-destructive' : ''}
+                  />
+                  {albumPasswordError ? (
+                    <p className="text-destructive text-sm" role="alert">
+                      {albumPasswordError}
+                    </p>
+                  ) : (
+                    <p className="text-muted-foreground text-xs">
+                      Required to authorize sharing this locked album.
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">

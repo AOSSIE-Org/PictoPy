@@ -114,6 +114,12 @@ async def create_share(
                 "Password Required",
                 "Password is required to share this locked album.",
             )
+        # bcrypt raises ValueError on NUL bytes, which would surface as a
+        # 500. A NUL can never be part of a real album password.
+        if "\x00" in body.album_password:
+            raise _unauthorized(
+                "Invalid Password", "The password provided is incorrect."
+            )
         if not verify_album_password(album_id, body.album_password):
             raise _unauthorized(
                 "Invalid Password", "The password provided is incorrect."
