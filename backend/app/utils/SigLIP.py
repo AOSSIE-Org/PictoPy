@@ -1,6 +1,6 @@
 import threading
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
 from app.logging.setup_logging import get_logger
 
 logger = get_logger(__name__)
@@ -20,11 +20,14 @@ def siglip_util_preprocess_image(img_path: str, resolution: int) -> np.ndarray |
         # Production is self-consistent: SIGLIP2_MATCH_THRESHOLD was tuned
         # against THIS pipeline. Any future threshold/calibration work must
         # use this function, not AutoImageProcessor.
-        img = (
-            Image.open(img_path)
-            .convert("RGB")
-            .resize((resolution, resolution), Image.BICUBIC)
-        )
+        # Phones store portrait shots as landscape pixels plus an EXIF
+        # Orientation tag; without applying it the model sees them sideways.
+        with Image.open(img_path) as raw:
+            img = (
+                ImageOps.exif_transpose(raw)
+                .convert("RGB")
+                .resize((resolution, resolution), Image.BICUBIC)
+            )
 
         # Convert to numpy array and normalize to [0, 1]
         img_np = np.asarray(img).astype(np.float32) / 255.0
