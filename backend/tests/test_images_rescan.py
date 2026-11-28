@@ -24,6 +24,8 @@ from app.database.images import (
     db_create_images_table,
     db_get_images_by_folder_ids,
     db_get_image_sync_state_by_folder_ids,
+    db_get_unembedded_images,
+    db_get_untagged_images,
 )
 from app.database.yolo_mapping import db_create_YOLO_classes_table
 from app.utils.SigLIP import siglip_util_preprocess_image
@@ -100,36 +102,63 @@ def _state(photo: str, thumbnail: str, **overrides: Any) -> ImageSyncState:
 
 
 class Test16BitGrayscaleImages:
+    @pytest.mark.parametrize("dtype", ["<u2", ">u2"])
+    @pytest.mark.parametrize(
+        ("pixel", "expected"), [(0, 0), (255, 0), (256, 1), (32768, 128), (65535, 255)]
+    )
     def test_normalization_matches_opencv_and_siglip_inputs(
-        self, tmp_path: Path
+        self, tmp_path: Path, dtype: str, pixel: int, expected: int
     ) -> None:
         image_path = tmp_path / "gray16.tiff"
-        Image.fromarray(np.full((16, 16), 32768, dtype=np.uint16)).save(image_path)
+        Image.fromarray(np.full((16, 16), pixel, dtype=dtype)).save(image_path)
 
         with Image.open(image_path) as image:
             normalized = image_util_normalize_16bit_grayscale(image)
         assert normalized.mode == "RGB"
-        assert np.asarray(normalized)[0, 0].tolist() == [128, 128, 128]
+        assert np.asarray(normalized).dtype == np.uint8
+        assert np.asarray(normalized)[0, 0].tolist() == [expected] * 3
 
         cv_image = cv2.imread(str(image_path))
         assert cv_image is not None
-        assert cv_image[0, 0].tolist() == [128, 128, 128]
+        assert cv_image[0, 0].tolist() == [expected] * 3
         loaded = image_util_read_bgr(str(image_path))
         assert loaded is not None
-        assert loaded[0, 0].tolist() == [128, 128, 128]
+        assert loaded[0, 0].tolist() == [expected] * 3
 
         siglip_input = siglip_util_preprocess_image(str(image_path), 8)
         assert siglip_input is not None
-        assert np.allclose(siglip_input[:, 0, 0], [128 / 255 * 2 - 1] * 3, atol=1e-6)
+        assert np.allclose(
+            siglip_input[:, 0, 0], [expected / 255 * 2 - 1] * 3, atol=1e-6
+        )
 
-    def test_mode_i_tiff_uses_the_same_8_bit_fallback(self, tmp_path: Path) -> None:
-        image_path = tmp_path / "gray_i.tiff"
-        Image.fromarray(np.full((16, 16), 32768, dtype=np.int32)).save(image_path)
+    def test_16_bit_tiff_falls_back_when_opencv_cannot_decode(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        image_path = tmp_path / "gray16.tiff"
+        Image.fromarray(np.full((16, 16), 32768, dtype=np.uint16)).save(image_path)
+        monkeypatch.setattr("app.utils.image_conversion.cv2.imread", lambda path: None)
 
-        assert cv2.imread(str(image_path)) is None
         image = image_util_read_bgr(str(image_path))
         assert image is not None
         assert image[0, 0].tolist() == [128, 128, 128]
+
+    @pytest.mark.parametrize("pixel", [128, 32768, 65535])
+    def test_32_bit_tiff_preserves_existing_siglip_conversion(
+        self, tmp_path: Path, pixel: int
+    ) -> None:
+        image_path = tmp_path / "gray32.tiff"
+        Image.fromarray(np.full((16, 16), pixel, dtype=np.int32)).save(image_path)
+
+        with Image.open(image_path) as image:
+            assert image.mode == "I"
+            assert image_util_normalize_16bit_grayscale(image) is image
+            expected = image.convert("RGB").getpixel((0, 0))[0]
+
+        siglip_input = siglip_util_preprocess_image(str(image_path), 8)
+        assert siglip_input is not None
+        assert np.allclose(
+            siglip_input[:, 0, 0], [expected / 255 * 2 - 1] * 3, atol=1e-6
+        )
 
     def test_thumbnail_generation_succeeds_for_16_bit_tiff(
         self, tmp_path: Path
@@ -162,6 +191,12 @@ class Test16BitGrayscaleImages:
         assert len(indexed) == 1
         assert indexed[0][1] == str(image_path)
         assert Path(indexed[0][2]).is_file()
+        assert [image["path"] for image in db_get_untagged_images()] == [
+            str(image_path)
+        ]
+        assert [image["path"] for image in db_get_unembedded_images()] == [
+            str(image_path)
+        ]
 
     def test_non_16_bit_modes_are_unchanged(self) -> None:
         images = [

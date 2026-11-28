@@ -10,20 +10,11 @@ _16BIT_GRAYSCALE_MODES = {"I;16", "I;16L", "I;16B"}
 
 def image_util_normalize_16bit_grayscale(image: Image.Image) -> Image.Image:
     """Scale 16-bit grayscale pixels to matching 8-bit RGB values."""
-    if image.mode in _16BIT_GRAYSCALE_MODES:
-        pixels = np.asarray(image).astype(np.uint16, copy=False)
-    elif image.mode == "I":
-        pixels = np.asarray(image)
-        if (
-            pixels.size == 0
-            or pixels.min() < 0
-            or pixels.max() > np.iinfo(np.uint16).max
-        ):
-            return image
-        pixels = pixels.astype(np.uint16)
-    else:
+    # Mode I is 32-bit; its pixel range alone cannot establish a 16-bit source.
+    if image.mode not in _16BIT_GRAYSCALE_MODES:
         return image
 
+    pixels = np.asarray(image).astype(np.uint16, copy=False)
     pixels_8bit = (pixels >> 8).astype(np.uint8)
     return Image.fromarray(pixels_8bit).convert("RGB")
 
