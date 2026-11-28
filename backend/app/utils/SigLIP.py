@@ -1,6 +1,7 @@
 import threading
 import numpy as np
 from PIL import Image
+from app.utils.image_conversion import image_util_normalize_16bit_grayscale
 from app.logging.setup_logging import get_logger
 
 logger = get_logger(__name__)
@@ -20,11 +21,12 @@ def siglip_util_preprocess_image(img_path: str, resolution: int) -> np.ndarray |
         # Production is self-consistent: SIGLIP2_MATCH_THRESHOLD was tuned
         # against THIS pipeline. Any future threshold/calibration work must
         # use this function, not AutoImageProcessor.
-        img = (
-            Image.open(img_path)
-            .convert("RGB")
-            .resize((resolution, resolution), Image.BICUBIC)
-        )
+        with Image.open(img_path) as source:
+            img = (
+                image_util_normalize_16bit_grayscale(source)
+                .convert("RGB")
+                .resize((resolution, resolution), Image.BICUBIC)
+            )
 
         # Convert to numpy array and normalize to [0, 1]
         img_np = np.asarray(img).astype(np.float32) / 255.0

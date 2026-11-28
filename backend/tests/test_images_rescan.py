@@ -12,6 +12,8 @@ import tempfile
 from pathlib import Path
 from typing import Any, Iterator, List
 
+import cv2
+import numpy as np
 import pytest
 from PIL import Image
 
@@ -20,9 +22,17 @@ from app.database.images import (
     ImageSyncState,
     db_bulk_insert_images,
     db_create_images_table,
+    db_get_images_by_folder_ids,
     db_get_image_sync_state_by_folder_ids,
+    db_get_unembedded_images,
+    db_get_untagged_images,
 )
 from app.database.yolo_mapping import db_create_YOLO_classes_table
+from app.utils.SigLIP import siglip_util_preprocess_image
+from app.utils.image_conversion import (
+    image_util_normalize_16bit_grayscale,
+    image_util_read_bgr,
+)
 from app.utils.images import (
     EXIF_IFD_POINTER,
     image_util_extract_metadata,
@@ -89,6 +99,129 @@ def _state(photo: str, thumbnail: str, **overrides: Any) -> ImageSyncState:
     )
     recorded.update(overrides)  # type: ignore[typeddict-item]
     return recorded
+
+
+class Test16BitGrayscaleImages:
+    @pytest.mark.parametrize("dtype", ["<u2", ">u2"])
+    @pytest.mark.parametrize(
+        ("pixel", "expected"), [(0, 0), (255, 0), (256, 1), (32768, 128), (65535, 255)]
+    )
+    def test_normalization_matches_opencv_and_siglip_inputs(
+        self, tmp_path: Path, dtype: str, pixel: int, expected: int
+    ) -> None:
+        image_path = tmp_path / "gray16.tiff"
+        Image.fromarray(np.full((16, 16), pixel, dtype=dtype)).save(image_path)
+
+        with Image.open(image_path) as image:
+            normalized = image_util_normalize_16bit_grayscale(image)
+        assert normalized.mode == "RGB"
+        assert np.asarray(normalized).dtype == np.uint8
+        assert np.asarray(normalized)[0, 0].tolist() == [expected] * 3
+
+        cv_image = cv2.imread(str(image_path))
+        assert cv_image is not None
+        assert cv_image[0, 0].tolist() == [expected] * 3
+        loaded = image_util_read_bgr(str(image_path))
+        assert loaded is not None
+        assert loaded[0, 0].tolist() == [expected] * 3
+
+        siglip_input = siglip_util_preprocess_image(str(image_path), 8)
+        assert siglip_input is not None
+        assert np.allclose(
+            siglip_input[:, 0, 0], [expected / 255 * 2 - 1] * 3, atol=1e-6
+        )
+
+    def test_16_bit_tiff_falls_back_when_opencv_cannot_decode(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        image_path = tmp_path / "gray16.tiff"
+        Image.fromarray(np.full((16, 16), 32768, dtype=np.uint16)).save(image_path)
+        monkeypatch.setattr("app.utils.image_conversion.cv2.imread", lambda path: None)
+
+        image = image_util_read_bgr(str(image_path))
+        assert image is not None
+        assert image[0, 0].tolist() == [128, 128, 128]
+
+    @pytest.mark.parametrize("pixel", [128, 32768, 65535])
+    def test_32_bit_tiff_preserves_existing_siglip_conversion(
+        self, tmp_path: Path, pixel: int
+    ) -> None:
+        image_path = tmp_path / "gray32.tiff"
+        Image.fromarray(np.full((16, 16), pixel, dtype=np.int32)).save(image_path)
+
+        with Image.open(image_path) as image:
+            assert image.mode == "I"
+            assert image_util_normalize_16bit_grayscale(image) is image
+            expected = image.convert("RGB").getpixel((0, 0))[0]
+
+        siglip_input = siglip_util_preprocess_image(str(image_path), 8)
+        assert siglip_input is not None
+        assert np.allclose(
+            siglip_input[:, 0, 0], [expected / 255 * 2 - 1] * 3, atol=1e-6
+        )
+
+    def test_thumbnail_generation_succeeds_for_16_bit_tiff(
+        self, tmp_path: Path
+    ) -> None:
+        image_path = tmp_path / "gray16.tiff"
+        thumbnail_path = tmp_path / "gray16.jpg"
+        Image.fromarray(np.full((16, 16), 32768, dtype=np.uint16)).save(image_path)
+
+        assert image_util_generate_thumbnail(str(image_path), str(thumbnail_path))
+        with Image.open(thumbnail_path) as thumbnail:
+            assert thumbnail.convert("RGB").getpixel((0, 0)) == (128, 128, 128)
+
+    def test_normal_indexing_inserts_16_bit_tiff(
+        self,
+        tmp_path: Path,
+        test_db: str,
+        folder: str,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        photos = tmp_path / "photos"
+        photos.mkdir()
+        thumbnails = tmp_path / "thumbs"
+        monkeypatch.setattr("app.utils.images.THUMBNAIL_IMAGES_PATH", str(thumbnails))
+        image_path = photos / "gray16.tiff"
+        Image.fromarray(np.full((16, 16), 32768, dtype=np.uint16)).save(image_path)
+
+        assert image_util_process_folder_images([(str(photos), folder, False)])
+        indexed = db_get_images_by_folder_ids([folder])
+
+        assert len(indexed) == 1
+        assert indexed[0][1] == str(image_path)
+        assert Path(indexed[0][2]).is_file()
+        assert [image["path"] for image in db_get_untagged_images()] == [
+            str(image_path)
+        ]
+        assert [image["path"] for image in db_get_unembedded_images()] == [
+            str(image_path)
+        ]
+
+    def test_non_16_bit_modes_are_unchanged(self) -> None:
+        images = [
+            Image.new("RGB", (1, 1)),
+            Image.new("RGBA", (1, 1)),
+            Image.new("L", (1, 1)),
+            Image.new("CMYK", (1, 1)),
+            Image.new("P", (1, 1)),
+        ]
+
+        assert all(
+            image_util_normalize_16bit_grayscale(image) is image for image in images
+        )
+
+    def test_animated_gif_keeps_its_palette_frames(self, tmp_path: Path) -> None:
+        first = Image.new("P", (2, 2), 0)
+        first.putpalette([255, 0, 0, 0, 255, 0] + [0, 0, 0] * 254)
+        second = Image.new("P", (2, 2), 1)
+        second.putpalette(first.getpalette())
+        gif_path = tmp_path / "animated.gif"
+        first.save(gif_path, save_all=True, append_images=[second], duration=100)
+
+        with Image.open(gif_path) as gif:
+            assert gif.n_frames == 2
+            assert image_util_normalize_16bit_grayscale(gif) is gif
 
 
 class TestIsUnchanged:

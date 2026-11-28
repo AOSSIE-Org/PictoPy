@@ -40,6 +40,8 @@ from app.utils.extract_location_metadata import (
     MetadataExtractor,
 )
 from app.utils.takeout_sidecar import takeout_sidecar_read
+from app.utils.image_conversion import image_util_normalize_16bit_grayscale
+
 
 logger = get_logger(__name__)
 
@@ -464,6 +466,7 @@ def image_util_generate_thumbnail(
     """Generate thumbnail for a single image."""
     try:
         with Image.open(image_path) as img:
+            img = image_util_normalize_16bit_grayscale(img)
             img.thumbnail(size)
 
             # Convert to RGB if the image has an alpha channel or is not RGB

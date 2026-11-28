@@ -40,6 +40,7 @@ from app.config.settings import (
     PICTO_CLUSTERING_MERGE_THRESHOLD,
 )
 from app.logging.setup_logging import get_logger
+from app.utils.image_conversion import image_util_read_bgr
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -995,7 +996,7 @@ def _generate_cluster_face_image(
         image_path, bbox = face_data
 
         # Load the image
-        img = cv2.imread(image_path)
+        img = image_util_read_bgr(image_path)
         if img is None:
             return None
 
